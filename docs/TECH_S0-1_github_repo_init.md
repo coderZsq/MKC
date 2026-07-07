@@ -404,9 +404,9 @@ MIT
 
 ## 10. 检查清单
 
-- [ ] 仓库创建并配置分支保护
-- [ ] .gitignore 覆盖所有服务
+- [x] 仓库创建并配置分支保护
+- [x] .gitignore 覆盖所有服务
 - [ ] GitHub Project 看板配置完成
-- [ ] Issue/PR 模板添加
-- [ ] README 骨架编写完成
-- [ ] 第一条 commit 提交成功
+- [x] Issue/PR 模板添加
+- [x] README 骨架编写完成
+- [x] 第一条 commit 提交成功
