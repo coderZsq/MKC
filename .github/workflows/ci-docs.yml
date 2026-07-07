@@ -1,0 +1,48 @@
+name: CI - Docs
+
+on:
+  push:
+    branches: [main, feature/**]
+    paths:
+      - 'docs/api/**'
+      - '.github/workflows/ci-docs.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/api/**'
+      - '.github/workflows/ci-docs.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install validator
+        run: pip install openapi-spec-validator
+
+      - name: Validate OpenAPI
+        run: python -m openapi_spec_validator docs/api/openapi.yaml
+
+      - name: Check required endpoints
+        run: |
+          grep -q "  /auth/register:" docs/api/openapi.yaml
+          grep -q "  /auth/login:" docs/api/openapi.yaml
+          grep -q "  /auth/refresh:" docs/api/openapi.yaml
+          grep -q "  /auth/logout:" docs/api/openapi.yaml
+          grep -q "  /files/upload:" docs/api/openapi.yaml
+          grep -q "  /tasks:" docs/api/openapi.yaml
+          grep -q "  /tasks/{task_id}:" docs/api/openapi.yaml
+          grep -q "  /tasks/{task_id}/progress:" docs/api/openapi.yaml
