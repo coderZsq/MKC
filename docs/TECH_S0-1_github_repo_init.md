@@ -406,7 +406,7 @@ MIT
 
 - [x] 仓库创建并配置分支保护
 - [x] .gitignore 覆盖所有服务
-- [ ] GitHub Project 看板配置完成
+- [x] GitHub Project 看板配置完成
 - [x] Issue/PR 模板添加
 - [x] README 骨架编写完成
 - [x] 第一条 commit 提交成功
