@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: mkc-dev
+  labels:
+    app: gateway
+    app.kubernetes.io/part-of: mkc
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+# NOTE: Deployment manifest will be added in S0-7 (Go gateway skeleton).
+# This Service + Ingress reserves the network endpoint for local development.
