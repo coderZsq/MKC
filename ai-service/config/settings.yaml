@@ -1,0 +1,14 @@
+app:
+  name: mkc-ai-service
+  env: dev
+  port: 5000
+
+log:
+  level: INFO
+
+redis:
+  url: redis://redis:6379/0
+
+celery:
+  broker_url: redis://redis:6379/1
+  result_backend: redis://redis:6379/1

@@ -26,6 +26,8 @@ jobs:
     defaults:
       run:
         working-directory: ./ai-service
+    env:
+      INTERNAL_API_KEY: ci-test-internal-key
     steps:
       - uses: actions/checkout@v4
 
@@ -54,7 +56,7 @@ jobs:
         run: mypy app
 
       - name: Run tests
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml
+        run: python -m pytest --cov=app --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
