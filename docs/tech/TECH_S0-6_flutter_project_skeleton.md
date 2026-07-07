@@ -1,7 +1,7 @@
 # 技术文档：[S0-6] Flutter 项目骨架与架构设计
 
 > 版本：v1.0  
-> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/移动端负责人  > 关联 PRD：[PRD_S0-6_flutter_project_skeleton.md](./PRD_S0-6_flutter_project_skeleton.md)
+> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/移动端负责人  > 关联 PRD：[PRD_S0-6_flutter_project_skeleton.md](../prd/PRD_S0-6_flutter_project_skeleton.md)
 
 ---
 

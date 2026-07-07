@@ -1,7 +1,7 @@
 # 技术文档：[S0-5] API 接口设计规范与技术实现
 
 > 版本：v1.0  
-> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/API 负责人  > 关联 PRD：[PRD_S0-5_api_interface_design.md](./PRD_S0-5_api_interface_design.md)
+> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/API 负责人  > 关联 PRD：[PRD_S0-5_api_interface_design.md](../prd/PRD_S0-5_api_interface_design.md)
 
 ---
 

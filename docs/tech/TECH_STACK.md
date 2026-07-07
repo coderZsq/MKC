@@ -199,11 +199,11 @@ MKC 是一个面向个人知识管理的多媒体 AI 伴侣，核心能力包括
 
 ## 6. 相关文档
 
-- [TECH_S0-1_github_repo_init.md](docs/TECH_S0-1_github_repo_init.md)
-- [TECH_S0-2_local_k8s_manifests.md](docs/TECH_S0-2_local_k8s_manifests.md)
-- [TECH_S0-3_github_actions_ci.md](docs/TECH_S0-3_github_actions_ci.md)
-- [TECH_S0-4_database_schema_migration.md](docs/TECH_S0-4_database_schema_migration.md)
-- [TECH_S0-5_api_interface_design.md](docs/TECH_S0-5_api_interface_design.md)
-- [TECH_S0-6_flutter_project_skeleton.md](docs/TECH_S0-6_flutter_project_skeleton.md)
-- [TECH_S0-7_go_gateway_skeleton.md](docs/TECH_S0-7_go_gateway_skeleton.md)
-- [TECH_S0-8_python_ai_service_skeleton.md](docs/TECH_S0-8_python_ai_service_skeleton.md)
+- [TECH_S0-1_github_repo_init.md](./TECH_S0-1_github_repo_init.md)
+- [TECH_S0-2_local_k8s_manifests.md](./TECH_S0-2_local_k8s_manifests.md)
+- [TECH_S0-3_github_actions_ci.md](./TECH_S0-3_github_actions_ci.md)
+- [TECH_S0-4_database_schema_migration.md](./TECH_S0-4_database_schema_migration.md)
+- [TECH_S0-5_api_interface_design.md](./TECH_S0-5_api_interface_design.md)
+- [TECH_S0-6_flutter_project_skeleton.md](./TECH_S0-6_flutter_project_skeleton.md)
+- [TECH_S0-7_go_gateway_skeleton.md](./TECH_S0-7_go_gateway_skeleton.md)
+- [TECH_S0-8_python_ai_service_skeleton.md](./TECH_S0-8_python_ai_service_skeleton.md)

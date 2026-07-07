@@ -1,6 +1,6 @@
 # MKC 系统架构
 
-详见 [TECH_STACK.md](./TECH_STACK.md) 与 [TECH_S0-2_local_k8s_manifests.md](./TECH_S0-2_local_k8s_manifests.md)。
+详见 [TECH_STACK.md](./tech/TECH_STACK.md) 与 [TECH_S0-2_local_k8s_manifests.md](./tech/TECH_S0-2_local_k8s_manifests.md)。
 
 ## 架构图
 

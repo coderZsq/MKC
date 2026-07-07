@@ -1,7 +1,7 @@
 # 技术文档：[S0-2] 本地 Kubernetes 开发环境与基础设施部署架构
 
 > 版本：v1.0  
-> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/平台负责人  > 关联 PRD：[PRD_S0-2_local_k8s_manifests.md](./PRD_S0-2_local_k8s_manifests.md)
+> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/平台负责人  > 关联 PRD：[PRD_S0-2_local_k8s_manifests.md](../prd/PRD_S0-2_local_k8s_manifests.md)
 
 ---
 

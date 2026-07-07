@@ -4,7 +4,7 @@
 > 日期：2026-07-06  
 > 作者：朱双泉  
 > 级别：架构师/后端负责人  
-> 关联 PRD：[PRD_S0-4_database_schema_migration.md](./PRD_S0-4_database_schema_migration.md)
+> 关联 PRD：[PRD_S0-4_database_schema_migration.md](../prd/PRD_S0-4_database_schema_migration.md)
 
 ---
 
