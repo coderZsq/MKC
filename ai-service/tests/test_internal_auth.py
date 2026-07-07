@@ -1,4 +1,8 @@
+import os
+
 from flask.testing import FlaskClient
+
+INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "test-internal-key")
 
 
 def test_internal_health_missing_key(client: FlaskClient) -> None:
@@ -21,7 +25,7 @@ def test_internal_health_wrong_key(client: FlaskClient) -> None:
 def test_internal_health_valid_key(client: FlaskClient) -> None:
     response = client.get(
         "/api/v1/internal/health",
-        headers={"X-Internal-Key": "test-internal-key"},
+        headers={"X-Internal-Key": INTERNAL_API_KEY},
     )
     assert response.status_code == 200
 
