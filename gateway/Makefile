@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean docker
+.PHONY: build run test lint clean docker migrate-up migrate-down
 
 build:
 	go build -o bin/server ./cmd/server
@@ -17,3 +17,9 @@ clean:
 
 docker:
 	docker build -t mkc-gateway:latest .
+
+migrate-up:
+	go run ./cmd/migrate up
+
+migrate-down:
+	go run ./cmd/migrate down
