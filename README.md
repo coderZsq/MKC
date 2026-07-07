@@ -28,6 +28,18 @@
 
 见 [技术文档 TECH_S0-1](./docs/tech/TECH_S0-1_github_repo_init.md)。
 
+## API 文档
+
+API 接口契约位于 [docs/api/openapi.yaml](docs/api/openapi.yaml)，设计说明见 [docs/api/api-design.md](docs/api/api-design.md)。
+
+Gateway 启动后，可通过 Swagger UI 在线查看文档：
+
+```text
+http://mkc.local/swagger/index.html
+```
+
+本地开发环境请替换 `mkc.local` 为实际服务地址。
+
 ## License
 
 MIT
