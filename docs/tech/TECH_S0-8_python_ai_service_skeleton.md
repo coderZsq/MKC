@@ -1,7 +1,7 @@
 # 技术文档：[S0-8] Python AI Service 项目骨架与架构设计
 
 > 版本：v1.0  
-> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/AI 服务负责人  > 关联 PRD：[PRD_S0-8_python_ai_service_skeleton.md](./PRD_S0-8_python_ai_service_skeleton.md)
+> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/AI 服务负责人  > 关联 PRD：[PRD_S0-8_python_ai_service_skeleton.md](../prd/PRD_S0-8_python_ai_service_skeleton.md)
 
 ---
 

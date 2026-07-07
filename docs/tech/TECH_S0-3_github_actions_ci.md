@@ -1,6 +1,6 @@
 # 技术文档：[S0-3] GitHub Actions CI/CD 流水线架构
 
-> 版本：v1.0  > 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/DevOps 负责人  > 关联 PRD：[PRD_S0-3_github_actions_ci.md](./PRD_S0-3_github_actions_ci.md)
+> 版本：v1.0  > 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/DevOps 负责人  > 关联 PRD：[PRD_S0-3_github_actions_ci.md](../prd/PRD_S0-3_github_actions_ci.md)
 
 ---
 

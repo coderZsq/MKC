@@ -22,7 +22,7 @@
 
 ## 目录结构
 
-见 [技术文档 TECH_S0-1](./docs/TECH_S0-1_github_repo_init.md)。
+见 [技术文档 TECH_S0-1](./docs/tech/TECH_S0-1_github_repo_init.md)。
 
 ## License
 

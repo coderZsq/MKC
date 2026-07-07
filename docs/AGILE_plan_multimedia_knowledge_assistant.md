@@ -1,7 +1,7 @@
 # 敏捷排卡计划：多媒体 AI 知识库助手
 
 > 版本：v1.0  
-> 日期：2026-07-06  > 作者：朱双泉  > 基于 PRD：[PRD_multimedia_knowledge_assistant.md](./PRD_multimedia_knowledge_assistant.md)
+> 日期：2026-07-06  > 作者：朱双泉  > 基于 PRD：[PRD_multimedia_knowledge_assistant.md](./prd/PRD_multimedia_knowledge_assistant.md)
 
 ---
 

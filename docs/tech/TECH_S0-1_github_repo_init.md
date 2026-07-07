@@ -4,7 +4,7 @@
 > 日期：2026-07-06  
 > 作者：朱双泉  
 > 级别：架构师/技术负责人  
-> 关联 PRD：[PRD_S0-1_github_repo_init.md](./PRD_S0-1_github_repo_init.md)
+> 关联 PRD：[PRD_S0-1_github_repo_init.md](../prd/PRD_S0-1_github_repo_init.md)
 
 ---
 
@@ -196,7 +196,12 @@ mkc/
 │   │   └── port-forward.sh
 │   └── README.md
 ├── docs/                           # 项目文档
-│   ├── PRD_multimedia_knowledge_assistant.md
+│   ├── prd/                        # 产品需求文档
+│   │   ├── PRD_multimedia_knowledge_assistant.md
+│   │   └── PRD_S0-1_github_repo_init.md
+│   ├── tech/                       # 技术文档
+│   │   ├── TECH_STACK.md
+│   │   └── TECH_S0-1_github_repo_init.md
 │   ├── AGILE_plan_multimedia_knowledge_assistant.md
 │   ├── architecture.md             # 系统架构图与说明
 │   ├── api/

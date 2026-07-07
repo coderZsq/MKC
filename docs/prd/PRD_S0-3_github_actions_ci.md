@@ -3,7 +3,7 @@
 > 版本：v1.0  
 > 日期：2026-07-06  
 > 作者：朱双泉  
-> 关联文档：[PRD_multimedia_knowledge_assistant.md](./PRD_multimedia_knowledge_assistant.md)、[AGILE_plan_multimedia_knowledge_assistant.md](./AGILE_plan_multimedia_knowledge_assistant.md)
+> 关联文档：[PRD_multimedia_knowledge_assistant.md](./PRD_multimedia_knowledge_assistant.md)、[AGILE_plan_multimedia_knowledge_assistant.md](../AGILE_plan_multimedia_knowledge_assistant.md)
 
 ---
 

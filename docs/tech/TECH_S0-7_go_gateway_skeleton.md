@@ -1,7 +1,7 @@
 # 技术文档：[S0-7] Go Gateway 服务骨架与架构设计
 
 > 版本：v1.0  
-> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/后端负责人  > 关联 PRD：[PRD_S0-7_go_gateway_skeleton.md](./PRD_S0-7_go_gateway_skeleton.md)
+> 日期：2026-07-06  > 作者：朱双泉  > 级别：架构师/后端负责人  > 关联 PRD：[PRD_S0-7_go_gateway_skeleton.md](../prd/PRD_S0-7_go_gateway_skeleton.md)
 
 ---
 

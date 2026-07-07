@@ -3,7 +3,7 @@
 > 版本：v1.0  
 > 日期：2026-07-06  
 > 作者：朱双泉  
-> 关联文档：[PRD_multimedia_knowledge_assistant.md](./PRD_multimedia_knowledge_assistant.md)、[AGILE_plan_multimedia_knowledge_assistant.md](./AGILE_plan_multimedia_knowledge_assistant.md)
+> 关联文档：[PRD_multimedia_knowledge_assistant.md](./PRD_multimedia_knowledge_assistant.md)、[AGILE_plan_multimedia_knowledge_assistant.md](../AGILE_plan_multimedia_knowledge_assistant.md)
 
 ---
 
@@ -74,9 +74,20 @@ mkc/
 │   ├── scripts/              # 部署与初始化脚本
 │   └── README.md
 ├── docs/                     # 项目文档
-│   ├── PRD_multimedia_knowledge_assistant.md
+│   ├── prd/                  # 产品需求文档
+│   │   ├── PRD_multimedia_knowledge_assistant.md
+│   │   └── PRD_S0-1_github_repo_init.md
+│   ├── tech/                 # 技术文档
+│   │   ├── TECH_STACK.md
+│   │   └── TECH_S0-1_github_repo_init.md
 │   ├── AGILE_plan_multimedia_knowledge_assistant.md
-│   └── architecture.md
+│   ├── architecture.md
+│   ├── api/
+│   │   ├── openapi.yaml
+│   │   └── api-design.md
+│   ├── database-schema.md
+│   └── runbooks/
+│       └── troubleshooting.md
 ├── .gitignore
 ├── LICENSE
 └── README.md
