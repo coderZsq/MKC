@@ -35,7 +35,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer appLogger.Sync()
+	defer func() { _ = appLogger.Sync() }()
 
 	deps := buildDependencies(cfg, appLogger)
 	healthSvc := service.NewHealthService(cfg.App.Version, deps...)
