@@ -1,5 +1,9 @@
 # MKC - Multimedia AI Knowledge Companion
 
+![CI - Gateway](https://github.com/coderZsq/mkc/actions/workflows/ci-gateway.yml/badge.svg)
+![CI - AI Service](https://github.com/coderZsq/mkc/actions/workflows/ci-ai-service.yml/badge.svg)
+![CI - Client](https://github.com/coderZsq/mkc/actions/workflows/ci-client.yml/badge.svg)
+
 基于 Flutter + Go + Python 的多媒体 AI 知识库助手。
 
 ## 核心能力
