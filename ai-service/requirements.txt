@@ -9,4 +9,4 @@ gevent==24.2.1
 opentelemetry-api==1.25.0
 opentelemetry-sdk==1.25.0
 opentelemetry-instrumentation-flask==0.46b0
-opentelemetry-exporter-otlp==1.25.0
+opentelemetry-exporter-otlp==1.43.0
