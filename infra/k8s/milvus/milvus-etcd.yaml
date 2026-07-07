@@ -1,0 +1,89 @@
+# Milvus dependency: etcd
+apiVersion: v1
+kind: Service
+metadata:
+  name: milvus-etcd
+  namespace: mkc-dev
+  labels:
+    app: milvus-etcd
+    app.kubernetes.io/part-of: mkc
+spec:
+  type: ClusterIP
+  selector:
+    app: milvus-etcd
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: peer
+      port: 2380
+      targetPort: 2380
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: milvus-etcd
+  namespace: mkc-dev
+  labels:
+    app: milvus-etcd
+    app.kubernetes.io/part-of: mkc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: milvus-etcd
+  template:
+    metadata:
+      labels:
+        app: milvus-etcd
+        app.kubernetes.io/part-of: mkc
+    spec:
+      containers:
+        - name: etcd
+          image: quay.m.daocloud.io/coreos/etcd:v3.5.14
+          imagePullPolicy: IfNotPresent
+          command:
+            - etcd
+            - --advertise-client-urls=http://milvus-etcd:2379
+            - --listen-client-urls=http://0.0.0.0:2379
+            - --listen-peer-urls=http://0.0.0.0:2380
+            - --initial-advertise-peer-urls=http://milvus-etcd:2380
+            - --initial-cluster=default=http://milvus-etcd:2380
+            - --initial-cluster-token=milvus-etcd
+            - --initial-cluster-state=new
+            - --auto-compaction-retention=1
+            - --data-dir=/etcd-data
+          ports:
+            - name: client
+              containerPort: 2379
+            - name: peer
+              containerPort: 2380
+          volumeMounts:
+            - name: data
+              mountPath: /etcd-data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            exec:
+              command:
+                - etcdctl
+                - endpoint
+                - health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - etcdctl
+                - endpoint
+                - health
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          emptyDir: {}

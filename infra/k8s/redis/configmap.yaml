@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: mkc-dev
+  labels:
+    app.kubernetes.io/part-of: mkc
+data:
+  redis.conf: |
+    appendonly yes
+    appendfsync everysec
+    maxmemory 128mb
+    maxmemory-policy allkeys-lru
+    bind 0.0.0.0
+    protected-mode no
