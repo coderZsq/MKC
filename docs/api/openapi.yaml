@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: MKC API
-  version: 0.1.0
+  version: 1.0.0
   description: Multimedia Knowledge Companion API
 
 servers:
@@ -11,9 +11,597 @@ servers:
 paths:
   /health:
     get:
+      tags: [System]
       summary: Health check
+      operationId: healthCheck
       responses:
         '200':
-          description: OK
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
 
-# 详见 TECH_S0-5_api_interface_design.md
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: User login
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: User logout
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /files/upload:
+    post:
+      tags: [Files]
+      summary: Upload a file
+      description: |
+        Upload a multimedia file. The endpoint accepts `multipart/form-data`.
+        Maximum file size is 500 MB. Supported types include audio, video, PDF,
+        and common document formats. Chunked upload fields (`upload_id`,
+        `chunk_index`) are reserved for future use.
+      operationId: uploadFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Binary file content
+                upload_id:
+                  type: string
+                  description: Reserved for chunked uploads
+                chunk_index:
+                  type: integer
+                  description: Reserved for chunked uploads
+      responses:
+        '200':
+          description: File accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      operationId: listTasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks/{task_id}:
+    get:
+      tags: [Tasks]
+      summary: Get task details
+      operationId: getTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks/{task_id}/progress:
+    get:
+      tags: [Tasks]
+      summary: Task progress SSE stream
+      operationId: taskProgressStream
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: SSE stream of task progress events
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/TaskProgressEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access_token. Example `Bearer <access_token>`
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: BAD_REQUEST
+              message: 请求参数错误
+            meta: null
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: UNAUTHORIZED
+              message: 访问令牌已过期或无效
+            meta: null
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: FORBIDDEN
+              message: 无权访问该资源
+            meta: null
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: NOT_FOUND
+              message: 资源不存在
+            meta: null
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: CONFLICT
+              message: 资源冲突
+            meta: null
+
+    PayloadTooLarge:
+      description: File too large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: FILE_TOO_LARGE
+              message: 文件超过大小限制
+            meta: null
+
+    UnsupportedMediaType:
+      description: Unsupported media type
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: FILE_UNSUPPORTED_TYPE
+              message: 不支持的文件类型
+            meta: null
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: INTERNAL_ERROR
+              message: 服务器内部错误
+            meta: null
+
+  schemas:
+    Envelope:
+      type: object
+      required: [success, data, error, meta]
+      properties:
+        success:
+          type: boolean
+          description: Indicates whether the request succeeded
+        data:
+          nullable: true
+          description: Response payload when success is true
+        error:
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/Error'
+        meta:
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/Meta'
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorDetail'
+          description: Optional validation error details
+
+    ValidationErrorDetail:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    Meta:
+      type: object
+      nullable: true
+      properties:
+        request_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        page:
+          type: integer
+          description: Current page for paginated responses
+        limit:
+          type: integer
+          description: Items per page for paginated responses
+        total:
+          type: integer
+          description: Total items for paginated responses
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      required: [user_id, access_token, refresh_token, expires_in, token_type]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          description: Access token TTL in seconds
+          example: 900
+        token_type:
+          type: string
+          example: Bearer
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    RefreshResponse:
+      type: object
+      required: [access_token, expires_in, token_type]
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 900
+        token_type:
+          type: string
+          example: Bearer
+
+    UserProfile:
+      type: object
+      required: [user_id, email, nickname, status, created_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        nickname:
+          type: string
+        avatar_url:
+          type: string
+        status:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    UploadResponse:
+      type: object
+      required: [resource_id, name, type, status, size_bytes]
+      properties:
+        resource_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          example: uploading
+        size_bytes:
+          type: integer
+
+    Task:
+      type: object
+      required: [task_id, resource_id, user_id, type, status, progress, created_at, updated_at]
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        status:
+          type: string
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        result:
+          type: object
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TaskProgressEvent:
+      type: object
+      required: [event, data]
+      properties:
+        event:
+          type: string
+          enum: [chunk, done, error]
+        data:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: string
+            progress:
+              type: integer
+            done:
+              type: boolean
+            error_code:
+              type: string
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
