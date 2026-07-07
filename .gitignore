@@ -1,0 +1,61 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env / Secrets
+.env
+.env.local
+*.secret.yaml
+*.secret.yml
+secrets/
+
+# Flutter / Dart
+client/.dart_tool/
+client/.packages
+client/build/
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+client/.pub-cache/
+client/.pub/
+client/pubspec.lock
+
+# Go
+gateway/bin/
+gateway/vendor/
+gateway/*.exe
+gateway/coverage.out
+
+# Python
+ai-service/.venv/
+ai-service/__pycache__/
+ai-service/*.pyc
+ai-service/.pytest_cache/
+ai-service/.mypy_cache/
+ai-service/htmlcov/
+ai-service/.coverage
+ai-service/*.egg-info/
+ai-service/dist/
+ai-service/build/
+
+# Models / Data
+ai-service/models/*
+!ai-service/models/.gitkeep
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# K8s / Infra
+infra/k8s/**/*-secret.yaml
+infra/k8s/**/secret*.yaml
+
+# Logs
+*.log
+logs/
