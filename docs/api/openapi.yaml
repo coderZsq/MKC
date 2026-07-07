@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info:
+  title: MKC API
+  version: 0.1.0
+  description: Multimedia Knowledge Companion API
+
+servers:
+  - url: http://mkc.local/api/v1
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+# 详见 TECH_S0-5_api_interface_design.md

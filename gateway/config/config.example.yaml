@@ -1,0 +1,34 @@
+app:
+  name: mkc-gateway
+  version: 0.1.0
+  env: dev
+  port: 8080
+
+log:
+  level: info
+  format: json
+
+mysql:
+  host: localhost
+  port: 3306
+  user: mkc
+  password: ""
+  dbname: mkc
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+jwt:
+  secret: "change-me-in-prod"
+  access_ttl: 15m
+  refresh_ttl: 168h
+
+ai_service:
+  base_url: http://localhost:5000
+  timeout: 60s

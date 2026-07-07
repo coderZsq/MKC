@@ -1,0 +1,16 @@
+name: CD - Deploy
+
+# Sprint 5 启用：构建镜像并部署到生产 Kubernetes 集群
+on:
+  workflow_dispatch:
+  # push:
+  #   tags:
+  #     - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and push images
+        run: echo "Sprint 5: implement build and deploy steps"
