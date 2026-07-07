@@ -2,7 +2,10 @@ app:
   name: mkc-gateway
   version: 0.1.0
   env: dev
+
+server:
   port: 8080
+  mode: debug
 
 log:
   level: info
