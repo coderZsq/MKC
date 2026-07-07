@@ -26,6 +26,8 @@ jobs:
     defaults:
       run:
         working-directory: ./ai-service
+    env:
+      INTERNAL_API_KEY: ci-test-internal-key
     steps:
       - uses: actions/checkout@v4
 

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mkc-ai-service
+  labels:
+    app: mkc-ai-service
+spec:
+  selector:
+    app: mkc-ai-service
+  ports:
+    - port: 5000
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  type: ClusterIP
