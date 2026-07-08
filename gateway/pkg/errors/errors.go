@@ -18,16 +18,17 @@ func (e *AppError) Error() string {
 
 // Common error codes used across the gateway.
 const (
-	CodeInternalError   = "INTERNAL_ERROR"
-	CodeBadRequest      = "BAD_REQUEST"
-	CodeValidationError = "VALIDATION_ERROR"
-	CodeUnauthorized    = "UNAUTHORIZED"
-	CodeForbidden       = "FORBIDDEN"
-	CodeNotFound        = "NOT_FOUND"
-	CodeConflict        = "CONFLICT"
-	CodeTooManyRequests = "TOO_MANY_REQUESTS"
-	CodeInvalidToken    = "AUTH_INVALID_TOKEN"
-	CodeTokenExpired    = "AUTH_TOKEN_EXPIRED"
+	CodeInternalError          = "INTERNAL_ERROR"
+	CodeBadRequest             = "BAD_REQUEST"
+	CodeValidationError        = "VALIDATION_ERROR"
+	CodeUnauthorized           = "UNAUTHORIZED"
+	CodeForbidden              = "FORBIDDEN"
+	CodeNotFound               = "NOT_FOUND"
+	CodeConflict               = "CONFLICT"
+	CodeTooManyRequests        = "TOO_MANY_REQUESTS"
+	CodeInvalidToken           = "AUTH_INVALID_TOKEN"
+	CodeTokenExpired           = "AUTH_TOKEN_EXPIRED"
+	CodeInvalidStateTransition = "INVALID_STATE_TRANSITION"
 )
 
 // New creates a new AppError.
