@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../config/constants.dart';
 import '../providers/auth_provider.dart';
+import '../routes/app_routes.dart';
 
 /// Launch screen shown while the app initializes.
 class SplashPage extends ConsumerStatefulWidget {
@@ -16,8 +19,13 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authNotifierProvider.notifier).checkAuthentication();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(authNotifierProvider.notifier).checkAuthentication();
+      if (!mounted) return;
+      final status = ref.read(authNotifierProvider).status;
+      GoRouter.maybeOf(context)?.go(
+        status == AuthScreenStatus.authenticated ? homeRoute : loginRoute,
+      );
     });
   }
 

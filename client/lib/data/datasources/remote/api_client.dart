@@ -122,8 +122,13 @@ class ApiClient {
         return const NetworkException();
       case DioExceptionType.badResponse:
         final status = e.response?.statusCode;
+        final body = e.response?.data;
+        String? errorCode;
+        if (body is Map<String, dynamic>) {
+          errorCode = (body['error'] as Map<String, dynamic>?)?['code'] as String?;
+        }
         if (status == 401) return const UnauthorizedException();
-        return ServerException(code: status?.toString());
+        return ServerException(code: errorCode ?? status?.toString());
       case DioExceptionType.cancel:
       case DioExceptionType.unknown:
       case DioExceptionType.transformTimeout:
