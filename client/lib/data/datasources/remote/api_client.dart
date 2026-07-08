@@ -10,24 +10,25 @@ class ApiClient {
   ApiClient({
     required String baseUrl,
     required TokenProvider tokenProvider,
-  }) : _tokenProvider = tokenProvider {
-    _dio = Dio(
-      BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 30),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ),
-    );
-
+    Dio? dio,
+  })  : _tokenProvider = tokenProvider,
+        _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: baseUrl,
+                connectTimeout: const Duration(seconds: 10),
+                receiveTimeout: const Duration(seconds: 30),
+                headers: <String, String>{
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+              ),
+            ) {
     _dio.interceptors.add(_authInterceptor());
     _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
   }
 
-  late final Dio _dio;
+  final Dio _dio;
   final TokenProvider _tokenProvider;
   final _uuid = const Uuid();
 
