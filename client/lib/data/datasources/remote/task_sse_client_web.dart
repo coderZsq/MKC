@@ -105,8 +105,7 @@ class TaskSseClientImpl implements TaskSseClient {
         eventSource!.addEventListener(
           name,
           (html.Event event) {
-            final messageEvent = event as html.MessageEvent;
-            final raw = messageEvent.data?.toString() ?? '';
+            final raw = ((event as dynamic).data as Object?)?.toString() ?? '';
             if (raw.isEmpty) return;
             try {
               final json = jsonDecode(raw) as Map<String, dynamic>;
