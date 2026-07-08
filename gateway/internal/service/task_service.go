@@ -36,6 +36,7 @@ type CreateTaskRequest struct {
 type TaskDTO struct {
 	TaskID       string          `json:"task_id"`
 	ResourceID   string          `json:"resource_id"`
+	ResourceName string          `json:"resource_name"`
 	UserID       string          `json:"user_id,omitempty"`
 	Type         string          `json:"type"`
 	Status       string          `json:"status"`
@@ -128,6 +129,7 @@ func (s *taskService) Create(ctx context.Context, userID uint64, req CreateTaskR
 
 	dto := toTaskDTO(task)
 	dto.ResourceID = resource.UUID
+	dto.ResourceName = resource.Name
 	return &dto, nil
 }
 
@@ -249,6 +251,7 @@ func toTaskDTO(task *model.Task) TaskDTO {
 	return TaskDTO{
 		TaskID:       task.UUID,
 		ResourceID:   resourceID,
+		ResourceName: task.Resource.Name,
 		UserID:       userID,
 		Type:         task.Type,
 		Status:       task.Status,
