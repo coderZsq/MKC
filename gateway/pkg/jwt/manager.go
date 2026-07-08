@@ -30,6 +30,14 @@ func NewManager(secret string, accessTTL, refreshTTL time.Duration) *Manager {
 	}
 }
 
+func (m *Manager) AccessTTL() time.Duration {
+	return m.accessTTL
+}
+
+func (m *Manager) RefreshTTL() time.Duration {
+	return m.refreshTTL
+}
+
 // GenerateAccessToken creates a signed access token for the user.
 func (m *Manager) GenerateAccessToken(userUUID, email string) (string, error) {
 	claims := Claims{

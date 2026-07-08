@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,4 +108,22 @@ ai_service:
 func TestLoad_InvalidPort(t *testing.T) {
 	cfg := &Config{Server: ServerConfig{Port: 0}}
 	assert.Error(t, cfg.validate())
+}
+
+func TestLoad_MissingJWTSecret(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{Port: 8080},
+		JWT:    JWTConfig{Secret: ""},
+	}
+	assert.Error(t, cfg.validate())
+}
+
+func TestLoad_DefaultJWTTTLs(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{Port: 8080},
+		JWT:    JWTConfig{Secret: "test-secret"},
+	}
+	require.NoError(t, cfg.validate())
+	assert.Equal(t, 15*time.Minute, cfg.JWT.AccessTTL)
+	assert.Equal(t, 7*24*time.Hour, cfg.JWT.RefreshTTL)
 }

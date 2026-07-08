@@ -7,11 +7,12 @@ import (
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/internal/handler"
 	"github.com/zhushuangquan/mkc/gateway/internal/middleware"
+	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 	"go.uber.org/zap"
 )
 
 // New creates and configures a Gin engine with middlewares and routes.
-func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler) *gin.Engine {
+func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, jwtMgr *jwt.Manager) *gin.Engine {
 	mode := gin.ReleaseMode
 	if cfg.Server.Mode == "debug" || cfg.Server.Mode == "" && cfg.App.Env == "dev" {
 		mode = gin.DebugMode
@@ -31,6 +32,21 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler) 
 	r.GET("/health", health.Health)
 	r.GET("/api/v1/health", health.Health)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	if auth != nil && jwtMgr != nil {
+		authLimit := middleware.NewRateLimiter(10, 60)
+		api := r.Group("/api/v1")
+		{
+			authGroup := api.Group("/auth")
+			authGroup.Use(authLimit.Limit())
+			authGroup.POST("/register", auth.Register)
+			authGroup.POST("/login", auth.Login)
+			authGroup.POST("/refresh", auth.Refresh)
+			authGroup.POST("/logout", auth.Logout)
+
+			api.GET("/auth/me", middleware.JWTAuth(jwtMgr), auth.Me)
+		}
+	}
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{

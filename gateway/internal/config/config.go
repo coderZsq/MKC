@@ -112,5 +112,14 @@ func (c *Config) validate() error {
 	if c.Log.Format == "" {
 		c.Log.Format = "json"
 	}
+	if c.JWT.Secret == "" {
+		return fmt.Errorf("jwt.secret must be set")
+	}
+	if c.JWT.AccessTTL <= 0 {
+		c.JWT.AccessTTL = 15 * time.Minute
+	}
+	if c.JWT.RefreshTTL <= 0 {
+		c.JWT.RefreshTTL = 7 * 24 * time.Hour
+	}
 	return nil
 }

@@ -15,7 +15,7 @@ type User struct {
 	Nickname     string         `gorm:"column:nickname;type:varchar(100)"`
 	AvatarURL    string         `gorm:"column:avatar_url;type:varchar(512)"`
 	Status       uint8          `gorm:"column:status;type:tinyint unsigned;default:1"`
-	CreatedAt    time.Time      `gorm:"column:created_at;type:datetime(3);autoCreateTime"`
-	UpdatedAt    time.Time      `gorm:"column:updated_at;type:datetime(3);autoUpdateTime"`
-	DeletedAt    gorm.DeletedAt `gorm:"column:deleted_at;type:datetime(3);index"`
+	CreatedAt    time.Time      `gorm:"column:created_at;type:datetime;autoCreateTime"`
+	UpdatedAt    time.Time      `gorm:"column:updated_at;type:datetime;autoUpdateTime"`
+	DeletedAt    gorm.DeletedAt `gorm:"column:deleted_at;type:datetime;index"`
 }

@@ -49,6 +49,10 @@ func NotFound(resource string) *AppError {
 	return New(404, CodeNotFound, resource+" not found")
 }
 
+func Conflict(message string) *AppError {
+	return New(409, CodeConflict, message)
+}
+
 func Internal(message string) *AppError {
 	return New(500, CodeInternalError, message)
 }

@@ -26,7 +26,7 @@ func TestNoRoute_ReturnsNotFoundEnvelope(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h)
+	r := New(cfg, logger, h, nil, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/not-a-real-path", nil)
