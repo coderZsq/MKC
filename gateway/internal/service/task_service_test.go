@@ -111,7 +111,7 @@ func TestTaskService_Create_Success(t *testing.T) {
 
 	resourceUUID := uuid.NewString()
 	resourceRepo.getByUUIDAndUserFunc = func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
-		return &model.Resource{ID: 1, UUID: uuid, Type: "media_parse"}, nil
+		return &model.Resource{ID: 1, UUID: uuid, Name: "test.pdf", Type: "media_parse"}, nil
 	}
 	taskRepo.createFunc = func(ctx context.Context, t *model.Task) error {
 		t.ID = 10
@@ -133,7 +133,7 @@ func TestTaskService_Create_DefaultsToResourceType(t *testing.T) {
 
 	resourceUUID := uuid.NewString()
 	resourceRepo.getByUUIDAndUserFunc = func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
-		return &model.Resource{ID: 1, UUID: uuid, Type: "media_parse"}, nil
+		return &model.Resource{ID: 1, UUID: uuid, Name: "test.pdf", Type: "media_parse"}, nil
 	}
 
 	result, err := svc.Create(context.Background(), 42, CreateTaskRequest{ResourceID: resourceUUID})
@@ -192,7 +192,7 @@ func TestTaskService_Get_Success(t *testing.T) {
 			UUID:       uuid,
 			UserID:     userID,
 			ResourceID: 10,
-			Resource:   model.Resource{UUID: "res-uuid"},
+			Resource:   model.Resource{UUID: "res-uuid", Name: "test.pdf"},
 			Type:       "media_parse",
 			Status:     model.TaskStatusRunning,
 			Progress:   50,
@@ -231,7 +231,7 @@ func TestTaskService_List_Success(t *testing.T) {
 
 	taskRepo.listByUserIDFunc = func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 		return []model.Task{
-			{UUID: "t1", UserID: userID, Resource: model.Resource{UUID: "r1"}, Status: model.TaskStatusPending},
+			{UUID: "t1", UserID: userID, Resource: model.Resource{UUID: "r1", Name: "test.pdf"}, Status: model.TaskStatusPending},
 		}, 1, nil
 	}
 
@@ -390,7 +390,7 @@ func TestTaskService_toTaskDTO(t *testing.T) {
 		UUID:       uuid.NewString(),
 		UserID:     42,
 		ResourceID: 10,
-		Resource:   model.Resource{UUID: "res-uuid"},
+		Resource:   model.Resource{UUID: "res-uuid", Name: "test.pdf"},
 		Type:       "media_parse",
 		Status:     model.TaskStatusPending,
 		Progress:   0,
@@ -401,6 +401,7 @@ func TestTaskService_toTaskDTO(t *testing.T) {
 	dto := toTaskDTO(task)
 	assert.Equal(t, task.UUID, dto.TaskID)
 	assert.Equal(t, "res-uuid", dto.ResourceID)
+	assert.Equal(t, "test.pdf", dto.ResourceName)
 	assert.Equal(t, "42", dto.UserID)
 	assert.Equal(t, now.Unix(), dto.CreatedAt)
 }
