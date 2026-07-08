@@ -102,7 +102,7 @@ var _ repository.TaskRepository = (*stubTaskRepositoryForTask)(nil)
 func newTestTaskService(t *testing.T) (*taskService, *stubResourceRepositoryForTask, *stubTaskRepositoryForTask) {
 	resourceRepo := &stubResourceRepositoryForTask{}
 	taskRepo := &stubTaskRepositoryForTask{}
-	svc := NewTaskService(zap.NewNop(), resourceRepo, taskRepo).(*taskService)
+	svc := NewTaskService(zap.NewNop(), resourceRepo, taskRepo, nil).(*taskService)
 	return svc, resourceRepo, taskRepo
 }
 
@@ -404,4 +404,90 @@ func TestTaskService_toTaskDTO(t *testing.T) {
 	assert.Equal(t, "test.pdf", dto.ResourceName)
 	assert.Equal(t, "42", dto.UserID)
 	assert.Equal(t, now.Unix(), dto.CreatedAt)
+}
+
+type fakeTaskBroadcaster struct {
+	events []TaskEvent
+}
+
+func (f *fakeTaskBroadcaster) Subscribe(ctx context.Context, taskID string) (<-chan TaskEvent, error) {
+	return make(chan TaskEvent), nil
+}
+
+func (f *fakeTaskBroadcaster) Publish(ctx context.Context, taskID string, event TaskEvent) {
+	f.events = append(f.events, event)
+}
+
+func (f *fakeTaskBroadcaster) Close(taskID string) {}
+
+func TestTaskService_UpdateProgress_PublishesEvent(t *testing.T) {
+	broadcaster := &fakeTaskBroadcaster{}
+	svc := NewTaskService(zap.NewNop(), &stubResourceRepositoryForTask{}, &stubTaskRepositoryForTask{
+		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
+			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
+		},
+		updateProgressFunc: func(ctx context.Context, id uint64, p uint8) error { return nil },
+	}, broadcaster).(*taskService)
+
+	err := svc.UpdateProgress(context.Background(), "task-uuid", 60)
+
+	require.NoError(t, err)
+	require.Len(t, broadcaster.events, 1)
+	assert.Equal(t, "progress", broadcaster.events[0].EventType)
+	assert.Equal(t, "running", broadcaster.events[0].Status)
+	assert.Equal(t, uint8(60), broadcaster.events[0].Progress)
+}
+
+func TestTaskService_MarkRunning_PublishesStatusEvent(t *testing.T) {
+	broadcaster := &fakeTaskBroadcaster{}
+	svc := NewTaskService(zap.NewNop(), &stubResourceRepositoryForTask{}, &stubTaskRepositoryForTask{
+		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
+			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusPending}, nil
+		},
+		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
+	}, broadcaster).(*taskService)
+
+	err := svc.MarkRunning(context.Background(), "task-uuid")
+
+	require.NoError(t, err)
+	require.Len(t, broadcaster.events, 1)
+	assert.Equal(t, "status", broadcaster.events[0].EventType)
+	assert.Equal(t, "running", broadcaster.events[0].Status)
+}
+
+func TestTaskService_MarkCompleted_PublishesDoneEvent(t *testing.T) {
+	broadcaster := &fakeTaskBroadcaster{}
+	svc := NewTaskService(zap.NewNop(), &stubResourceRepositoryForTask{}, &stubTaskRepositoryForTask{
+		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
+			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
+		},
+		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
+	}, broadcaster).(*taskService)
+
+	err := svc.MarkCompleted(context.Background(), "task-uuid", json.RawMessage(`{"ok":true}`))
+
+	require.NoError(t, err)
+	require.Len(t, broadcaster.events, 1)
+	assert.Equal(t, "done", broadcaster.events[0].EventType)
+	assert.Equal(t, "completed", broadcaster.events[0].Status)
+	assert.Equal(t, uint8(100), broadcaster.events[0].Progress)
+}
+
+func TestTaskService_MarkFailed_PublishesErrorEvent(t *testing.T) {
+	broadcaster := &fakeTaskBroadcaster{}
+	svc := NewTaskService(zap.NewNop(), &stubResourceRepositoryForTask{}, &stubTaskRepositoryForTask{
+		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
+			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
+		},
+		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
+	}, broadcaster).(*taskService)
+
+	err := svc.MarkFailed(context.Background(), "task-uuid", "boom")
+
+	require.NoError(t, err)
+	require.Len(t, broadcaster.events, 1)
+	assert.Equal(t, "error", broadcaster.events[0].EventType)
+	assert.Equal(t, "failed", broadcaster.events[0].Status)
+	require.NotNil(t, broadcaster.events[0].Message)
+	assert.Equal(t, "boom", *broadcaster.events[0].Message)
 }

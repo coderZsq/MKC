@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/task.dart';
+import '../providers/task_sse_provider.dart';
 import 'task_status_chip.dart';
 
 /// List item rendering a single task summary.
-class TaskListItem extends StatelessWidget {
+class TaskListItem extends ConsumerWidget {
   const TaskListItem({required this.task, this.onTap, super.key});
 
   final Task task;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final displayTask = task.status == TaskStatus.running
+        ? taskWithEvent(task, ref.watch(taskEventStreamProvider(task.id)))
+        : task;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
@@ -26,34 +32,35 @@ class TaskListItem extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      task.resourceName,
+                      displayTask.resourceName,
                       style: Theme.of(context).textTheme.titleMedium,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  TaskStatusChip(status: task.status),
+                  TaskStatusChip(status: displayTask.status),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Text(
-                    task.type.label,
+                    displayTask.type.label,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    formatTaskUpdatedAt(task.updatedAt),
+                    formatTaskUpdatedAt(displayTask.updatedAt),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
-              if (task.status == TaskStatus.running || task.status == TaskStatus.pending) ...[
+              if (displayTask.status == TaskStatus.running ||
+                  displayTask.status == TaskStatus.pending) ...[
                 const SizedBox(height: 12),
-                LinearProgressIndicator(value: task.progress / 100),
+                LinearProgressIndicator(value: displayTask.progress / 100),
                 const SizedBox(height: 4),
-                Text('${task.progress}%', style: Theme.of(context).textTheme.bodySmall),
+                Text('${displayTask.progress}%', style: Theme.of(context).textTheme.bodySmall),
               ],
             ],
           ),
