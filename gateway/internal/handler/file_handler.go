@@ -40,7 +40,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 		response.BadRequest(c, "FILE_MISSING", "invalid file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	result, err := h.svc.Upload(c.Request.Context(), service.UploadRequest{
 		File:     file,
