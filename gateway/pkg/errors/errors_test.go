@@ -17,5 +17,7 @@ func TestAppError(t *testing.T) {
 func TestHelpers(t *testing.T) {
 	assert.Equal(t, CodeNotFound, NotFound("user").Code)
 	assert.Equal(t, CodeUnauthorized, Unauthorized("missing token").Code)
+	assert.Equal(t, CodeConflict, Conflict("duplicate").Code)
+	assert.Equal(t, 409, Conflict("duplicate").Status)
 	assert.Equal(t, 500, Internal("boom").Status)
 }

@@ -9,13 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/internal/handler"
 	"github.com/zhushuangquan/mkc/gateway/internal/repository"
 	"github.com/zhushuangquan/mkc/gateway/internal/router"
 	"github.com/zhushuangquan/mkc/gateway/internal/service"
+	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 	"github.com/zhushuangquan/mkc/gateway/pkg/logger"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -37,11 +40,21 @@ func main() {
 	}
 	defer func() { _ = appLogger.Sync() }()
 
-	deps := buildDependencies(cfg, appLogger)
+	deps, db, redisClient := buildDependencies(cfg, appLogger)
 	healthSvc := service.NewHealthService(cfg.App.Version, deps...)
 	healthHandler := handler.NewHealthHandler(healthSvc)
 
-	r := router.New(cfg, appLogger, healthHandler)
+	var authHandler *handler.AuthHandler
+	var jwtMgr *jwt.Manager
+	if db != nil && redisClient != nil {
+		userRepo := repository.NewUserRepository(db)
+		tokenStore := repository.NewRedisTokenStore(redisClient)
+		jwtMgr = jwt.NewManager(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
+		authSvc := service.NewAuthService(userRepo, tokenStore, jwtMgr, &service.BcryptHasher{})
+		authHandler = handler.NewAuthHandler(authSvc)
+	}
+
+	r := router.New(cfg, appLogger, healthHandler, authHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
@@ -58,13 +71,16 @@ func main() {
 	waitForShutdown(srv, appLogger)
 }
 
-func buildDependencies(cfg *config.Config, log *zap.Logger) []service.Dependency {
+func buildDependencies(cfg *config.Config, log *zap.Logger) ([]service.Dependency, *gorm.DB, *redis.Client) {
 	var deps []service.Dependency
+	var db *gorm.DB
+	var redisClient *redis.Client
 
 	db, err := repository.NewMySQL(cfg.MySQL)
 	if err != nil {
 		log.Warn("mysql connection failed", zap.Error(err))
 		deps = append(deps, &service.NoopDependency{NameVal: "mysql"})
+		db = nil
 	} else {
 		if err := repository.AutoMigrate(db); err != nil {
 			log.Warn("auto migrate failed", zap.Error(err))
@@ -72,18 +88,19 @@ func buildDependencies(cfg *config.Config, log *zap.Logger) []service.Dependency
 		deps = append(deps, &repository.MySQLDependency{DB: db})
 	}
 
-	redisClient := repository.NewRedis(cfg.Redis)
+	redisClient = repository.NewRedis(cfg.Redis)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		log.Warn("redis connection failed", zap.Error(err))
 		_ = redisClient.Close()
+		redisClient = nil
 		deps = append(deps, &service.NoopDependency{NameVal: "redis"})
 	} else {
 		deps = append(deps, &repository.RedisDependency{Client: redisClient})
 	}
 
-	return deps
+	return deps, db, redisClient
 }
 
 func waitForShutdown(srv *http.Server, log *zap.Logger) {
