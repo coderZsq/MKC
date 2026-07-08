@@ -1,5 +1,6 @@
 from flask import Flask, Response
 
+from app.api.asr import asr_bp
 from app.api.health import health_bp
 from app.api.internal import internal_bp
 from app.core.config import settings
@@ -35,6 +36,7 @@ def init_extensions(app: Flask) -> None:
 def register_blueprints(app: Flask) -> None:
     app.register_blueprint(health_bp, url_prefix="/api/v1")
     app.register_blueprint(internal_bp, url_prefix="/api/v1/internal")
+    app.register_blueprint(asr_bp, url_prefix="/ai/v1")
 
 
 def register_error_handlers(app: Flask) -> None:

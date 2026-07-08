@@ -56,8 +56,9 @@ type JWTConfig struct {
 
 // AIServiceConfig holds AI service client options.
 type AIServiceConfig struct {
-	BaseURL string        `mapstructure:"base_url"`
-	Timeout time.Duration `mapstructure:"timeout"`
+	BaseURL     string        `mapstructure:"base_url"`
+	Timeout     time.Duration `mapstructure:"timeout"`
+	InternalKey string        `mapstructure:"internal_key"`
 }
 
 // MinIOConfig holds object storage connection options.
@@ -131,6 +132,15 @@ func (c *Config) validate() error {
 	}
 	if c.JWT.RefreshTTL <= 0 {
 		c.JWT.RefreshTTL = 7 * 24 * time.Hour
+	}
+	if c.AIService.BaseURL == "" {
+		return fmt.Errorf("ai_service.base_url must be set")
+	}
+	if c.AIService.InternalKey == "" {
+		return fmt.Errorf("ai_service.internal_key must be set")
+	}
+	if c.AIService.Timeout <= 0 {
+		c.AIService.Timeout = 60 * time.Second
 	}
 	return nil
 }

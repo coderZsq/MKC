@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 	"github.com/zhushuangquan/mkc/gateway/pkg/response"
 )
@@ -43,4 +45,22 @@ func extractBearerToken(authHeader string) string {
 		return ""
 	}
 	return parts[1]
+}
+
+// InternalAuth validates the X-Internal-Key header for service-to-service calls.
+func InternalAuth(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := c.GetHeader("X-Internal-Key")
+		if key == "" {
+			response.Unauthorized(c, "UNAUTHORIZED", "missing internal key")
+			c.Abort()
+			return
+		}
+		if key != cfg.AIService.InternalKey {
+			response.Error(c, http.StatusForbidden, "FORBIDDEN", "invalid internal key")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }

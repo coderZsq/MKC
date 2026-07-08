@@ -47,6 +47,7 @@ jwt:
 ai_service:
   base_url: http://localhost:5000
   timeout: 60s
+  internal_key: test-key
 `
 	require.NoError(t, os.WriteFile(path, []byte(content), 0644))
 
@@ -96,6 +97,7 @@ jwt:
 ai_service:
   base_url: http://localhost:5000
   timeout: 60s
+  internal_key: test-key
 `
 	require.NoError(t, os.WriteFile(path, []byte(content), 0644))
 	t.Setenv("APP_SERVER_PORT", "9090")
@@ -136,8 +138,9 @@ func TestLoad_MissingJWTSecret(t *testing.T) {
 
 func TestLoad_DefaultJWTTTLs(t *testing.T) {
 	cfg := &Config{
-		Server: ServerConfig{Port: 8080},
-		JWT:    JWTConfig{Secret: "test-secret"},
+		Server:    ServerConfig{Port: 8080},
+		JWT:       JWTConfig{Secret: "test-secret"},
+		AIService: AIServiceConfig{BaseURL: "http://localhost:5000", InternalKey: "test-key"},
 	}
 	require.NoError(t, cfg.validate())
 	assert.Equal(t, 15*time.Minute, cfg.JWT.AccessTTL)

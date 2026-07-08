@@ -3,5 +3,16 @@ celery[redis]==5.4.0
 redis==5.0.6
 pydantic-settings==2.3.4
 python-dotenv==1.0.1
+pyyaml==6.0.1
 gunicorn==22.0.0
 gevent==24.2.1
+
+# ASR
+faster-whisper==1.0.3
+ffmpeg-python==0.2.0
+librosa==0.10.2
+soundfile==0.12.1
+pydub==0.25.1
+numpy==1.26.4
+requests==2.32.3
+minio==7.2.7

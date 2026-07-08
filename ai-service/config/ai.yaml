@@ -1,0 +1,30 @@
+asr:
+  model_dir: /models/whisper
+  default_model: small
+  fallback_model: tiny
+  device: auto
+  compute_type: int8
+  beam_size: 5
+  best_of: 5
+  vad_filter: true
+  vad_parameters:
+    min_silence_duration_ms: 500
+    threshold: 0.5
+  chunk_length: 30
+  language: zh
+  sample_rate: 16000
+  progress_interval: 5.0
+
+minio:
+  endpoint: localhost:9000
+  # MinIO credentials are read from environment variables:
+  #   MINIO_ACCESS_KEY, MINIO_SECRET_KEY
+  bucket: mkc-resources
+  use_ssl: false
+  region: us-east-1
+
+gateway:
+  base_url: http://localhost:8080
+  # Internal API key is read from the INTERNAL_API_KEY environment variable.
+  progress_path: /api/v1/internal/tasks/{task_id}/progress
+  status_path: /api/v1/internal/tasks/{task_id}/status
