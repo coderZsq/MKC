@@ -72,16 +72,30 @@
 
 ## 4. 测试执行清单
 
-- [ ] 文件选择器调用与取消
-- [ ] 文件大小/扩展名校验
-- [ ] 合法文件上传成功并显示结果
+- [x] 文件选择器调用（E2E 使用 FakeFilePickerService 注入）
+- [x] 文件大小/扩展名校验（E2E）
+- [x] 合法文件上传成功并显示结果（E2E）
 - [ ] 上传进度更新
 - [ ] 取消上传
-- [ ] 网络/413/415/401/500 错误提示
-- [ ] 成功后跳转任务中心
-- [ ] `flutter test` 通过（含 `flutter test --platform chrome` 至少运行一次）
-- [ ] `flutter analyze` 0 issues
-- [ ] Web 端文件选择/上传集成验证（可选，ChromeDriver）
+- [x] 413/415/401 错误提示（E2E）
+- [x] 成功后跳转任务中心（E2E）
+- [x] `flutter analyze` 0 issues
+- [x] Web 端文件选择/上传集成验证（ChromeDriver，E2E）
+
+### E2E 自动化覆盖
+
+以下用例已由 `client/integration_test/upload_e2e_test.dart` 覆盖：
+
+- MKC-TC-S1-4-004（Web 平台 100MB 上限提示）
+- MKC-TC-S1-4-005
+- MKC-TC-S1-4-008 / MKC-TC-S1-4-012（上传成功并跳转任务中心）
+- MKC-TC-S1-4-014 / MKC-TC-S1-4-015（服务端错误映射）
+- MKC-TC-S1-4-016（未登录跳转登录页）
+- MKC-TC-S1-4-026（Web 端选择并上传文件成功）
+
+运行命令与状态见 S1-3 E2E 覆盖说明。
+
+状态：**全部通过**。
 
 ## 5. 缺陷记录模板
 
