@@ -28,6 +28,9 @@ type ErrorInfo struct {
 type MetaInfo struct {
 	RequestID string    `json:"request_id"`
 	Timestamp time.Time `json:"timestamp"`
+	Page      int       `json:"page,omitempty"`
+	Limit     int       `json:"limit,omitempty"`
+	Total     int64     `json:"total,omitempty"`
 }
 
 // OK writes a successful response.
@@ -36,6 +39,19 @@ func OK(c *gin.Context, data any) {
 		Success: true,
 		Data:    data,
 		Meta:    buildMeta(c),
+	})
+}
+
+// OKWithMeta writes a successful response with custom meta fields.
+func OKWithMeta(c *gin.Context, data any, meta MetaInfo) {
+	base := buildMeta(c)
+	base.Page = meta.Page
+	base.Limit = meta.Limit
+	base.Total = meta.Total
+	c.JSON(http.StatusOK, Envelope{
+		Success: true,
+		Data:    data,
+		Meta:    base,
 	})
 }
 

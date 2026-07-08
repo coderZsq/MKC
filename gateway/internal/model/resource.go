@@ -21,9 +21,9 @@ type Resource struct {
 	DurationSeconds *int            `gorm:"column:duration_seconds;type:int"`
 	PageCount       *int            `gorm:"column:page_count;type:int"`
 	Metadata        json.RawMessage `gorm:"column:metadata;type:json"`
-	CreatedAt       time.Time       `gorm:"column:created_at;type:datetime(3);autoCreateTime"`
-	UpdatedAt       time.Time       `gorm:"column:updated_at;type:datetime(3);autoUpdateTime"`
-	DeletedAt       gorm.DeletedAt  `gorm:"column:deleted_at;type:datetime(3);index"`
+	CreatedAt       time.Time       `gorm:"column:created_at;type:datetime;autoCreateTime"`
+	UpdatedAt       time.Time       `gorm:"column:updated_at;type:datetime;autoUpdateTime"`
+	DeletedAt       gorm.DeletedAt  `gorm:"column:deleted_at;type:datetime;index"`
 
 	User User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }

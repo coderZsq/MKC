@@ -79,3 +79,27 @@ func TestResourceRepository_Create_DuplicateUUID(t *testing.T) {
 	err := repo.Create(ctx, duplicate)
 	require.Error(t, err)
 }
+
+func TestResourceRepository_GetByUUIDAndUserID(t *testing.T) {
+	db := setupResourceTestDB(t)
+	repo := NewResourceRepository(db)
+	ctx := context.Background()
+
+	user1 := newTestUser("resowner1@example.com", "hashed1", "Owner1")
+	user2 := newTestUser("resowner2@example.com", "hashed2", "Owner2")
+	require.NoError(t, db.WithContext(ctx).Create(user1).Error)
+	require.NoError(t, db.WithContext(ctx).Create(user2).Error)
+
+	resource := newTestResource(user1.ID, "doc.txt", "text/plain")
+	require.NoError(t, repo.Create(ctx, resource))
+
+	found, err := repo.GetByUUIDAndUserID(ctx, resource.UUID, user1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, resource.UUID, found.UUID)
+
+	_, err = repo.GetByUUIDAndUserID(ctx, resource.UUID, user2.ID)
+	assert.ErrorIs(t, err, ErrNotFound)
+
+	_, err = repo.GetByUUIDAndUserID(ctx, uuid.NewString(), user1.ID)
+	assert.ErrorIs(t, err, ErrNotFound)
+}

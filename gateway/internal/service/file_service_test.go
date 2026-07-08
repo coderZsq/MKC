@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"mime/multipart"
@@ -61,8 +62,9 @@ func (s *stubObjectStorage) PresignedGetURL(ctx context.Context, key string, exp
 var _ storage.ObjectStorage = (*stubObjectStorage)(nil)
 
 type stubResourceRepository struct {
-	createFunc       func(ctx context.Context, r *model.Resource) error
-	updateStatusFunc func(ctx context.Context, id uint64, status uint8) error
+	createFunc           func(ctx context.Context, r *model.Resource) error
+	updateStatusFunc     func(ctx context.Context, id uint64, status uint8) error
+	getByUUIDAndUserFunc func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
 }
 
 func (r *stubResourceRepository) Create(ctx context.Context, resource *model.Resource) error {
@@ -79,15 +81,62 @@ func (r *stubResourceRepository) UpdateStatus(ctx context.Context, id uint64, st
 	return nil
 }
 
+func (r *stubResourceRepository) GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
+	if r.getByUUIDAndUserFunc != nil {
+		return r.getByUUIDAndUserFunc(ctx, uuid, userID)
+	}
+	return nil, repository.ErrNotFound
+}
+
 var _ repository.ResourceRepository = (*stubResourceRepository)(nil)
 
 type stubTaskRepository struct {
-	createFunc func(ctx context.Context, t *model.Task) error
+	createFunc         func(ctx context.Context, t *model.Task) error
+	getByUUIDFunc      func(ctx context.Context, uuid string) (*model.Task, error)
+	getByUUIDAndUserID func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	listByUserIDFunc   func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
+	updateStatusFunc   func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
+	updateProgressFunc func(ctx context.Context, id uint64, progress uint8) error
 }
 
 func (r *stubTaskRepository) Create(ctx context.Context, task *model.Task) error {
 	if r.createFunc != nil {
 		return r.createFunc(ctx, task)
+	}
+	return nil
+}
+
+func (r *stubTaskRepository) GetByUUID(ctx context.Context, uuid string) (*model.Task, error) {
+	if r.getByUUIDFunc != nil {
+		return r.getByUUIDFunc(ctx, uuid)
+	}
+	return nil, repository.ErrNotFound
+}
+
+func (r *stubTaskRepository) GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Task, error) {
+	if r.getByUUIDAndUserID != nil {
+		return r.getByUUIDAndUserID(ctx, uuid, userID)
+	}
+	return nil, repository.ErrNotFound
+}
+
+func (r *stubTaskRepository) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
+	if r.listByUserIDFunc != nil {
+		return r.listByUserIDFunc(ctx, userID, page, limit)
+	}
+	return nil, 0, nil
+}
+
+func (r *stubTaskRepository) UpdateStatus(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error {
+	if r.updateStatusFunc != nil {
+		return r.updateStatusFunc(ctx, id, status, progress, result, errMsg)
+	}
+	return nil
+}
+
+func (r *stubTaskRepository) UpdateProgress(ctx context.Context, id uint64, progress uint8) error {
+	if r.updateProgressFunc != nil {
+		return r.updateProgressFunc(ctx, id, progress)
 	}
 	return nil
 }
