@@ -31,6 +31,7 @@ gateway/bin/
 gateway/vendor/
 gateway/*.exe
 gateway/coverage.out
+gateway/config/config.yaml
 
 # Python
 ai-service/.venv/
