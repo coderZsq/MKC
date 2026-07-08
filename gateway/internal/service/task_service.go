@@ -73,10 +73,11 @@ type taskService struct {
 	logger       *zap.Logger
 	resourceRepo repository.ResourceRepository
 	taskRepo     repository.TaskRepository
+	broadcaster  TaskBroadcaster
 }
 
 // NewTaskService creates a TaskService.
-func NewTaskService(logger *zap.Logger, resourceRepo repository.ResourceRepository, taskRepo repository.TaskRepository) TaskService {
+func NewTaskService(logger *zap.Logger, resourceRepo repository.ResourceRepository, taskRepo repository.TaskRepository, broadcaster TaskBroadcaster) TaskService {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -84,6 +85,7 @@ func NewTaskService(logger *zap.Logger, resourceRepo repository.ResourceReposito
 		logger:       logger,
 		resourceRepo: resourceRepo,
 		taskRepo:     taskRepo,
+		broadcaster:  broadcaster,
 	}
 }
 
@@ -192,7 +194,11 @@ func (s *taskService) UpdateProgress(ctx context.Context, taskUUID string, progr
 	if task.Status != model.TaskStatusRunning {
 		return apperrors.New(400, apperrors.CodeValidationError, "task is not running")
 	}
-	return s.taskRepo.UpdateProgress(ctx, task.ID, progress)
+	if err := s.taskRepo.UpdateProgress(ctx, task.ID, progress); err != nil {
+		return fmt.Errorf("failed to update task progress: %w", err)
+	}
+	s.publishEvent(ctx, taskUUID, "progress", model.TaskStatusRunning, progress, nil)
+	return nil
 }
 
 // MarkRunning transitions a task from pending to running.
@@ -234,7 +240,37 @@ func (s *taskService) transitionStatus(ctx context.Context, taskUUID, toStatus s
 	if !canTransition(task.Status, toStatus) {
 		return apperrors.New(400, apperrors.CodeInvalidStateTransition, fmt.Sprintf("cannot transition from %s to %s", task.Status, toStatus))
 	}
-	return s.taskRepo.UpdateStatus(ctx, task.ID, toStatus, progress, result, errMsg)
+	if err := s.taskRepo.UpdateStatus(ctx, task.ID, toStatus, progress, result, errMsg); err != nil {
+		return err
+	}
+
+	eventType := "status"
+	var message *string
+	switch toStatus {
+	case model.TaskStatusCompleted:
+		eventType = "done"
+	case model.TaskStatusFailed:
+		eventType = "error"
+		if errMsg != "" {
+			message = &errMsg
+		}
+	}
+	s.publishEvent(ctx, taskUUID, eventType, toStatus, progress, message)
+	return nil
+}
+
+func (s *taskService) publishEvent(ctx context.Context, taskUUID, eventType, status string, progress uint8, message *string) {
+	if s.broadcaster == nil {
+		return
+	}
+	s.broadcaster.Publish(ctx, taskUUID, TaskEvent{
+		EventType: eventType,
+		TaskID:    taskUUID,
+		Progress:  progress,
+		Status:    status,
+		Message:   message,
+		Timestamp: time.Now().UTC(),
+	})
 }
 
 func toTaskDTO(task *model.Task) TaskDTO {

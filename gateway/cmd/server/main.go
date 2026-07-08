@@ -48,6 +48,7 @@ func main() {
 	var authHandler *handler.AuthHandler
 	var fileHandler *handler.FileHandler
 	var taskHandler *handler.TaskHandler
+	var taskSSEHandler *handler.TaskSSEHandler
 	var jwtMgr *jwt.Manager
 	if db != nil && redisClient != nil {
 		userRepo := repository.NewUserRepository(db)
@@ -58,8 +59,10 @@ func main() {
 		authSvc := service.NewAuthService(userRepo, tokenStore, jwtMgr, &service.BcryptHasher{})
 		authHandler = handler.NewAuthHandler(authSvc)
 
-		taskSvc := service.NewTaskService(appLogger, resourceRepo, taskRepo)
+		taskBroadcaster := service.NewTaskBroadcaster()
+		taskSvc := service.NewTaskService(appLogger, resourceRepo, taskRepo, taskBroadcaster)
 		taskHandler = handler.NewTaskHandler(taskSvc)
+		taskSSEHandler = handler.NewTaskSSEHandler(taskSvc, taskBroadcaster)
 
 		minioClient, err := storage.NewMinIOClient(cfg.MinIO)
 		if err != nil {
@@ -70,7 +73,7 @@ func main() {
 		}
 	}
 
-	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, jwtMgr)
+	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, taskSSEHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),

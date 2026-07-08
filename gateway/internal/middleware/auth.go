@@ -9,23 +9,21 @@ import (
 )
 
 // JWTAuth validates access tokens and sets user context values.
+// The token may be provided in the Authorization header as a Bearer token
+// or in the `token` query parameter for SSE/EventSource clients.
 func JWTAuth(jwtMgr *jwt.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "missing authorization header")
+		token := extractBearerToken(c.GetHeader("Authorization"))
+		if token == "" {
+			token = c.Query("token")
+		}
+		if token == "" {
+			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "missing authorization header or token")
 			c.Abort()
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "invalid authorization header format")
-			c.Abort()
-			return
-		}
-
-		claims, err := jwtMgr.ParseAccessToken(parts[1])
+		claims, err := jwtMgr.ParseAccessToken(token)
 		if err != nil {
 			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "access token invalid or expired")
 			c.Abort()
@@ -37,4 +35,12 @@ func JWTAuth(jwtMgr *jwt.Manager) gin.HandlerFunc {
 		c.Set("email", claims.Email)
 		c.Next()
 	}
+}
+
+func extractBearerToken(authHeader string) string {
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return ""
+	}
+	return parts[1]
 }

@@ -22,6 +22,28 @@ class Task {
   final int progress;
   final String? errorMessage;
   final DateTime updatedAt;
+
+  Task copyWith({
+    String? id,
+    String? resourceId,
+    String? resourceName,
+    TaskType? type,
+    TaskStatus? status,
+    int? progress,
+    String? errorMessage,
+    DateTime? updatedAt,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      resourceId: resourceId ?? this.resourceId,
+      resourceName: resourceName ?? this.resourceName,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      progress: progress ?? this.progress,
+      errorMessage: errorMessage ?? this.errorMessage,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 /// Task processing status.
