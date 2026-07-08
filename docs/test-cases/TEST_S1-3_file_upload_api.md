@@ -68,11 +68,11 @@
 
 ## 4. 测试执行清单
 
-- [ ] 未认证请求返回 401
-- [ ] 缺少 file 字段返回 400
+- [x] 未认证请求返回 401（E2E: `client/integration_test/upload_e2e_test.dart`）
+- [x] 缺少 file 字段返回 400（E2E）
 - [ ] 超大文件返回 413
-- [ ] 不支持的 MIME 返回 415
-- [ ] 合法文件上传返回 resource/task
+- [x] 不支持的 MIME 返回 415（E2E）
+- [x] 合法文件上传返回 resource/task（E2E）
 - [ ] MinIO 中对象存在且 key 符合规范
 - [ ] MySQL resource/task 记录正确
 - [ ] 失败时回滚 MinIO 对象
@@ -80,6 +80,26 @@
 - [ ] `go test ./...` 通过且覆盖率 80%+
 - [ ] `go test -race ./...` 通过
 - [ ] 无硬编码密钥
+
+### E2E 自动化覆盖
+
+以下用例已由 `client/integration_test/upload_e2e_test.dart` 覆盖：
+
+- MKC-TC-S1-3-001（实际返回 code=`AUTH_INVALID_TOKEN`，HTTP 401）
+- MKC-TC-S1-3-004
+- MKC-TC-S1-3-006
+- MKC-TC-S1-3-009（MP3 → `type=media_parse`）
+
+运行命令：
+
+```bash
+cd client
+flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/upload_e2e_test.dart -d chrome \
+  --dart-define=BASE_URL=http://localhost:8080/api/v1
+```
+
+状态：**全部通过**。
 
 ## 5. 缺陷记录模板
 
