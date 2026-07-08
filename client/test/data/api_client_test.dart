@@ -26,6 +26,14 @@ class _FakeTokenProvider implements TokenProvider {
   Future<void> clearTokens() async {
     _token = null;
   }
+
+  @override
+  Future<void> setTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    _token = accessToken;
+  }
 }
 
 class _FailingRefreshProvider implements TokenProvider {
@@ -41,6 +49,12 @@ class _FailingRefreshProvider implements TokenProvider {
 
   @override
   Future<void> clearTokens() async {}
+
+  @override
+  Future<void> setTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {}
 }
 
 class _MockAdapter implements HttpClientAdapter {

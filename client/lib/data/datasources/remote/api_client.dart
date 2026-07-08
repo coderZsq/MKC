@@ -25,7 +25,8 @@ class ApiClient {
               ),
             ) {
     _dio.interceptors.add(_authInterceptor());
-    _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+    _dio.interceptors
+        .add(LogInterceptor(requestBody: true, responseBody: true));
   }
 
   final Dio _dio;
