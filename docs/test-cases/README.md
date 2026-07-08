@@ -1,6 +1,6 @@
-# MKC Sprint 0 Test Case Suite
+# MKC Test Case Suite
 
-> 目标：为 S0-1 ~ S0-8 提供专家级、全场景覆盖的测试用例集，作为手工测试、CI 验收与自动化回归的依据。
+> 目标：为 Sprint 0 与 Sprint 1 提供专家级、全场景覆盖的测试用例集，作为手工测试、CI 验收与自动化回归的依据。
 > 来源：各卡片的 PRD 与 TECH 文档，以及 S0-1/S0-2 的真实踩坑记录。
 
 ---
@@ -9,7 +9,7 @@
 
 | 字段 | 说明 |
 |---|---|
-| 用例编号 | `MKC-TC-S0-{N}-{SEQ}`，例如 `MKC-TC-S0-2-013` |
+| 用例编号 | `MKC-TC-S0-{N}-{SEQ}` / `MKC-TC-S1-{N}-{SEQ}`，例如 `MKC-TC-S0-2-013`、`MKC-TC-S1-5-007` |
 | 测试维度 | Functional / Security / Negative / Boundary / Exception / Concurrency / Performance / Observability / Compatibility |
 | 测试级别 | Static / Unit / Integration / E2E / Contract |
 | 优先级 | P0 = 阻塞发布；P1 = 必须修复；P2 = 建议修复 |
@@ -24,18 +24,25 @@
 
 | 卡片 | 任务 | 测试用例文件 | 关联 PRD | 关联 TECH |
 |---|---|---|---|---|
-| S0-1 | GitHub 仓库与目录结构 | [S0-1-repo-governance.md](./S0-1-repo-governance.md) | [PRD_S0-1](../prd/PRD_S0-1_github_repo_init.md) | [TECH_S0-1](../tech/TECH_S0-1_github_repo_init.md) |
-| S0-2 | 本地 K8s 开发环境 | [S0-2-local-k8s.md](./S0-2-local-k8s.md) | [PRD_S0-2](../prd/PRD_S0-2_local_k8s_manifests.md) | [TECH_S0-2](../tech/TECH_S0-2_local_k8s_manifests.md) |
-| S0-3 | GitHub Actions CI | [S0-3-ci-pipeline.md](./S0-3-ci-pipeline.md) | [PRD_S0-3](../prd/PRD_S0-3_github_actions_ci.md) | [TECH_S0-3](../tech/TECH_S0-3_github_actions_ci.md) |
-| S0-4 | 数据库 Schema & Migration | [S0-4-database-schema.md](./S0-4-database-schema.md) | [PRD_S0-4](../prd/PRD_S0-4_database_schema_migration.md) | [TECH_S0-4](../tech/TECH_S0-4_database_schema_migration.md) |
-| S0-5 | API 接口设计 | [S0-5-api-design.md](./S0-5-api-design.md) | [PRD_S0-5](../prd/PRD_S0-5_api_interface_design.md) | [TECH_S0-5](../tech/TECH_S0-5_api_interface_design.md) |
-| S0-6 | Flutter 项目骨架 | [S0-6-flutter-skeleton.md](./S0-6-flutter-skeleton.md) | [PRD_S0-6](../prd/PRD_S0-6_flutter_project_skeleton.md) | [TECH_S0-6](../tech/TECH_S0-6_flutter_project_skeleton.md) |
-| S0-7 | Go Gateway 项目骨架 | [S0-7-gateway-skeleton.md](./S0-7-gateway-skeleton.md) | [PRD_S0-7](../prd/PRD_S0-7_go_gateway_skeleton.md) | [TECH_S0-7](../tech/TECH_S0-7_go_gateway_skeleton.md) |
-| S0-8 | Python AI Service 项目骨架 | [S0-8-ai-service-skeleton.md](./S0-8-ai-service-skeleton.md) | [PRD_S0-8](../prd/PRD_S0-8_python_ai_service_skeleton.md) | [TECH_S0-8](../tech/TECH_S0-8_python_ai_service_skeleton.md) |
+| S0-1 | GitHub 仓库与目录结构 | [TEST_S0-1_repo_governance.md](./TEST_S0-1_repo_governance.md) | [PRD_S0-1](../prd/PRD_S0-1_github_repo_init.md) | [TECH_S0-1](../tech/TECH_S0-1_github_repo_init.md) |
+| S0-2 | 本地 K8s 开发环境 | [TEST_S0-2_local_k8s.md](./TEST_S0-2_local_k8s.md) | [PRD_S0-2](../prd/PRD_S0-2_local_k8s_manifests.md) | [TECH_S0-2](../tech/TECH_S0-2_local_k8s_manifests.md) |
+| S0-3 | GitHub Actions CI | [TEST_S0-3_ci_pipeline.md](./TEST_S0-3_ci_pipeline.md) | [PRD_S0-3](../prd/PRD_S0-3_github_actions_ci.md) | [TECH_S0-3](../tech/TECH_S0-3_github_actions_ci.md) |
+| S0-4 | 数据库 Schema & Migration | [TEST_S0-4_database_schema.md](./TEST_S0-4_database_schema.md) | [PRD_S0-4](../prd/PRD_S0-4_database_schema_migration.md) | [TECH_S0-4](../tech/TECH_S0-4_database_schema_migration.md) |
+| S0-5 | API 接口设计 | [TEST_S0-5_api_design.md](./TEST_S0-5_api_design.md) | [PRD_S0-5](../prd/PRD_S0-5_api_interface_design.md) | [TECH_S0-5](../tech/TECH_S0-5_api_interface_design.md) |
+| S0-6 | Flutter 项目骨架 | [TEST_S0-6_flutter_skeleton.md](./TEST_S0-6_flutter_skeleton.md) | [PRD_S0-6](../prd/PRD_S0-6_flutter_project_skeleton.md) | [TECH_S0-6](../tech/TECH_S0-6_flutter_project_skeleton.md) |
+| S0-7 | Go Gateway 项目骨架 | [TEST_S0-7_gateway_skeleton.md](./TEST_S0-7_gateway_skeleton.md) | [PRD_S0-7](../prd/PRD_S0-7_go_gateway_skeleton.md) | [TECH_S0-7](../tech/TECH_S0-7_go_gateway_skeleton.md) |
+| S0-8 | Python AI Service 项目骨架 | [TEST_S0-8_ai_service_skeleton.md](./TEST_S0-8_ai_service_skeleton.md) | [PRD_S0-8](../prd/PRD_S0-8_python_ai_service_skeleton.md) | [TECH_S0-8](../tech/TECH_S0-8_python_ai_service_skeleton.md) |
+| S1-1 | 用户注册/登录 API | [TEST_S1-1_user_auth_api.md](./TEST_S1-1_user_auth_api.md) | [PRD_S1-1](../prd/PRD_S1-1_user_auth_api.md) | [TECH_S1-1](../tech/TECH_S1-1_user_auth_api.md) |
+| S1-2 | Flutter 登录/注册页面 | [TEST_S1-2_flutter_auth_pages.md](./TEST_S1-2_flutter_auth_pages.md) | [PRD_S1-2](../prd/PRD_S1-2_flutter_auth_pages.md) | [TECH_S1-2](../tech/TECH_S1-2_flutter_auth_pages.md) |
+| S1-3 | 文件上传 API | [TEST_S1-3_file_upload_api.md](./TEST_S1-3_file_upload_api.md) | [PRD_S1-3](../prd/PRD_S1-3_file_upload_api.md) | [TECH_S1-3](../tech/TECH_S1-3_file_upload_api.md) |
+| S1-4 | Flutter 文件选择/上传页面 | [TEST_S1-4_flutter_upload_page.md](./TEST_S1-4_flutter_upload_page.md) | [PRD_S1-4](../prd/PRD_S1-4_flutter_upload_page.md) | [TECH_S1-4](../tech/TECH_S1-4_flutter_upload_page.md) |
+| S1-5 | 任务创建与状态查询 API | [TEST_S1-5_task_status_api.md](./TEST_S1-5_task_status_api.md) | [PRD_S1-5](../prd/PRD_S1-5_task_status_api.md) | [TECH_S1-5](../tech/TECH_S1-5_task_status_api.md) |
+| S1-6 | Flutter 任务中心页面 | [TEST_S1-6_flutter_task_center.md](./TEST_S1-6_flutter_task_center.md) | [PRD_S1-6](../prd/PRD_S1-6_flutter_task_center.md) | [TECH_S1-6](../tech/TECH_S1-6_flutter_task_center.md) |
+| S1-7 | SSE/WebSocket 任务进度推送 | [TEST_S1-7_task_progress_push.md](./TEST_S1-7_task_progress_push.md) | [PRD_S1-7](../prd/PRD_S1-7_task_progress_push.md) | [TECH_S1-7](../tech/TECH_S1-7_task_progress_push.md) |
 
 ---
 
-## 3. 测试金字塔（Sprint 0）
+## 3. 测试金字塔（Sprint 0 / Sprint 1）
 
 ```
         /\\
@@ -75,6 +82,10 @@
 | CI 工作流 | S0-3 | 全部 | PR 合并前必须通过的 status checks |
 | DB Schema | S0-4 | S0-5/S0-7 | Gateway 模型与 migration 依赖 users/resources/tasks 等表 |
 | API 契约 | S0-5 | S0-6/S0-7 | 前后端共享 OpenAPI 规范 |
+| 用户认证 | S1-1 | S1-2/S1-3/S1-5/S1-6/S1-7 | 登录后获取 JWT，后续接口依赖认证 |
+| 文件上传 | S1-3 | S1-4 | 上传页依赖上传 API |
+| 任务管理 | S1-5 | S1-6/S1-7 | 任务中心与 SSE 依赖任务 API |
+| 任务中心 | S1-6 | S1-7 | SSE 在任务中心页面订阅进度 |
 
 ---
 
