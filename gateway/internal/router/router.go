@@ -12,7 +12,7 @@ import (
 )
 
 // New creates and configures a Gin engine with middlewares and routes.
-func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, jwtMgr *jwt.Manager) *gin.Engine {
+func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, file *handler.FileHandler, jwtMgr *jwt.Manager) *gin.Engine {
 	mode := gin.ReleaseMode
 	if cfg.Server.Mode == "debug" || cfg.Server.Mode == "" && cfg.App.Env == "dev" {
 		mode = gin.DebugMode
@@ -20,6 +20,7 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 	gin.SetMode(mode)
 
 	r := gin.New()
+	r.MaxMultipartMemory = 32 << 20 // 32 MB
 
 	r.Use(
 		middleware.RequestID(),
@@ -45,6 +46,10 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 			authGroup.POST("/logout", auth.Logout)
 
 			api.GET("/auth/me", middleware.JWTAuth(jwtMgr), auth.Me)
+
+			if file != nil {
+				api.POST("/files/upload", middleware.JWTAuth(jwtMgr), file.Upload)
+			}
 		}
 	}
 

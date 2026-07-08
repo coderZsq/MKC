@@ -220,7 +220,7 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (*Refres
 		return nil, apperrors.Internal(fmt.Sprintf("failed to delete refresh session: %v", err))
 	}
 
-	accessToken, err := s.jwtMgr.GenerateAccessToken(user.UUID, user.Email)
+	accessToken, err := s.jwtMgr.GenerateAccessToken(user.UUID, user.Email, user.ID)
 	if err != nil {
 		return nil, apperrors.Internal(fmt.Sprintf("failed to generate access token: %v", err))
 	}
@@ -268,7 +268,7 @@ type tokenPair struct {
 }
 
 func (s *authService) generateTokenPair(ctx context.Context, user *model.User) (*tokenPair, error) {
-	accessToken, err := s.jwtMgr.GenerateAccessToken(user.UUID, user.Email)
+	accessToken, err := s.jwtMgr.GenerateAccessToken(user.UUID, user.Email, user.ID)
 	if err != nil {
 		return nil, apperrors.Internal(fmt.Sprintf("failed to generate access token: %v", err))
 	}

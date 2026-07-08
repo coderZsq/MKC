@@ -60,6 +60,16 @@ type AIServiceConfig struct {
 	Timeout time.Duration `mapstructure:"timeout"`
 }
 
+// MinIOConfig holds object storage connection options.
+type MinIOConfig struct {
+	Endpoint  string `mapstructure:"endpoint"`
+	AccessKey string `mapstructure:"access_key"`
+	SecretKey string `mapstructure:"secret_key"`
+	Bucket    string `mapstructure:"bucket"`
+	UseSSL    bool   `mapstructure:"use_ssl"`
+	Region    string `mapstructure:"region"`
+}
+
 // Config is the top-level configuration container.
 type Config struct {
 	App       AppConfig       `mapstructure:"app"`
@@ -69,6 +79,7 @@ type Config struct {
 	Redis     RedisConfig     `mapstructure:"redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	AIService AIServiceConfig `mapstructure:"ai_service"`
+	MinIO     MinIOConfig     `mapstructure:"minio"`
 }
 
 // Load reads configuration from the given YAML file and environment variables.

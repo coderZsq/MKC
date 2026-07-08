@@ -47,3 +47,9 @@ func TestHealthService_Degraded(t *testing.T) {
 	assert.Equal(t, "ok", status.Checks["mysql"])
 	assert.Equal(t, "down", status.Checks["redis"])
 }
+
+func TestNoopDependency(t *testing.T) {
+	dep := &NoopDependency{NameVal: "mysql"}
+	assert.Equal(t, "mysql", dep.Name())
+	assert.ErrorContains(t, dep.Ping(context.Background()), "mysql is not configured")
+}

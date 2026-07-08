@@ -110,6 +110,22 @@ func TestLoad_InvalidPort(t *testing.T) {
 	assert.Error(t, cfg.validate())
 }
 
+func TestLoad_MissingFile(t *testing.T) {
+	_, err := Load(filepath.Join(t.TempDir(), "missing.yaml"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read config")
+}
+
+func TestLoad_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte("app: ["), 0644))
+
+	_, err := Load(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read config")
+}
+
 func TestLoad_MissingJWTSecret(t *testing.T) {
 	cfg := &Config{
 		Server: ServerConfig{Port: 8080},

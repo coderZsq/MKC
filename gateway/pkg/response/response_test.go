@@ -58,3 +58,33 @@ func TestInternalError(t *testing.T) {
 	assert.False(t, body.Success)
 	assert.Equal(t, "INTERNAL_ERROR", body.Error.Code)
 }
+
+func TestBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	BadRequest(c, "VALIDATION_ERROR", "invalid")
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var body Envelope
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.Equal(t, "VALIDATION_ERROR", body.Error.Code)
+}
+
+func TestUnauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	Unauthorized(c, "UNAUTHORIZED", "missing token")
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	var body Envelope
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.Equal(t, "UNAUTHORIZED", body.Error.Code)
+}

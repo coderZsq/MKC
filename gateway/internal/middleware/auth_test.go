@@ -17,13 +17,14 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
-	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com")
+	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
 
 	r := gin.New()
 	r.Use(JWTAuth(jwtMgr))
 	r.GET("/protected", func(c *gin.Context) {
 		assert.Equal(t, "user-uuid", c.GetString("user_uuid"))
+		assert.Equal(t, uint64(42), c.GetUint64("user_id"))
 		assert.Equal(t, "user@example.com", c.GetString("email"))
 		c.Status(http.StatusOK)
 	})
@@ -80,7 +81,7 @@ func TestJWTAuth_ExpiredToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	jwtMgr := jwt.NewManager("test-secret", -time.Hour, 24*time.Hour)
-	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com")
+	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
 
 	r := gin.New()
