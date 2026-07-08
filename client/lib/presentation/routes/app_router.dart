@@ -6,6 +6,8 @@ import '../pages/home_page.dart';
 import '../pages/login_page.dart';
 import '../pages/register_page.dart';
 import '../pages/splash_page.dart';
+import '../pages/task_center_page.dart';
+import '../pages/upload_page.dart';
 import '../providers/auth_provider.dart';
 import 'app_routes.dart';
 
@@ -42,6 +44,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: loginRoute, builder: (_, __) => const LoginPage()),
       GoRoute(path: registerRoute, builder: (_, __) => const RegisterPage()),
       GoRoute(path: homeRoute, builder: (_, __) => const HomePage()),
+      GoRoute(path: uploadRoute, builder: (_, __) => const UploadPage()),
+      GoRoute(path: taskCenterRoute, builder: (_, __) => const TaskCenterPage()),
     ],
   );
 });

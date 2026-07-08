@@ -80,6 +80,24 @@ class ApiClient {
     );
   }
 
+  Future<Result<T>> upload<T>(
+    String path, {
+    required FormData data,
+    CancelToken? cancelToken,
+    void Function(int sent, int total)? onSendProgress,
+    required T Function(dynamic data) parser,
+  }) async {
+    return _request<T>(
+      () => _dio.post<dynamic>(
+        path,
+        data: data,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+      ),
+      parser: parser,
+    );
+  }
+
   Future<Result<T>> _request<T>(
     Future<Response<dynamic>> Function() call, {
     required T Function(dynamic data) parser,
@@ -130,6 +148,7 @@ class ApiClient {
         if (status == 401) return const UnauthorizedException();
         return ServerException(code: errorCode ?? status?.toString());
       case DioExceptionType.cancel:
+        return const CancelledUploadException();
       case DioExceptionType.unknown:
       case DioExceptionType.transformTimeout:
         return const UnknownException();

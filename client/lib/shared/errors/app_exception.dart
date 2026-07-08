@@ -43,3 +43,24 @@ class UnknownException extends AppException {
   @override
   String get message => '未知错误';
 }
+
+class CancelledUploadException extends AppException {
+  const CancelledUploadException();
+
+  @override
+  String get message => '上传已取消';
+}
+
+class FileSizeLimitException extends AppException {
+  const FileSizeLimitException();
+
+  @override
+  String get message => '文件超过当前平台大小限制';
+}
+
+class UnsupportedFileTypeException extends AppException {
+  const UnsupportedFileTypeException();
+
+  @override
+  String get message => '不支持的文件类型';
+}
