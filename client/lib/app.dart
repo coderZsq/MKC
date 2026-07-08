@@ -1,40 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'config/constants.dart';
 import 'config/theme.dart';
-import 'presentation/pages/home_page.dart';
-import 'presentation/pages/splash_page.dart';
-import 'presentation/routes/app_routes.dart';
+import 'presentation/routes/app_router.dart';
 
 /// Root application widget configured with Riverpod, go_router and app themes.
-class MKCApp extends StatelessWidget {
+class MKCApp extends ConsumerWidget {
   const MKCApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final router = GoRouter(
-      initialLocation: splashRoute,
-      routes: [
-        GoRoute(
-          path: splashRoute,
-          builder: (context, state) => const SplashPage(),
-        ),
-        GoRoute(
-          path: homeRoute,
-          builder: (context, state) => const HomePage(),
-        ),
-      ],
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
 
-    return ProviderScope(
-      child: MaterialApp.router(
-        title: Constants.appName,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        routerConfig: router,
-      ),
+    return MaterialApp.router(
+      title: Constants.appName,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      routerConfig: router,
     );
   }
 }

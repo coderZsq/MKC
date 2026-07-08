@@ -19,6 +19,7 @@ secrets/
 client/.dart_tool/
 client/.packages
 client/build/
+client/coverage/
 client/.flutter-plugins
 client/.flutter-plugins-dependencies
 client/.pub-cache/

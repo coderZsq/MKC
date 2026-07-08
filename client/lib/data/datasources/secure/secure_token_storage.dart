@@ -37,7 +37,9 @@ class SecureTokenStorage implements TokenProvider {
     await _storage.delete(key: _refreshTokenKey);
   }
 
-  Future<void> setTokens({required String accessToken, required String refreshToken}) async {
+  @override
+  Future<void> setTokens(
+      {required String accessToken, required String refreshToken}) async {
     _memoryAccessToken = accessToken;
     await _storage.write(key: _accessTokenKey, value: accessToken);
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
