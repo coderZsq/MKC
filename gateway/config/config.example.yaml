@@ -35,3 +35,11 @@ jwt:
 ai_service:
   base_url: http://localhost:5000
   timeout: 60s
+
+minio:
+  endpoint: localhost:9000
+  access_key: mkc
+  secret_key: ""
+  bucket: mkc-resources
+  use_ssl: false
+  region: us-east-1

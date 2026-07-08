@@ -42,7 +42,7 @@ spec:
             - -c
             - |
               mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
-              mc mb -p local/a-bucket
+              mc mb -p local/mkc-resources
               mc mb -p local/mkc-uploads
               mc mb -p local/mkc-outputs
               mc version enable local/mkc-uploads

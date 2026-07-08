@@ -15,6 +15,7 @@ import (
 	"github.com/zhushuangquan/mkc/gateway/internal/repository"
 	"github.com/zhushuangquan/mkc/gateway/internal/router"
 	"github.com/zhushuangquan/mkc/gateway/internal/service"
+	"github.com/zhushuangquan/mkc/gateway/internal/storage"
 	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 	"github.com/zhushuangquan/mkc/gateway/pkg/logger"
 	"go.uber.org/zap"
@@ -45,16 +46,27 @@ func main() {
 	healthHandler := handler.NewHealthHandler(healthSvc)
 
 	var authHandler *handler.AuthHandler
+	var fileHandler *handler.FileHandler
 	var jwtMgr *jwt.Manager
 	if db != nil && redisClient != nil {
 		userRepo := repository.NewUserRepository(db)
+		resourceRepo := repository.NewResourceRepository(db)
+		taskRepo := repository.NewTaskRepository(db)
 		tokenStore := repository.NewRedisTokenStore(redisClient)
 		jwtMgr = jwt.NewManager(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL)
 		authSvc := service.NewAuthService(userRepo, tokenStore, jwtMgr, &service.BcryptHasher{})
 		authHandler = handler.NewAuthHandler(authSvc)
+
+		minioClient, err := storage.NewMinIOClient(cfg.MinIO)
+		if err != nil {
+			appLogger.Warn("minio connection failed", zap.Error(err))
+		} else {
+			fileSvc := service.NewFileService(minioClient, resourceRepo, taskRepo)
+			fileHandler = handler.NewFileHandler(fileSvc)
+		}
 	}
 
-	r := router.New(cfg, appLogger, healthHandler, authHandler, jwtMgr)
+	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),

@@ -10,7 +10,8 @@ import (
 
 // Claims extends registered JWT claims with application data.
 type Claims struct {
-	Email string `json:"email"`
+	Email  string `json:"email"`
+	UserID uint64 `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
@@ -39,9 +40,10 @@ func (m *Manager) RefreshTTL() time.Duration {
 }
 
 // GenerateAccessToken creates a signed access token for the user.
-func (m *Manager) GenerateAccessToken(userUUID, email string) (string, error) {
+func (m *Manager) GenerateAccessToken(userUUID, email string, userID uint64) (string, error) {
 	claims := Claims{
-		Email: email,
+		Email:  email,
+		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userUUID,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.accessTTL)),

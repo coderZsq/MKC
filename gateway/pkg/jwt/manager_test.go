@@ -20,7 +20,7 @@ func TestManager_TTLs(t *testing.T) {
 func TestGenerateAndParseAccessToken(t *testing.T) {
 	m := NewManager("test-secret", 15*time.Minute, 7*24*time.Hour)
 
-	token, err := m.GenerateAccessToken("user-uuid", "user@example.com")
+	token, err := m.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
 	assert.NotEmpty(t, token)
 
@@ -28,6 +28,7 @@ func TestGenerateAndParseAccessToken(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "user-uuid", claims.Subject)
 	assert.Equal(t, "user@example.com", claims.Email)
+	assert.Equal(t, uint64(42), claims.UserID)
 }
 
 func TestParseAccessToken_Invalid(t *testing.T) {
@@ -40,7 +41,7 @@ func TestParseAccessToken_Invalid(t *testing.T) {
 func TestParseAccessToken_Expired(t *testing.T) {
 	m := NewManager("test-secret", -time.Hour, 7*24*time.Hour)
 
-	token, err := m.GenerateAccessToken("user-uuid", "user@example.com")
+	token, err := m.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
 
 	_, err = m.ParseAccessToken(token)

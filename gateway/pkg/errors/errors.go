@@ -1,6 +1,9 @@
 package apperrors
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+)
 
 // AppError is a domain-aware error that maps to an HTTP response.
 type AppError struct {
@@ -55,4 +58,12 @@ func Conflict(message string) *AppError {
 
 func Internal(message string) *AppError {
 	return New(500, CodeInternalError, message)
+}
+
+func FileTooLarge(message string) *AppError {
+	return New(http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE", message)
+}
+
+func UnsupportedMediaType(message string) *AppError {
+	return New(http.StatusUnsupportedMediaType, "FILE_UNSUPPORTED_TYPE", message)
 }
