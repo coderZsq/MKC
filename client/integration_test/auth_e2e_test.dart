@@ -1,5 +1,3 @@
-import 'dart:html';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,7 +87,6 @@ void main() {
   group('Auth full-link E2E on Chrome', () {
     setUp(() async {
       await storage.clearTokens();
-      window.localStorage.clear();
     });
 
     testWidgets('navigates from splash to login when unauthenticated', (
@@ -180,7 +177,6 @@ void main() {
 
       // 在同一浏览器会话中保留 token，手动登出以回到未登录状态。
       await storage.clearTokens();
-      window.localStorage.clear();
 
       // 模拟应用冷启动：使用新的 ProviderScope 让 Riverpod 容器重建，避免旧状态残留。
       await tester.pumpWidget(
@@ -216,7 +212,6 @@ void main() {
       await pumpUntilPage(tester, '首页占位 — 功能开发中');
 
       await storage.clearTokens();
-      window.localStorage.clear();
 
       // 使用相同账号登录
       await tester.pumpWidget(
