@@ -34,6 +34,14 @@ def _default_subtitle_generator() -> Any:
     )
 
 
+def _default_text_cleaning_service() -> Any:
+    from app.core.config import settings
+    from app.services.text_cleaning.factory import build_text_cleaning_service
+
+    cfg = (settings.ai_config or {}).get("text_cleaning", {})
+    return build_text_cleaning_service(cfg)
+
+
 class AsrService:
     """Orchestrates audio download, preprocessing, transcription and result reporting."""
 
@@ -45,6 +53,7 @@ class AsrService:
         download_func: Callable[[str, Path], None] | None = None,
         progress_interval: float = 5.0,
         subtitle_generator: Any | None = None,
+        text_cleaning_service: Any | None = None,
     ) -> None:
         self.engine = engine
         self.processor = processor
@@ -52,6 +61,7 @@ class AsrService:
         self._download_func = download_func or _default_download
         self._progress_interval = progress_interval
         self._subtitle_generator = subtitle_generator or _default_subtitle_generator()
+        self._text_cleaning_service = text_cleaning_service or _default_text_cleaning_service()
 
     def process(self, task: AsrTaskRequest) -> AsrResult:
         """Download, convert, transcribe and report the result for a task."""
@@ -69,14 +79,15 @@ class AsrService:
 
                 self.reporter.mark_status(task.task_id, "running")
                 segments = self._transcribe_with_progress(task, wav_path, duration)
+                cleaned_segments = self._text_cleaning_service.clean(segments)
 
                 result = AsrResult(
                     task_id=task.task_id,
                     resource_id=task.resource_id,
-                    segments=segments,
-                    text=self._join_text(segments, task.language),
+                    segments=cleaned_segments,
+                    text=self._join_text(cleaned_segments, task.language),
                     duration=duration,
-                    subtitle_url=self._generate_subtitle(task, segments),
+                    subtitle_url=self._generate_subtitle(task, cleaned_segments),
                 )
                 self.reporter.mark_status(
                     task.task_id,

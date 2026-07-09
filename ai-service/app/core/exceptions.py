@@ -34,3 +34,13 @@ class SubtitleGenerationError(APIException):
         status_code: int = 500,
     ) -> None:
         super().__init__(code, message, status_code)
+
+
+class TextCleaningError(APIException):
+    def __init__(
+        self,
+        code: str = "TEXT_CLEANING_ERROR",
+        message: str = "文本清洗失败",
+        status_code: int = 500,
+    ) -> None:
+        super().__init__(code, message, status_code)
