@@ -6,7 +6,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from app.core.exceptions import AsrProcessingError, AudioProcessingError
+from app.core.exceptions import (
+    AsrProcessingError,
+    AudioProcessingError,
+    SubtitleGenerationError,
+)
 from app.models.asr import AsrResult, AsrSegment, AsrTaskRequest
 
 logger = logging.getLogger(__name__)
@@ -14,6 +18,20 @@ logger = logging.getLogger(__name__)
 
 def _default_download(_url: str, _target: Path) -> None:
     raise AudioProcessingError("no download function configured")
+
+
+def _default_subtitle_generator() -> Any:
+    from app.core.config import settings
+    from app.services.srt_generator import SrtGenerator
+
+    srt_cfg = (settings.ai_config or {}).get("srt", {})
+    return SrtGenerator(
+        min_duration=srt_cfg.get("min_duration", 1.0),
+        max_duration=srt_cfg.get("max_duration", 6.0),
+        max_chars=srt_cfg.get("max_chars", 80),
+        output_format=srt_cfg.get("output_format", "srt"),
+        presigned_expiry=srt_cfg.get("presigned_expiry", 3600),
+    )
 
 
 class AsrService:
@@ -26,12 +44,14 @@ class AsrService:
         reporter: Any,
         download_func: Callable[[str, Path], None] | None = None,
         progress_interval: float = 5.0,
+        subtitle_generator: Any | None = None,
     ) -> None:
         self.engine = engine
         self.processor = processor
         self.reporter = reporter
         self._download_func = download_func or _default_download
         self._progress_interval = progress_interval
+        self._subtitle_generator = subtitle_generator or _default_subtitle_generator()
 
     def process(self, task: AsrTaskRequest) -> AsrResult:
         """Download, convert, transcribe and report the result for a task."""
@@ -56,6 +76,7 @@ class AsrService:
                     segments=segments,
                     text=self._join_text(segments, task.language),
                     duration=duration,
+                    subtitle_url=self._generate_subtitle(task, segments),
                 )
                 self.reporter.mark_status(
                     task.task_id,
@@ -65,6 +86,10 @@ class AsrService:
                 return result
         except AudioProcessingError as exc:
             logger.error("audio processing failed for task %s: %s", task.task_id, exc)
+            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
+            raise
+        except SubtitleGenerationError as exc:
+            logger.error("subtitle generation failed for task %s: %s", task.task_id, exc)
             self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
             raise
         except AsrProcessingError as exc:
@@ -111,3 +136,16 @@ class AsrService:
         if language in {"zh", "zh-cn", "zh-tw", "ja", "ko"}:
             return "".join(segment.text for segment in segments)
         return " ".join(segment.text for segment in segments)
+
+    def _generate_subtitle(
+        self,
+        task: AsrTaskRequest,
+        segments: list[AsrSegment],
+    ) -> str | None:
+        """Generate a subtitle file from ``segments`` and upload it to MinIO."""
+        if self._subtitle_generator is None:
+            return None
+
+        srt_content = self._subtitle_generator.generate(segments, language=task.language)
+        key = f"results/{task.task_id}/subtitle.{self._subtitle_generator.output_format}"
+        return str(self._subtitle_generator.save_to_minio(srt_content, key))

@@ -15,6 +15,13 @@ asr:
   sample_rate: 16000
   progress_interval: 5.0
 
+srt:
+  min_duration: 1.0
+  max_duration: 6.0
+  max_chars: 80
+  output_format: srt
+  presigned_expiry: 3600
+
 minio:
   endpoint: localhost:9000
   # MinIO credentials are read from environment variables:
