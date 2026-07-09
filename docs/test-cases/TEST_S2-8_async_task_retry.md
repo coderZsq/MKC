@@ -68,7 +68,31 @@
 - [ ] 静态检查通过
 - [ ] 无硬编码密钥
 
-## 5. 缺陷记录模板
+## 5. E2E 覆盖（Chrome 集成测试）
+
+由 `client/integration_test/s2_pipeline_e2e_test.dart` 在 Chrome 模式下执行的端到端测试覆盖以下用例：
+
+| 覆盖用例 ID | 测试名称 | 说明 |
+|---|---|---|
+| MKC-TC-S2-8-007 | retry returns 404 when caller does not own the task | 跨用户调用 `POST /tasks/{id}/retry` 返回 404，验证重试权限隔离 |
+| MKC-TC-S2-8-008 | retry returns 401 without token | 无 JWT 调用重试接口返回 401 |
+| MKC-TC-S2-8-011 | retry returns TASK_NOT_RETRYABLE for pending document task | 非失败/完成状态的任务调用重试接口返回 `400 TASK_NOT_RETRYABLE` |
+
+执行命令：
+
+```bash
+cd client
+flutter drive \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/s2_pipeline_e2e_test.dart \
+  -d chrome \
+  --dart-define=BASE_URL=http://localhost:8080/api/v1 \
+  --dart-define=STORAGE_HOST=localhost
+```
+
+注意：本 E2E 测试不启动 Celery Worker，因此不验证自动/手动重试成功、进度上报、最大重试后失败及重试冷却等涉及任务调度的场景。
+
+## 6. 缺陷记录模板
 
 | 用例 ID | 缺陷描述 | 严重程度 | 复现步骤 | 预期 | 实际 | 状态 |
 |---|---|---|---|---|---|---|

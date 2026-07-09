@@ -70,7 +70,32 @@
 - [ ] `flutter analyze` 0 issues
 - [ ] 无硬编码密钥
 
-## 5. 缺陷记录模板
+## 5. E2E 覆盖（Chrome 集成测试）
+
+由 `client/integration_test/s2_pipeline_e2e_test.dart` 在 Chrome 模式下执行的端到端测试覆盖以下用例：
+
+| 覆盖用例 ID | 测试名称 | 说明 |
+|---|---|---|
+| MKC-TC-S2-7-013 | content view for pending audio task shows not-completed message | 音频任务未完成时内容查看页显示“处理中，请稍后” |
+| MKC-TC-S2-7-013 | content view for pending PDF task shows not-completed message | PDF 任务未完成时内容查看页显示“处理中，请稍后” |
+| MKC-TC-S2-7-017 | UI E2E on Chrome group | 内容查看页在 Chrome 中正常渲染并通过集成测试 |
+| MKC-TC-S2-7-019 | content view for pending PDF task shows not-completed message | Chrome 中打开 PDF 内容页，验证页面渲染与错误态展示 |
+
+执行命令：
+
+```bash
+cd client
+flutter drive \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/s2_pipeline_e2e_test.dart \
+  -d chrome \
+  --dart-define=BASE_URL=http://localhost:8080/api/v1 \
+  --dart-define=STORAGE_HOST=localhost
+```
+
+注意：本 E2E 测试仅覆盖任务未完成时的错误态。SRT 解析、时间戳跳转、PDF 折叠展示、搜索高亮、原文/清洗切换等正例需在 Widget/单元测试中补充覆盖。
+
+## 6. 缺陷记录模板
 
 | 用例 ID | 缺陷描述 | 严重程度 | 复现步骤 | 预期 | 实际 | 状态 |
 |---|---|---|---|---|---|---|

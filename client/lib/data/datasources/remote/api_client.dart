@@ -150,6 +150,9 @@ class ApiClient {
           errorCode = (body['error'] as Map<String, dynamic>?)?['code'] as String?;
         }
         if (status == 401) return const UnauthorizedException();
+        if (errorCode == 'TASK_NOT_COMPLETED') {
+          return const TaskNotCompletedException();
+        }
         return ServerException(code: errorCode ?? status?.toString());
       case DioExceptionType.cancel:
         return const CancelledUploadException();
