@@ -22,6 +22,17 @@ srt:
   output_format: srt
   presigned_expiry: 3600
 
+pdf:
+  extractor: pymupdf
+  ocr_fallback: true
+  ocr_threshold: 50
+  chunk_size: 10
+  progress_interval: 5.0
+  max_pdf_size: 104857600  # 100 MiB
+  max_pages: 5000
+
+# result_storage will be fully configured in S2-6; PDF parse already uploads JSON to MinIO.
+
 text_cleaning:
   enabled: true
   mode: rule          # rule / llm / hybrid

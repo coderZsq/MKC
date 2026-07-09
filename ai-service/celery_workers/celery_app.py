@@ -23,5 +23,7 @@ celery_app.conf.update(
         "app.tasks.parse_pdf.*": {"queue": "parse_pdf"},
         "app.tasks.embed.*": {"queue": "embed"},
         "app.tasks.rag.*": {"queue": "rag"},
+        "celery_workers.tasks.asr_task.*": {"queue": "transcribe"},
+        "celery_workers.tasks.pdf_parse_task.*": {"queue": "parse_pdf"},
     },
 )

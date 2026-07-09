@@ -44,3 +44,33 @@ class TextCleaningError(APIException):
         status_code: int = 500,
     ) -> None:
         super().__init__(code, message, status_code)
+
+
+class PdfParseError(APIException):
+    def __init__(self, message: str = "PDF 解析失败") -> None:
+        super().__init__("PDF_PARSE_FAILED", message, 500)
+
+
+class EncryptedPdfError(APIException):
+    def __init__(self, message: str = "无法解析加密 PDF") -> None:
+        super().__init__("ENCRYPTED_PDF", message, 400)
+
+
+class CorruptPdfError(APIException):
+    def __init__(self, message: str = "PDF 文件损坏") -> None:
+        super().__init__("CORRUPT_PDF", message, 400)
+
+
+class NoTextLayerError(APIException):
+    def __init__(self, message: str = "PDF 无文本层，需要使用 OCR 处理") -> None:
+        super().__init__("NO_TEXT_LAYER", message, 400)
+
+
+class PdfNotFoundError(APIException):
+    def __init__(self, message: str = "PDF 文件不存在") -> None:
+        super().__init__("PDF_NOT_FOUND", message, 404)
+
+
+class ParserUnavailableError(APIException):
+    def __init__(self, message: str = "PDF 解析器不可用") -> None:
+        super().__init__("PARSER_UNAVAILABLE", message, 503)
