@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/entities/task.dart';
 import '../providers/task_center_provider.dart';
 import '../routes/app_routes.dart';
 import '../widgets/task_center_skeleton.dart';
@@ -26,6 +27,13 @@ class _TaskCenterPageState extends ConsumerState<TaskCenterPage> {
 
   Future<void> _onRefresh() async {
     await ref.read(taskCenterNotifierProvider.notifier).refresh();
+  }
+
+  String _contentTypeParam(TaskType type) {
+    return switch (type) {
+      TaskType.mediaParse => 'audio',
+      TaskType.pdfParse || TaskType.documentParse => 'pdf',
+    };
   }
 
   @override
@@ -90,6 +98,11 @@ class _TaskCenterPageState extends ConsumerState<TaskCenterPage> {
         return TaskListItem(
           task: task,
           onTap: () => context.go('$taskCenterRoute/${task.id}'),
+          onViewContent: task.status == TaskStatus.completed
+              ? () => context.go(
+                    '$taskCenterRoute/${task.id}/content?type=${_contentTypeParam(task.type)}',
+                  )
+              : null,
         );
       },
     );

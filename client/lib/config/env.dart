@@ -21,4 +21,8 @@ abstract final class Env {
 
   static bool get isDev => environment == 'dev';
   static bool get isProd => environment == 'prod';
+
+  /// Expected host for result-file signed URLs (e.g. `minio.example.com`).
+  /// When empty, only the URL scheme is validated.
+  static const String storageHost = String.fromEnvironment('STORAGE_HOST');
 }

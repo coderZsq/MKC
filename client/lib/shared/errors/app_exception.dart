@@ -51,6 +51,27 @@ class CancelledUploadException extends AppException {
   String get message => '上传已取消';
 }
 
+class TaskNotCompletedException extends AppException {
+  const TaskNotCompletedException();
+
+  @override
+  String get message => '处理中，请稍后';
+}
+
+class ContentParseException extends AppException {
+  const ContentParseException();
+
+  @override
+  String get message => '内容格式错误';
+}
+
+class UnsafeUrlException extends AppException {
+  const UnsafeUrlException();
+
+  @override
+  String get message => '不安全的文件地址';
+}
+
 class FileSizeLimitException extends AppException {
   const FileSizeLimitException();
 

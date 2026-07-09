@@ -7,10 +7,16 @@ import 'task_status_chip.dart';
 
 /// List item rendering a single task summary.
 class TaskListItem extends ConsumerWidget {
-  const TaskListItem({required this.task, this.onTap, super.key});
+  const TaskListItem({
+    required this.task,
+    this.onTap,
+    this.onViewContent,
+    super.key,
+  });
 
   final Task task;
   final VoidCallback? onTap;
+  final VoidCallback? onViewContent;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,6 +67,16 @@ class TaskListItem extends ConsumerWidget {
                 LinearProgressIndicator(value: displayTask.progress / 100),
                 const SizedBox(height: 4),
                 Text('${displayTask.progress}%', style: Theme.of(context).textTheme.bodySmall),
+              ],
+              if (onViewContent != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: onViewContent,
+                    child: const Text('查看内容'),
+                  ),
+                ),
               ],
             ],
           ),

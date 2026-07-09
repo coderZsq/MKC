@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../config/env.dart';
 import '../../../domain/repositories/token_provider.dart';
 import '../../../shared/errors/app_exception.dart';
 import '../../../shared/result.dart';
@@ -11,6 +13,7 @@ class ApiClient {
     required String baseUrl,
     required TokenProvider tokenProvider,
     Dio? dio,
+    void Function(String message)? logger,
   })  : _tokenProvider = tokenProvider,
         _dio = dio ??
             Dio(
@@ -25,8 +28,9 @@ class ApiClient {
               ),
             ) {
     _dio.interceptors.add(_authInterceptor());
-    _dio.interceptors
-        .add(LogInterceptor(requestBody: true, responseBody: true));
+    if (Env.isDev) {
+      _dio.interceptors.add(RedactingLogInterceptor(logger: logger));
+    }
   }
 
   final Dio _dio;
@@ -155,5 +159,42 @@ class ApiClient {
       case DioExceptionType.badCertificate:
         return const NetworkException();
     }
+  }
+}
+
+/// Logs HTTP requests and responses without exposing headers or bodies.
+class RedactingLogInterceptor extends Interceptor {
+  RedactingLogInterceptor({void Function(String message)? logger})
+      : _logger = logger ?? _defaultLogger;
+
+  final void Function(String) _logger;
+
+  static void _defaultLogger(String message) => debugPrint(message);
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    _logger('--> ${options.method} ${options.baseUrl}${options.path}');
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    final request = response.requestOptions;
+    _logger(
+      '<-- ${response.statusCode} ${request.method} ${request.baseUrl}${request.path}',
+    );
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final request = err.requestOptions;
+    _logger(
+      '<-- ERROR ${err.response?.statusCode} ${request.method} ${request.baseUrl}${request.path}',
+    );
+    handler.next(err);
   }
 }

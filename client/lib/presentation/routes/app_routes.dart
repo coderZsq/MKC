@@ -8,3 +8,4 @@ const String conversationRoute = '/conversation/:id';
 const String uploadRoute = '/upload';
 const String taskCenterRoute = '/tasks';
 const String taskDetailRoute = '/tasks/:id';
+const String contentViewRoute = '/tasks/:id/content';
