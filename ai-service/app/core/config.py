@@ -1,3 +1,7 @@
+from pathlib import Path
+from typing import Any
+
+import yaml
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,10 +27,36 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("internal_api_key", "gateway_internal_key")
     )
     log_level: str = "INFO"
+    ai_config_path: str = "config/ai.yaml"
+
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
+    minio_bucket: str = "mkc-resources"
+    minio_endpoint: str = "localhost:9000"
+    minio_use_ssl: bool = False
+    minio_region: str | None = None
+
+    @property
+    def ai_config(self) -> dict[str, Any]:
+        return load_yaml_config(self.ai_config_path)
 
     @property
     def is_dev(self) -> bool:
         return self.env.lower() == "dev"
+
+
+def load_yaml_config(path: str | Path) -> dict[str, Any]:
+    """Load a YAML configuration file, returning an empty dict on missing file."""
+    config_path = Path(path)
+    if not config_path.is_absolute():
+        project_root = Path(__file__).resolve().parents[2]
+        config_path = project_root / config_path
+
+    if not config_path.exists():
+        return {}
+
+    with config_path.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 
 settings = Settings()  # type: ignore[call-arg]

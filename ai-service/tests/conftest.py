@@ -1,6 +1,6 @@
 import os
 
-os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
+os.environ["INTERNAL_API_KEY"] = "test-internal-key"
 
 import pytest
 from flask import Flask

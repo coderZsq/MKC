@@ -19,7 +19,11 @@ def test_internal_health_wrong_key(client: FlaskClient) -> None:
         "/api/v1/internal/health",
         headers={"X-Internal-Key": "wrong"},
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
+
+    data = response.get_json()
+    assert data["success"] is False
+    assert data["error"]["code"] == "FORBIDDEN"
 
 
 def test_internal_health_valid_key(client: FlaskClient) -> None:

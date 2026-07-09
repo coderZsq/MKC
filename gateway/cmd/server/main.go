@@ -48,6 +48,7 @@ func main() {
 	var authHandler *handler.AuthHandler
 	var fileHandler *handler.FileHandler
 	var taskHandler *handler.TaskHandler
+	var internalTaskHandler *handler.InternalTaskHandler
 	var taskSSEHandler *handler.TaskSSEHandler
 	var jwtMgr *jwt.Manager
 	if db != nil && redisClient != nil {
@@ -62,6 +63,7 @@ func main() {
 		taskBroadcaster := service.NewTaskBroadcaster()
 		taskSvc := service.NewTaskService(appLogger, resourceRepo, taskRepo, taskBroadcaster)
 		taskHandler = handler.NewTaskHandler(taskSvc)
+		internalTaskHandler = handler.NewInternalTaskHandler(taskSvc)
 		taskSSEHandler = handler.NewTaskSSEHandler(taskSvc, taskBroadcaster)
 
 		minioClient, err := storage.NewMinIOClient(cfg.MinIO)
@@ -73,7 +75,7 @@ func main() {
 		}
 	}
 
-	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, taskSSEHandler, jwtMgr)
+	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
