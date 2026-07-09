@@ -5,8 +5,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.core.exceptions import CorruptPdfError, EncryptedPdfError, NoTextLayerError, PdfParseError
+from app.core.exceptions import (
+    CorruptPdfError,
+    EncryptedPdfError,
+    NoTextLayerError,
+    OcrNoTextError,
+    OcrPageFailedError,
+    OcrUnavailableError,
+    PdfParseError,
+)
 from app.models.pdf import PdfBlock, PdfDocument, PdfPage, PdfParseTask, PdfTocEntry
+from app.services.ocr_service import OcrService
 from app.services.pdf_parser_service import PdfParserService
 
 
@@ -351,3 +360,173 @@ class TestPdfParserService:
             completed_call.kwargs["result"]["parsed_url"]
             == "http://minio/results/task-1/parsed.json"
         )
+
+    def test_scanned_pdf_triggers_ocr_fallback(
+        self,
+        fake_extractor: MagicMock,
+        fake_reporter: MagicMock,
+    ) -> None:
+        fake_extractor.extract.return_value = PdfDocument(
+            resource_id="res-1",
+            total_pages=1,
+            toc=[],
+            pages=[PdfPage(page_number=1, text="", blocks=[])],
+        )
+        ocr_document = PdfDocument(
+            resource_id="res-1",
+            total_pages=1,
+            toc=[],
+            pages=[
+                PdfPage(
+                    page_number=1,
+                    text="OCR text",
+                    blocks=[
+                        PdfBlock(
+                            x=0,
+                            y=0,
+                            width=10,
+                            height=10,
+                            text="OCR text",
+                            confidence=0.91,
+                        ),
+                    ],
+                ),
+            ],
+        )
+        ocr_service = MagicMock(spec=OcrService)
+        ocr_service.process_pdf.return_value = ocr_document
+        service = PdfParserService(
+            extractor=fake_extractor,
+            reporter=fake_reporter,
+            download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
+            upload_func=lambda _data, _key: "http://minio/results/task-1/parsed.json",
+            ocr_service=ocr_service,
+            progress_interval=0.0,
+            ocr_fallback=True,
+            ocr_threshold=50,
+        )
+        task = PdfParseTask(
+            task_id="task-ocr",
+            resource_id="res-1",
+            pdf_url="minio://resources/scanned.pdf",
+        )
+
+        document = service.parse(task)
+
+        assert document is ocr_document
+        ocr_service.process_pdf.assert_called_once()
+        completed_call = fake_reporter.mark_status.call_args_list[-1]
+        result = completed_call.kwargs["result"]
+        assert result["pages"][0]["blocks"][0]["confidence"] == pytest.approx(0.91)
+
+    def test_ocr_unavailable_error_is_reported(
+        self,
+        fake_extractor: MagicMock,
+        fake_reporter: MagicMock,
+    ) -> None:
+        fake_extractor.extract.return_value = PdfDocument(
+            resource_id="res-1",
+            total_pages=1,
+            toc=[],
+            pages=[PdfPage(page_number=1, text="", blocks=[])],
+        )
+        ocr_service = MagicMock(spec=OcrService)
+        ocr_service.process_pdf.side_effect = OcrUnavailableError("OCR not ready")
+        service = PdfParserService(
+            extractor=fake_extractor,
+            reporter=fake_reporter,
+            download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
+            upload_func=lambda _data, _key: "",
+            ocr_service=ocr_service,
+            progress_interval=0.0,
+            ocr_fallback=True,
+            ocr_threshold=50,
+        )
+        task = PdfParseTask(
+            task_id="task-ocr-unavailable",
+            resource_id="res-1",
+            pdf_url="minio://resources/scanned.pdf",
+        )
+
+        with pytest.raises(OcrUnavailableError) as exc_info:
+            service.parse(task)
+
+        assert exc_info.value.status_code == 503
+        fake_reporter.mark_status.assert_called_with(
+            "task-ocr-unavailable",
+            "failed",
+            error_message="OCR not ready",
+        )
+
+    def test_ocr_no_text_error_is_reported(
+        self,
+        fake_extractor: MagicMock,
+        fake_reporter: MagicMock,
+    ) -> None:
+        fake_extractor.extract.return_value = PdfDocument(
+            resource_id="res-1",
+            total_pages=1,
+            toc=[],
+            pages=[PdfPage(page_number=1, text="", blocks=[])],
+        )
+        ocr_service = MagicMock(spec=OcrService)
+        ocr_service.process_pdf.side_effect = OcrNoTextError()
+        service = PdfParserService(
+            extractor=fake_extractor,
+            reporter=fake_reporter,
+            download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
+            upload_func=lambda _data, _key: "",
+            ocr_service=ocr_service,
+            progress_interval=0.0,
+            ocr_fallback=True,
+            ocr_threshold=50,
+        )
+        task = PdfParseTask(
+            task_id="task-ocr-empty",
+            resource_id="res-1",
+            pdf_url="minio://resources/scanned.pdf",
+        )
+
+        with pytest.raises(OcrNoTextError) as exc_info:
+            service.parse(task)
+
+        assert exc_info.value.status_code == 400
+        fake_reporter.mark_status.assert_called_with(
+            "task-ocr-empty",
+            "failed",
+            error_message=OcrNoTextError().message,
+        )
+
+    def test_ocr_page_failed_error_is_reported(
+        self,
+        fake_extractor: MagicMock,
+        fake_reporter: MagicMock,
+    ) -> None:
+        fake_extractor.extract.return_value = PdfDocument(
+            resource_id="res-1",
+            total_pages=1,
+            toc=[],
+            pages=[PdfPage(page_number=1, text="", blocks=[])],
+        )
+        ocr_service = MagicMock(spec=OcrService)
+        ocr_service.process_pdf.side_effect = OcrPageFailedError("page 1 failed")
+        service = PdfParserService(
+            extractor=fake_extractor,
+            reporter=fake_reporter,
+            download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
+            upload_func=lambda _data, _key: "",
+            ocr_service=ocr_service,
+            progress_interval=0.0,
+            ocr_fallback=True,
+            ocr_threshold=50,
+        )
+        task = PdfParseTask(
+            task_id="task-ocr-page",
+            resource_id="res-1",
+            pdf_url="minio://resources/scanned.pdf",
+        )
+
+        with pytest.raises(OcrPageFailedError) as exc_info:
+            service.parse(task)
+
+        assert exc_info.value.status_code == 500

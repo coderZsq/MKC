@@ -11,12 +11,16 @@ from app.core.exceptions import (
     CorruptPdfError,
     EncryptedPdfError,
     NoTextLayerError,
+    OcrNoTextError,
+    OcrPageFailedError,
+    OcrUnavailableError,
     PdfNotFoundError,
     PdfParseError,
 )
 from app.models.pdf import PdfDocument, PdfParseTask
 from app.services.gateway_reporter import GatewayProgressReporter
-from app.services.pymupdf_extractor import detect_no_text_layer
+from app.services.ocr_service import OcrService
+from app.services.pymupdf_extractor import detect_no_text_layer, is_scanned_page
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +51,7 @@ class PdfParserService:
         reporter: GatewayProgressReporter,
         download_func: Callable[[str, Path], None] | None = None,
         upload_func: Callable[[dict[str, Any], str], str] | None = None,
+        ocr_service: OcrService | None = None,
         progress_interval: float = 5.0,
         ocr_fallback: bool = True,
         ocr_threshold: int = 50,
@@ -57,6 +62,7 @@ class PdfParserService:
         self._reporter = reporter
         self._download_func = download_func or _default_download
         self._upload_func = upload_func or _default_upload
+        self._ocr_service = ocr_service
         self._progress_interval = progress_interval
         self._ocr_fallback = ocr_fallback
         self._ocr_threshold = ocr_threshold
@@ -87,7 +93,15 @@ class PdfParserService:
                 error_message=exc.message,
             )
             raise
-        except (EncryptedPdfError, CorruptPdfError, NoTextLayerError, PdfParseError) as exc:
+        except (
+            EncryptedPdfError,
+            CorruptPdfError,
+            NoTextLayerError,
+            PdfParseError,
+            OcrUnavailableError,
+            OcrPageFailedError,
+            OcrNoTextError,
+        ) as exc:
             logger.error(
                 "PDF extraction failed for task %s: %s",
                 task.task_id,
@@ -114,10 +128,16 @@ class PdfParserService:
             raise PdfParseError(f"PDF exceeds maximum allowed size of {self._max_pdf_size} bytes")
 
     def _extract_and_report(self, task: PdfParseTask, pdf_path: Path) -> PdfDocument:
-        """Extract the document and report progress page by page."""
-        document = self._extractor.extract(pdf_path, resource_id=task.resource_id)
-        if document.total_pages > self._max_pages:
+        """Extract the document and report progress page by page.
+
+        When every page looks scanned and OCR fallback is enabled, the PDF is
+        re-processed through the configured OCR service.
+        """
+        extracted = self._extractor.extract(pdf_path, resource_id=task.resource_id)
+        if extracted.total_pages > self._max_pages:
             raise PdfParseError(f"PDF exceeds maximum allowed page count of {self._max_pages}")
+
+        document = self._apply_ocr_fallback(task, pdf_path, extracted)
         total_pages = document.total_pages
         last_reported = 0
 
@@ -127,10 +147,40 @@ class PdfParserService:
                 self._reporter.report_progress(task.task_id, progress, "running")
                 last_reported = progress
 
-        if self._ocr_fallback:
-            detect_no_text_layer(document, self._ocr_threshold)
-
         return document
+
+    def _apply_ocr_fallback(
+        self,
+        task: PdfParseTask,
+        pdf_path: Path,
+        extracted: PdfDocument,
+    ) -> PdfDocument:
+        """Return the OCR document when the extracted document has no text layer."""
+        if not self._ocr_fallback:
+            return extracted
+
+        if not self._is_fully_scanned(extracted):
+            return extracted
+
+        if self._ocr_service is None:
+            detect_no_text_layer(extracted, self._ocr_threshold)
+            return extracted
+
+        def _report_ocr_progress(progress: int) -> None:
+            self._reporter.report_progress(task.task_id, progress, "running")
+
+        return self._ocr_service.process_pdf(
+            pdf_path,
+            resource_id=task.resource_id,
+            progress_callback=_report_ocr_progress,
+        )
+
+    def _is_fully_scanned(self, document: PdfDocument) -> bool:
+        if not document.pages:
+            return False
+        return all(
+            is_scanned_page(page.text, threshold=self._ocr_threshold) for page in document.pages
+        )
 
     @staticmethod
     def _page_progress(page_index: int, total_pages: int) -> int:
@@ -146,7 +196,7 @@ class PdfParserService:
         """Upload the parsed JSON and return the result payload for Gateway."""
         safe_id = _safe_task_id(task.task_id)
         key = f"results/{safe_id}/parsed.json"
-        parsed_url = self._upload_func(document.model_dump(), key)
-        result = document.model_dump()
-        result["parsed_url"] = parsed_url
-        return result
+        data = document.model_dump()
+        parsed_url = self._upload_func(data, key)
+        data["parsed_url"] = parsed_url
+        return data
