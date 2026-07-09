@@ -40,14 +40,17 @@ class GatewayProgressReporter:
         status: str,
         result: dict[str, Any] | None = None,
         error_message: str | None = None,
+        attempt_count: int | None = None,
     ) -> None:
         """Send a status transition to the Gateway."""
         url = self._build_url(self._status_path, task_id)
-        payload = {
+        payload: dict[str, Any] = {
             "status": status,
             "result": result,
             "error_message": error_message,
         }
+        if attempt_count is not None:
+            payload["attempt_count"] = attempt_count
         self._post(url, payload)
 
     def _build_url(self, path_template: str, task_id: str) -> str:

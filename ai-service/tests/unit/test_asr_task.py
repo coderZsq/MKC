@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+from celery.exceptions import Retry
+
 from app.core.exceptions import ModelLoadError
 from celery_workers.tasks.asr_task import run_asr
 
@@ -40,16 +43,12 @@ def test_run_asr_fallback_retry_passes_updated_model(
     run_asr.request.retries = 0
     run_asr.request.max_retries = 3
 
-    retry_mock = MagicMock()
-    retry_mock.side_effect = Exception("retry scheduled")
-    with patch.object(run_asr, "retry", retry_mock):
-        try:
-            run_asr.run(task_id="task-1", payload=_task_payload("large-v3"))
-        except Exception as exc:
-            if "retry scheduled" not in str(exc):
-                raise
+    retry_mock = MagicMock(return_value=Retry())
+    with patch.object(run_asr, "retry", retry_mock), pytest.raises(Retry):
+        run_asr.run(task_id="task-1", payload=_task_payload("large-v3"))
 
     retry_mock.assert_called_once()
+    assert retry_mock.call_args is not None
     args = retry_mock.call_args.kwargs["args"]
     assert args[0] == "task-1"
     assert args[1]["model"] == "tiny"
@@ -90,8 +89,14 @@ def test_run_asr_fallback_exhausted_marks_failed(
     else:
         raise AssertionError("expected ModelLoadError to be raised")
 
-    reporter.mark_status.assert_called_once_with(
+    reporter.mark_status.assert_any_call(
+        "task-1",
+        "running",
+        attempt_count=4,
+    )
+    reporter.mark_status.assert_any_call(
         "task-1",
         "failed",
         error_message="out of memory",
+        attempt_count=4,
     )

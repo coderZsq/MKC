@@ -15,6 +15,7 @@ from app.services.pdf_parser_service import PdfParserService
 from app.services.pymupdf_extractor import PyMuPDFExtractor
 from app.utils.pdf_renderer import PdfRenderer
 from celery_workers.celery_app import celery_app
+from celery_workers.tasks.base import BaseAITask
 
 
 def _build_extractor() -> PyMuPDFExtractor:
@@ -54,16 +55,22 @@ def _build_ocr_service() -> OcrService | None:
     )
 
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=10)
+@celery_app.task(bind=True, base=BaseAITask)
 def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    """Celery task that extracts text from a PDF and reports the result."""
+    """Celery task that extracts text from a PDF and reports the result.
+
+    Automatic retry and exponential backoff are handled by :class:`BaseAITask`.
+    """
     task = PdfParseTask.model_validate(payload)
     pdf_cfg = (settings.ai_config or {}).get("pdf", {})
 
+    reporter = GatewayProgressReporter()
+    reporter.mark_status(task_id, "running", attempt_count=self._attempt_count())
+
+    retry_payload = payload
     try:
         extractor = _build_extractor()
         ocr_service = _build_ocr_service()
-        reporter = GatewayProgressReporter()
         service = PdfParserService(
             extractor=extractor,
             reporter=reporter,
@@ -77,10 +84,18 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
             max_pages=pdf_cfg.get("max_pages", 5_000),
         )
         document = service.parse(task)
-    except ParserUnavailableError as exc:
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc)  # noqa: B904
-        GatewayProgressReporter().mark_status(task_id, "failed", error_message=exc.message)
-        raise
+    except Exception as exc:
+        if self.request.retries >= self.max_retries:
+            reporter.mark_status(
+                task_id,
+                "failed",
+                error_message=str(exc),
+                attempt_count=self._attempt_count(),
+            )
+            self._failure_reported = True
+            raise
+        retry_exc = exc
+    else:
+        return document.model_dump()
 
-    return document.model_dump()
+    raise self.retry(args=[task_id, retry_payload], exc=retry_exc)

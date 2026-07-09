@@ -30,6 +30,10 @@ const (
 	CodeTokenExpired           = "AUTH_TOKEN_EXPIRED"
 	CodeInvalidStateTransition = "INVALID_STATE_TRANSITION"
 	CodeTaskNotCompleted       = "TASK_NOT_COMPLETED"
+	CodeTaskNotRetryable       = "TASK_NOT_RETRYABLE"
+	CodeRetryTooFrequent       = "RETRY_TOO_FREQUENT"
+	CodeDispatchFailed         = "DISPATCH_FAILED"
+	CodeWorkerUnavailable      = "WORKER_UNAVAILABLE"
 	CodePresignedURLFailed     = "PRESIGNED_URL_FAILED"
 	CodeStorageError           = "STORAGE_ERROR"
 )
@@ -70,4 +74,20 @@ func FileTooLarge(message string) *AppError {
 
 func UnsupportedMediaType(message string) *AppError {
 	return New(http.StatusUnsupportedMediaType, "FILE_UNSUPPORTED_TYPE", message)
+}
+
+func TaskNotRetryable(message string) *AppError {
+	return New(http.StatusBadRequest, CodeTaskNotRetryable, message)
+}
+
+func RetryTooFrequent(message string) *AppError {
+	return New(http.StatusTooManyRequests, CodeRetryTooFrequent, message)
+}
+
+func DispatchFailed(message string) *AppError {
+	return New(http.StatusInternalServerError, CodeDispatchFailed, message)
+}
+
+func WorkerUnavailable(message string) *AppError {
+	return New(http.StatusServiceUnavailable, CodeWorkerUnavailable, message)
 }

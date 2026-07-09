@@ -79,7 +79,7 @@ func TestCompatibleMime(t *testing.T) {
 }
 
 func TestFileService_Upload_FileReadError(t *testing.T) {
-	svc, _, _, _ := newTestFileService(t)
+	svc, _, _, _, _ := newTestFileService(t)
 
 	req := UploadRequest{
 		Header: fileHeader("doc.txt", "text/plain", 1),
@@ -96,7 +96,7 @@ func TestFileService_Upload_FileReadError(t *testing.T) {
 }
 
 func TestFileService_Upload_StoragePutError(t *testing.T) {
-	svc, store, _, _ := newTestFileService(t)
+	svc, store, _, _, _ := newTestFileService(t)
 	store.putFunc = func(ctx context.Context, key string, reader io.Reader, size int64, contentType string) error {
 		return errors.New("put failed")
 	}
@@ -117,7 +117,7 @@ func TestFileService_Upload_StoragePutError(t *testing.T) {
 }
 
 func TestFileService_Upload_MimeCompatibleFallback(t *testing.T) {
-	svc, _, resourceRepo, _ := newTestFileService(t)
+	svc, _, resourceRepo, _, _ := newTestFileService(t)
 	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
 		r.ID = 1
 		return nil

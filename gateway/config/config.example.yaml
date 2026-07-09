@@ -35,6 +35,16 @@ jwt:
 ai_service:
   base_url: http://localhost:5000
   timeout: 60s
+  internal_key: "change-me-in-prod"
+
+task:
+  max_retries: 3
+  retry_delays:
+    - 30s
+    - 2m
+    - 5m
+  retry_cooldown: 5s
+  dispatch_timeout: 30s
 
 minio:
   endpoint: localhost:9000

@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from celery.exceptions import Retry
 
 from app.core.exceptions import OcrUnavailableError, ParserUnavailableError
 from app.services.ocr_service import OcrService
@@ -70,14 +71,9 @@ def test_run_pdf_parse_parser_unavailable_retries(
     run_pdf_parse.request.retries = 0
     run_pdf_parse.request.max_retries = 3
 
-    retry_mock = MagicMock()
-    retry_mock.side_effect = Exception("retry scheduled")
-    with patch.object(run_pdf_parse, "retry", retry_mock):
-        try:
-            run_pdf_parse.run(task_id="task-1", payload=_task_payload())
-        except Exception as exc:
-            if "retry scheduled" not in str(exc):
-                raise
+    retry_mock = MagicMock(return_value=Retry())
+    with patch.object(run_pdf_parse, "retry", retry_mock), pytest.raises(Retry):
+        run_pdf_parse.run(task_id="task-1", payload=_task_payload())
 
     retry_mock.assert_called_once()
 
@@ -109,10 +105,16 @@ def test_run_pdf_parse_parser_unavailable_exhausted(
     else:
         raise AssertionError("expected ParserUnavailableError to be raised")
 
-    reporter.mark_status.assert_called_once_with(
+    reporter.mark_status.assert_any_call(
+        "task-1",
+        "running",
+        attempt_count=4,
+    )
+    reporter.mark_status.assert_any_call(
         "task-1",
         "failed",
         error_message="PyMuPDF missing",
+        attempt_count=4,
     )
 
 

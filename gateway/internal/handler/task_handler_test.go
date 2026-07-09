@@ -17,13 +17,15 @@ import (
 )
 
 type stubTaskService struct {
-	createFunc         func(ctx context.Context, userID uint64, req service.CreateTaskRequest) (*service.TaskDTO, error)
-	getFunc            func(ctx context.Context, userID uint64, taskUUID string) (*service.TaskDTO, error)
-	listFunc           func(ctx context.Context, userID uint64, page, limit int) (*service.ListTasksResult, error)
-	updateProgressFunc func(ctx context.Context, taskUUID string, progress uint8) error
-	markRunningFunc    func(ctx context.Context, taskUUID string) error
-	markCompletedFunc  func(ctx context.Context, taskUUID string, result json.RawMessage) error
-	markFailedFunc     func(ctx context.Context, taskUUID string, errMsg string) error
+	createFunc                    func(ctx context.Context, userID uint64, req service.CreateTaskRequest) (*service.TaskDTO, error)
+	getFunc                       func(ctx context.Context, userID uint64, taskUUID string) (*service.TaskDTO, error)
+	listFunc                      func(ctx context.Context, userID uint64, page, limit int) (*service.ListTasksResult, error)
+	retryFunc                     func(ctx context.Context, userID uint64, taskUUID string) (*service.RetryResult, error)
+	updateProgressFunc            func(ctx context.Context, taskUUID string, progress uint8) error
+	processInternalStatusUpdateFunc func(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error
+	markRunningFunc               func(ctx context.Context, taskUUID string) error
+	markCompletedFunc             func(ctx context.Context, taskUUID string, result json.RawMessage) error
+	markFailedFunc                func(ctx context.Context, taskUUID string, errMsg string) error
 }
 
 func (s *stubTaskService) Create(ctx context.Context, userID uint64, req service.CreateTaskRequest) (*service.TaskDTO, error) {
@@ -50,6 +52,20 @@ func (s *stubTaskService) List(ctx context.Context, userID uint64, page, limit i
 func (s *stubTaskService) UpdateProgress(ctx context.Context, taskUUID string, progress uint8) error {
 	if s.updateProgressFunc != nil {
 		return s.updateProgressFunc(ctx, taskUUID, progress)
+	}
+	return nil
+}
+
+func (s *stubTaskService) Retry(ctx context.Context, userID uint64, taskUUID string) (*service.RetryResult, error) {
+	if s.retryFunc != nil {
+		return s.retryFunc(ctx, userID, taskUUID)
+	}
+	return nil, nil
+}
+
+func (s *stubTaskService) ProcessInternalStatusUpdate(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
+	if s.processInternalStatusUpdateFunc != nil {
+		return s.processInternalStatusUpdateFunc(ctx, taskUUID, update)
 	}
 	return nil
 }
@@ -290,4 +306,44 @@ func TestTaskHandler_List_ServiceError(t *testing.T) {
 	h.List(c)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestTaskHandler_Retry_Success(t *testing.T) {
+	svc := &stubTaskService{
+		retryFunc: func(ctx context.Context, userID uint64, taskUUID string) (*service.RetryResult, error) {
+			assert.Equal(t, uint64(42), userID)
+			assert.Equal(t, "task-uuid", taskUUID)
+			return &service.RetryResult{TaskID: taskUUID, Status: "pending", AttemptCount: 0}, nil
+		},
+	}
+	h := NewTaskHandler(svc)
+	w, c := newTaskHandlerTestContext(t, http.MethodPost, "/api/v1/tasks/task-uuid/retry", nil)
+	c.Params = []gin.Param{{Key: "task_id", Value: "task-uuid"}}
+
+	h.Retry(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	data := resp["data"].(map[string]any)
+	assert.Equal(t, "pending", data["status"])
+}
+
+func TestTaskHandler_Retry_NotRetryable(t *testing.T) {
+	svc := &stubTaskService{
+		retryFunc: func(ctx context.Context, userID uint64, taskUUID string) (*service.RetryResult, error) {
+			return nil, apperrors.TaskNotRetryable("current status cannot be retried")
+		},
+	}
+	h := NewTaskHandler(svc)
+	w, c := newTaskHandlerTestContext(t, http.MethodPost, "/api/v1/tasks/task-uuid/retry", nil)
+	c.Params = []gin.Param{{Key: "task_id", Value: "task-uuid"}}
+
+	h.Retry(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	errInfo := resp["error"].(map[string]any)
+	assert.Equal(t, apperrors.CodeTaskNotRetryable, errInfo["code"])
 }

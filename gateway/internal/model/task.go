@@ -26,6 +26,13 @@ type Task struct {
 	User     User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
+// Task type constants.
+const (
+	TaskTypeMediaParse   = "media_parse"
+	TaskTypePdfParse     = "pdf_parse"
+	TaskTypeDocumentParse = "document_parse"
+)
+
 // Task status constants.
 const (
 	TaskStatusPending   = "pending"

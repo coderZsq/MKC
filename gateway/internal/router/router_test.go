@@ -70,6 +70,12 @@ func (s *stubTaskServiceForRouter) MarkCompleted(ctx context.Context, taskUUID s
 func (s *stubTaskServiceForRouter) MarkFailed(ctx context.Context, taskUUID string, errMsg string) error {
 	return nil
 }
+func (s *stubTaskServiceForRouter) Retry(ctx context.Context, userID uint64, taskUUID string) (*service.RetryResult, error) {
+	return &service.RetryResult{TaskID: taskUUID, Status: "pending"}, nil
+}
+func (s *stubTaskServiceForRouter) ProcessInternalStatusUpdate(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
+	return nil
+}
 
 var _ service.TaskService = (*stubTaskServiceForRouter)(nil)
 

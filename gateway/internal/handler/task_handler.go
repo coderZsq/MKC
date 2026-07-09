@@ -85,6 +85,20 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	response.OK(c, result)
 }
 
+// Retry resets and re-dispatches a failed or completed task.
+func (h *TaskHandler) Retry(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	taskUUID := c.Param("task_id")
+
+	result, err := h.svc.Retry(c.Request.Context(), userID, taskUUID)
+	if err != nil {
+		mapTaskError(c, err)
+		return
+	}
+
+	response.OK(c, result)
+}
+
 func mapTaskError(c *gin.Context, err error) {
 	var appErr *apperrors.AppError
 	if errors.As(err, &appErr) {

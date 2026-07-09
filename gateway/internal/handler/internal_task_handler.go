@@ -31,6 +31,7 @@ type UpdateStatusRequest struct {
 	Status       string          `json:"status" binding:"required,oneof=running completed failed"`
 	Result       json.RawMessage `json:"result,omitempty"`
 	ErrorMessage string          `json:"error_message,omitempty"`
+	AttemptCount *uint8          `json:"attempt_count,omitempty"`
 }
 
 // UpdateProgress updates the task progress percentage.
@@ -51,7 +52,7 @@ func (h *InternalTaskHandler) UpdateProgress(c *gin.Context) {
 	response.OK(c, gin.H{"task_id": taskUUID, "progress": req.Progress})
 }
 
-// UpdateStatus transitions the task status and optionally records the result or error.
+// UpdateStatus transitions the task status and optionally records the result, error, or attempt count.
 func (h *InternalTaskHandler) UpdateStatus(c *gin.Context) {
 	taskUUID := c.Param("task_id")
 
@@ -61,18 +62,13 @@ func (h *InternalTaskHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	var err error
-	switch req.Status {
-	case "running":
-		err = h.svc.MarkRunning(ctx, taskUUID)
-	case "completed":
-		err = h.svc.MarkCompleted(ctx, taskUUID, req.Result)
-	case "failed":
-		err = h.svc.MarkFailed(ctx, taskUUID, req.ErrorMessage)
+	update := service.InternalStatusUpdate{
+		Status:       req.Status,
+		Result:       req.Result,
+		ErrorMessage: req.ErrorMessage,
+		AttemptCount: req.AttemptCount,
 	}
-
-	if err != nil {
+	if err := h.svc.ProcessInternalStatusUpdate(c.Request.Context(), taskUUID, update); err != nil {
 		mapInternalTaskError(c, err)
 		return
 	}

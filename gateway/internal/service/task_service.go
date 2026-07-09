@@ -21,9 +21,9 @@ const (
 )
 
 var allowedTaskTypes = map[string]bool{
-	"media_parse":    true,
-	"pdf_parse":      true,
-	"document_parse": true,
+	model.TaskTypeMediaParse:    true,
+	model.TaskTypePdfParse:      true,
+	model.TaskTypeDocumentParse: true,
 }
 
 // CreateTaskRequest represents a request to create a task for an existing resource.
@@ -41,6 +41,7 @@ type TaskDTO struct {
 	Type         string          `json:"type"`
 	Status       string          `json:"status"`
 	Progress     uint8           `json:"progress"`
+	AttemptCount uint8           `json:"attempt_count"`
 	Result       json.RawMessage `json:"result,omitempty"`
 	ErrorMessage string          `json:"error_message,omitempty"`
 	StartedAt    *time.Time      `json:"started_at,omitempty"`
@@ -55,6 +56,21 @@ type ListTasksResult struct {
 	Total int64
 }
 
+// InternalStatusUpdate is used by the AI Service to report task status.
+type InternalStatusUpdate struct {
+	Status       string
+	Result       json.RawMessage
+	ErrorMessage string
+	AttemptCount *uint8
+}
+
+// RetryResult is returned after a successful manual retry.
+type RetryResult struct {
+	TaskID       string `json:"task_id"`
+	Status       string `json:"status"`
+	AttemptCount uint8  `json:"attempt_count"`
+}
+
 // TaskService defines task lifecycle operations.
 // UpdateProgress and the Mark* transition methods are intended for internal
 // worker use; they do not enforce row-level ownership checks.
@@ -62,7 +78,9 @@ type TaskService interface {
 	Create(ctx context.Context, userID uint64, req CreateTaskRequest) (*TaskDTO, error)
 	Get(ctx context.Context, userID uint64, taskUUID string) (*TaskDTO, error)
 	List(ctx context.Context, userID uint64, page, limit int) (*ListTasksResult, error)
+	Retry(ctx context.Context, userID uint64, taskUUID string) (*RetryResult, error)
 	UpdateProgress(ctx context.Context, taskUUID string, progress uint8) error
+	ProcessInternalStatusUpdate(ctx context.Context, taskUUID string, update InternalStatusUpdate) error
 	MarkRunning(ctx context.Context, taskUUID string) error
 	MarkCompleted(ctx context.Context, taskUUID string, result json.RawMessage) error
 	MarkFailed(ctx context.Context, taskUUID string, errMsg string) error
@@ -70,26 +88,30 @@ type TaskService interface {
 
 // taskService is the concrete TaskService implementation.
 type taskService struct {
-	logger       *zap.Logger
-	resourceRepo repository.ResourceRepository
-	taskRepo     repository.TaskRepository
-	broadcaster  TaskBroadcaster
+	logger        *zap.Logger
+	resourceRepo  repository.ResourceRepository
+	taskRepo      repository.TaskRepository
+	broadcaster   TaskBroadcaster
+	dispatcher    TaskDispatcher
+	retryCooldown time.Duration
 }
 
 // NewTaskService creates a TaskService.
-func NewTaskService(logger *zap.Logger, resourceRepo repository.ResourceRepository, taskRepo repository.TaskRepository, broadcaster TaskBroadcaster) TaskService {
+func NewTaskService(logger *zap.Logger, resourceRepo repository.ResourceRepository, taskRepo repository.TaskRepository, broadcaster TaskBroadcaster, dispatcher TaskDispatcher, retryCooldown time.Duration) TaskService {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 	return &taskService{
-		logger:       logger,
-		resourceRepo: resourceRepo,
-		taskRepo:     taskRepo,
-		broadcaster:  broadcaster,
+		logger:        logger,
+		resourceRepo:  resourceRepo,
+		taskRepo:      taskRepo,
+		broadcaster:   broadcaster,
+		dispatcher:    dispatcher,
+		retryCooldown: retryCooldown,
 	}
 }
 
-// Create creates a new task for an existing resource owned by the user.
+// Create creates a new task for an existing resource owned by the user and dispatches it.
 func (s *taskService) Create(ctx context.Context, userID uint64, req CreateTaskRequest) (*TaskDTO, error) {
 	if _, err := uuid.Parse(req.ResourceID); err != nil {
 		return nil, apperrors.New(400, apperrors.CodeValidationError, "invalid resource_id")
@@ -112,7 +134,7 @@ func (s *taskService) Create(ctx context.Context, userID uint64, req CreateTaskR
 		taskType = resource.Type
 	}
 	if taskType == "" {
-		taskType = "document_parse"
+		taskType = model.TaskTypeDocumentParse
 	}
 
 	task := &model.Task{
@@ -127,6 +149,12 @@ func (s *taskService) Create(ctx context.Context, userID uint64, req CreateTaskR
 	if err := s.taskRepo.Create(ctx, task); err != nil {
 		s.logger.Error("failed to create task", zap.Error(err))
 		return nil, apperrors.Internal("internal server error")
+	}
+
+	if s.shouldAutoDispatch(taskType) && s.dispatcher != nil {
+		if dispatchErr := s.dispatcher.Dispatch(ctx, task, resource); dispatchErr != nil {
+			s.logger.Warn("failed to dispatch newly created task", zap.String("task_id", task.UUID), zap.Error(dispatchErr))
+		}
 	}
 
 	dto := toTaskDTO(task)
@@ -178,6 +206,53 @@ func (s *taskService) List(ctx context.Context, userID uint64, page, limit int) 
 	return &ListTasksResult{Tasks: dtos, Total: total}, nil
 }
 
+// Retry validates ownership, state, and cooldown before resetting and re-dispatching a task.
+func (s *taskService) Retry(ctx context.Context, userID uint64, taskUUID string) (*RetryResult, error) {
+	if _, err := uuid.Parse(taskUUID); err != nil {
+		return nil, apperrors.New(400, apperrors.CodeValidationError, "invalid task_id")
+	}
+
+	task, err := s.taskRepo.GetByUUIDAndUserID(ctx, taskUUID, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, apperrors.NotFound("task")
+		}
+		s.logger.Error("failed to get task for retry", zap.Error(err))
+		return nil, apperrors.Internal("internal server error")
+	}
+
+	if task.Status != model.TaskStatusFailed && task.Status != model.TaskStatusCompleted {
+		return nil, apperrors.TaskNotRetryable(fmt.Sprintf("task status %s cannot be retried", task.Status))
+	}
+
+	if time.Since(task.UpdatedAt) < s.retryCooldown {
+		return nil, apperrors.RetryTooFrequent("please wait before retrying")
+	}
+
+	if err := s.taskRepo.ResetForRetry(ctx, task.ID); err != nil {
+		s.logger.Error("failed to reset task for retry", zap.Error(err))
+		return nil, apperrors.Internal("internal server error")
+	}
+
+	task.Status = model.TaskStatusPending
+	task.RetryCount = 0
+	task.ErrorMessage = ""
+	task.Progress = 0
+
+	if s.shouldAutoDispatch(task.Type) {
+		if dispatchErr := s.dispatcher.Dispatch(ctx, task, &task.Resource); dispatchErr != nil {
+			s.logger.Warn("failed to dispatch retried task", zap.String("task_id", task.UUID), zap.Error(dispatchErr))
+			return nil, dispatchErr
+		}
+	}
+
+	return &RetryResult{
+		TaskID:       task.UUID,
+		Status:       model.TaskStatusPending,
+		AttemptCount: 0,
+	}, nil
+}
+
 // UpdateProgress updates the progress of a running task.
 func (s *taskService) UpdateProgress(ctx context.Context, taskUUID string, progress uint8) error {
 	if progress > 100 {
@@ -201,19 +276,76 @@ func (s *taskService) UpdateProgress(ctx context.Context, taskUUID string, progr
 	return nil
 }
 
+// ProcessInternalStatusUpdate applies an AI Service status report, including optional attempt count.
+func (s *taskService) ProcessInternalStatusUpdate(ctx context.Context, taskUUID string, update InternalStatusUpdate) error {
+	task, err := s.taskRepo.GetByUUID(ctx, taskUUID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return apperrors.NotFound("task")
+		}
+		s.logger.Error("failed to get task for internal status update", zap.Error(err))
+		return apperrors.Internal("internal server error")
+	}
+
+	if !canTransition(task.Status, update.Status) {
+		return apperrors.New(400, apperrors.CodeInvalidStateTransition, fmt.Sprintf("cannot transition from %s to %s", task.Status, update.Status))
+	}
+
+	var progress uint8
+	switch update.Status {
+	case model.TaskStatusRunning:
+		progress = task.Progress
+		if progress == 0 {
+			progress = 0
+		}
+	case model.TaskStatusCompleted:
+		progress = 100
+	case model.TaskStatusFailed:
+		progress = 0
+	}
+
+	if update.AttemptCount != nil {
+		if err := s.taskRepo.UpdateStatusWithAttempt(ctx, task.ID, update.Status, progress, update.Result, update.ErrorMessage, *update.AttemptCount); err != nil {
+			return fmt.Errorf("failed to update task status with attempt: %w", err)
+		}
+	} else {
+		if err := s.taskRepo.UpdateStatus(ctx, task.ID, update.Status, progress, update.Result, update.ErrorMessage); err != nil {
+			return fmt.Errorf("failed to update task status: %w", err)
+		}
+	}
+
+	eventType := "status"
+	var message *string
+	switch update.Status {
+	case model.TaskStatusCompleted:
+		eventType = "done"
+	case model.TaskStatusFailed:
+		eventType = "error"
+		if update.ErrorMessage != "" {
+			message = &update.ErrorMessage
+		}
+	}
+	s.publishEvent(ctx, taskUUID, eventType, update.Status, progress, message)
+	return nil
+}
+
 // MarkRunning transitions a task from pending to running.
 func (s *taskService) MarkRunning(ctx context.Context, taskUUID string) error {
-	return s.transitionStatus(ctx, taskUUID, model.TaskStatusRunning, 0, nil, "")
+	return s.ProcessInternalStatusUpdate(ctx, taskUUID, InternalStatusUpdate{Status: model.TaskStatusRunning})
 }
 
 // MarkCompleted transitions a task from running to completed.
 func (s *taskService) MarkCompleted(ctx context.Context, taskUUID string, result json.RawMessage) error {
-	return s.transitionStatus(ctx, taskUUID, model.TaskStatusCompleted, 100, result, "")
+	return s.ProcessInternalStatusUpdate(ctx, taskUUID, InternalStatusUpdate{Status: model.TaskStatusCompleted, Result: result})
 }
 
 // MarkFailed transitions a task from running to failed.
 func (s *taskService) MarkFailed(ctx context.Context, taskUUID string, errMsg string) error {
-	return s.transitionStatus(ctx, taskUUID, model.TaskStatusFailed, 0, nil, errMsg)
+	return s.ProcessInternalStatusUpdate(ctx, taskUUID, InternalStatusUpdate{Status: model.TaskStatusFailed, ErrorMessage: errMsg})
+}
+
+func (s *taskService) shouldAutoDispatch(taskType string) bool {
+	return taskType == model.TaskTypeMediaParse || taskType == model.TaskTypePdfParse
 }
 
 func canTransition(from, to string) bool {
@@ -222,41 +354,12 @@ func canTransition(from, to string) bool {
 		return to == model.TaskStatusRunning
 	case model.TaskStatusRunning:
 		return to == model.TaskStatusCompleted || to == model.TaskStatusFailed
-	case model.TaskStatusCompleted, model.TaskStatusFailed:
+	case model.TaskStatusFailed:
+		return to == model.TaskStatusRunning
+	case model.TaskStatusCompleted:
 		return false
 	}
 	return false
-}
-
-func (s *taskService) transitionStatus(ctx context.Context, taskUUID, toStatus string, progress uint8, result json.RawMessage, errMsg string) error {
-	task, err := s.taskRepo.GetByUUID(ctx, taskUUID)
-	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return apperrors.NotFound("task")
-		}
-		s.logger.Error("failed to get task for status transition", zap.Error(err))
-		return apperrors.Internal("internal server error")
-	}
-	if !canTransition(task.Status, toStatus) {
-		return apperrors.New(400, apperrors.CodeInvalidStateTransition, fmt.Sprintf("cannot transition from %s to %s", task.Status, toStatus))
-	}
-	if err := s.taskRepo.UpdateStatus(ctx, task.ID, toStatus, progress, result, errMsg); err != nil {
-		return err
-	}
-
-	eventType := "status"
-	var message *string
-	switch toStatus {
-	case model.TaskStatusCompleted:
-		eventType = "done"
-	case model.TaskStatusFailed:
-		eventType = "error"
-		if errMsg != "" {
-			message = &errMsg
-		}
-	}
-	s.publishEvent(ctx, taskUUID, eventType, toStatus, progress, message)
-	return nil
 }
 
 func (s *taskService) publishEvent(ctx context.Context, taskUUID, eventType, status string, progress uint8, message *string) {
@@ -292,6 +395,7 @@ func toTaskDTO(task *model.Task) TaskDTO {
 		Type:         task.Type,
 		Status:       task.Status,
 		Progress:     task.Progress,
+		AttemptCount: task.RetryCount,
 		Result:       task.Result,
 		ErrorMessage: task.ErrorMessage,
 		StartedAt:    task.StartedAt,
