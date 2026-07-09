@@ -91,12 +91,14 @@ func (r *stubResourceRepository) GetByUUIDAndUserID(ctx context.Context, uuid st
 var _ repository.ResourceRepository = (*stubResourceRepository)(nil)
 
 type stubTaskRepository struct {
-	createFunc         func(ctx context.Context, t *model.Task) error
-	getByUUIDFunc      func(ctx context.Context, uuid string) (*model.Task, error)
-	getByUUIDAndUserID func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
-	listByUserIDFunc   func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
-	updateStatusFunc   func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
-	updateProgressFunc func(ctx context.Context, id uint64, progress uint8) error
+	createFunc                  func(ctx context.Context, t *model.Task) error
+	getByUUIDFunc               func(ctx context.Context, uuid string) (*model.Task, error)
+	getByUUIDAndUserID          func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	listByUserIDFunc            func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
+	updateStatusFunc            func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
+	updateStatusWithAttemptFunc func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error
+	updateProgressFunc          func(ctx context.Context, id uint64, progress uint8) error
+	resetForRetryFunc           func(ctx context.Context, id uint64) error
 }
 
 func (r *stubTaskRepository) Create(ctx context.Context, task *model.Task) error {
@@ -141,14 +143,38 @@ func (r *stubTaskRepository) UpdateProgress(ctx context.Context, id uint64, prog
 	return nil
 }
 
+func (r *stubTaskRepository) UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error {
+	if r.updateStatusWithAttemptFunc != nil {
+		return r.updateStatusWithAttemptFunc(ctx, id, status, progress, result, errMsg, attemptCount)
+	}
+	return nil
+}
+
+func (r *stubTaskRepository) ResetForRetry(ctx context.Context, id uint64) error {
+	if r.resetForRetryFunc != nil {
+		return r.resetForRetryFunc(ctx, id)
+	}
+	return nil
+}
+
 var _ repository.TaskRepository = (*stubTaskRepository)(nil)
 
-func newTestFileService(t *testing.T) (*fileService, *stubObjectStorage, *stubResourceRepository, *stubTaskRepository) {
+type fakeFileDispatcher struct {
+	calls []dispatchCall
+}
+
+func (d *fakeFileDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
+	d.calls = append(d.calls, dispatchCall{Task: task, Resource: resource})
+	return nil
+}
+
+func newTestFileService(t *testing.T) (*fileService, *stubObjectStorage, *stubResourceRepository, *stubTaskRepository, *fakeFileDispatcher) {
 	storageStub := &stubObjectStorage{}
 	resourceRepo := &stubResourceRepository{}
 	taskRepo := &stubTaskRepository{}
-	svc := NewFileService(storageStub, resourceRepo, taskRepo).(*fileService)
-	return svc, storageStub, resourceRepo, taskRepo
+	dispatcher := &fakeFileDispatcher{}
+	svc := NewFileService(nil, storageStub, resourceRepo, taskRepo, dispatcher).(*fileService)
+	return svc, storageStub, resourceRepo, taskRepo, dispatcher
 }
 
 func fileHeader(name, contentType string, size int64) *multipart.FileHeader {
@@ -162,7 +188,7 @@ func fileHeader(name, contentType string, size int64) *multipart.FileHeader {
 }
 
 func TestFileService_Upload_MissingFile(t *testing.T) {
-	svc, _, _, _ := newTestFileService(t)
+	svc, _, _, _, _ := newTestFileService(t)
 
 	_, err := svc.Upload(context.Background(), UploadRequest{})
 
@@ -174,7 +200,7 @@ func TestFileService_Upload_MissingFile(t *testing.T) {
 }
 
 func TestFileService_Upload_TooLarge(t *testing.T) {
-	svc, _, _, _ := newTestFileService(t)
+	svc, _, _, _, _ := newTestFileService(t)
 
 	req := UploadRequest{
 		Header: fileHeader("big.mp4", "video/mp4", MaxFileSizeBytes+1),
@@ -191,7 +217,7 @@ func TestFileService_Upload_TooLarge(t *testing.T) {
 }
 
 func TestFileService_Upload_UnsupportedType(t *testing.T) {
-	svc, _, _, _ := newTestFileService(t)
+	svc, _, _, _, _ := newTestFileService(t)
 
 	req := UploadRequest{
 		Header: fileHeader("bad.exe", "application/x-msdownload", 4),
@@ -208,7 +234,7 @@ func TestFileService_Upload_UnsupportedType(t *testing.T) {
 }
 
 func TestFileService_Upload_MimeMismatch(t *testing.T) {
-	svc, _, _, _ := newTestFileService(t)
+	svc, _, _, _, _ := newTestFileService(t)
 
 	req := UploadRequest{
 		Header: fileHeader("fake.txt", "text/plain", 8),
@@ -225,7 +251,7 @@ func TestFileService_Upload_MimeMismatch(t *testing.T) {
 }
 
 func TestFileService_Upload_Success(t *testing.T) {
-	svc, store, resourceRepo, _ := newTestFileService(t)
+	svc, store, resourceRepo, _, _ := newTestFileService(t)
 
 	userUUID := uuid.NewString()
 	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
@@ -270,7 +296,7 @@ func TestFileService_Upload_TaskTypeMapping(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.mime, func(t *testing.T) {
-			svc, _, resourceRepo, _ := newTestFileService(t)
+			svc, _, resourceRepo, _, _ := newTestFileService(t)
 			resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
 				r.ID = 1
 				return nil
@@ -291,7 +317,7 @@ func TestFileService_Upload_TaskTypeMapping(t *testing.T) {
 }
 
 func TestFileService_Upload_ResourceRepoError_RollbacksObject(t *testing.T) {
-	svc, store, resourceRepo, _ := newTestFileService(t)
+	svc, store, resourceRepo, _, _ := newTestFileService(t)
 
 	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
 		return errors.New("db error")
@@ -313,7 +339,7 @@ func TestFileService_Upload_ResourceRepoError_RollbacksObject(t *testing.T) {
 }
 
 func TestFileService_Upload_TaskRepoError_RollbacksObject(t *testing.T) {
-	svc, store, resourceRepo, taskRepo := newTestFileService(t)
+	svc, store, resourceRepo, taskRepo, _ := newTestFileService(t)
 
 	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
 		r.ID = 1
@@ -336,4 +362,51 @@ func TestFileService_Upload_TaskRepoError_RollbacksObject(t *testing.T) {
 	assert.Len(t, store.putCalls, 1)
 	assert.Len(t, store.removeKeys, 1)
 	assert.Equal(t, store.putCalls[0], store.removeKeys[0])
+}
+
+func TestFileService_Upload_DispatchesAutoTasks(t *testing.T) {
+	svc, _, resourceRepo, _, dispatcher := newTestFileService(t)
+	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
+		r.ID = 1
+		return nil
+	}
+
+	req := UploadRequest{
+		Header:   fileHeader("song.mp3", "audio/mpeg", 10),
+		File:     newFakeFile([]byte{0xff, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
+		UserID:   1,
+		UserUUID: "user-uuid",
+	}
+
+	_, err := svc.Upload(context.Background(), req)
+
+	require.NoError(t, err)
+	require.Len(t, dispatcher.calls, 1)
+	assert.Equal(t, model.TaskTypeMediaParse, dispatcher.calls[0].Task.Type)
+}
+
+func TestFileService_Upload_DispatchFailureDoesNotFailUpload(t *testing.T) {
+	svc, _, resourceRepo, _, _ := newTestFileService(t)
+	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
+		r.ID = 1
+		return nil
+	}
+	svc.dispatcher = &alwaysFailingDispatcher{}
+
+	req := UploadRequest{
+		Header:   fileHeader("doc.pdf", "application/pdf", 8),
+		File:     newFakeFile([]byte("%PDF-1.4")),
+		UserID:   1,
+		UserUUID: "user-uuid",
+	}
+
+	_, err := svc.Upload(context.Background(), req)
+
+	require.NoError(t, err)
+}
+
+type alwaysFailingDispatcher struct{}
+
+func (d *alwaysFailingDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
+	return errors.New("dispatch failed")
 }

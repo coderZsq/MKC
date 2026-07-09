@@ -15,6 +15,7 @@ import (
 	"github.com/zhushuangquan/mkc/gateway/internal/repository"
 	"github.com/zhushuangquan/mkc/gateway/internal/storage"
 	apperrors "github.com/zhushuangquan/mkc/gateway/pkg/errors"
+	"go.uber.org/zap"
 )
 
 const (
@@ -66,21 +67,28 @@ type FileService interface {
 
 // fileService is the concrete FileService implementation.
 type fileService struct {
+	logger       *zap.Logger
 	storage      storage.ObjectStorage
 	resourceRepo repository.ResourceRepository
 	taskRepo     repository.TaskRepository
+	dispatcher   TaskDispatcher
 }
 
 // NewFileService creates a FileService.
-func NewFileService(storage storage.ObjectStorage, resourceRepo repository.ResourceRepository, taskRepo repository.TaskRepository) FileService {
+func NewFileService(logger *zap.Logger, storage storage.ObjectStorage, resourceRepo repository.ResourceRepository, taskRepo repository.TaskRepository, dispatcher TaskDispatcher) FileService {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &fileService{
+		logger:       logger,
 		storage:      storage,
 		resourceRepo: resourceRepo,
 		taskRepo:     taskRepo,
+		dispatcher:   dispatcher,
 	}
 }
 
-// Upload validates and stores the file, creates resource and task records.
+// Upload validates and stores the file, creates resource and task records, and dispatches parse tasks.
 func (s *fileService) Upload(ctx context.Context, req UploadRequest) (*UploadResult, error) {
 	if req.Header == nil {
 		return nil, apperrors.New(http.StatusBadRequest, "FILE_MISSING", "missing file")
@@ -137,12 +145,22 @@ func (s *fileService) Upload(ctx context.Context, req UploadRequest) (*UploadRes
 		ResourceID: resource.ID,
 		UserID:     req.UserID,
 		Type:       resource.Type,
-		Status:     "pending",
+		Status:     model.TaskStatusPending,
 	}
 
 	if err := s.taskRepo.Create(ctx, task); err != nil {
 		_ = s.storage.RemoveObject(ctx, key)
 		return nil, apperrors.Internal("failed to create parse task")
+	}
+
+	if s.dispatcher != nil && isAutoDispatchType(resource.Type) {
+		if dispatchErr := s.dispatcher.Dispatch(ctx, task, resource); dispatchErr != nil {
+			s.logger.Warn("failed to dispatch upload task",
+				zap.String("task_id", task.UUID),
+				zap.String("resource_id", resource.UUID),
+				zap.Error(dispatchErr),
+			)
+		}
 	}
 
 	return &UploadResult{
@@ -157,14 +175,18 @@ func (s *fileService) Upload(ctx context.Context, req UploadRequest) (*UploadRes
 	}, nil
 }
 
+func isAutoDispatchType(taskType string) bool {
+	return taskType == model.TaskTypeMediaParse || taskType == model.TaskTypePdfParse
+}
+
 func detectTaskType(mime string) string {
 	if strings.HasPrefix(mime, "audio/") || strings.HasPrefix(mime, "video/") {
-		return "media_parse"
+		return model.TaskTypeMediaParse
 	}
 	if mime == "application/pdf" {
-		return "pdf_parse"
+		return model.TaskTypePdfParse
 	}
-	return "document_parse"
+	return model.TaskTypeDocumentParse
 }
 
 func sanitizeFilename(name string) string {

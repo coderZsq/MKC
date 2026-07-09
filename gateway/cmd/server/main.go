@@ -62,7 +62,8 @@ func main() {
 		authHandler = handler.NewAuthHandler(authSvc)
 
 		taskBroadcaster := service.NewTaskBroadcaster()
-		taskSvc := service.NewTaskService(appLogger, resourceRepo, taskRepo, taskBroadcaster)
+		taskDispatcher := service.NewTaskDispatcher(cfg, appLogger)
+		taskSvc := service.NewTaskService(appLogger, resourceRepo, taskRepo, taskBroadcaster, taskDispatcher, cfg.Task.RetryCooldown)
 		taskHandler = handler.NewTaskHandler(taskSvc)
 		internalTaskHandler = handler.NewInternalTaskHandler(taskSvc)
 		taskSSEHandler = handler.NewTaskSSEHandler(taskSvc, taskBroadcaster)
@@ -75,7 +76,7 @@ func main() {
 			resultSvc := service.NewResultService(appLogger, taskRepo, resultsClient, cfg.MinIO.PresignedExpiry, cfg.MinIO.ResultsBucket)
 			resultHandler = handler.NewResultHandler(resultSvc)
 
-			fileSvc := service.NewFileService(minioClient, resourceRepo, taskRepo)
+			fileSvc := service.NewFileService(appLogger, minioClient, resourceRepo, taskRepo, taskDispatcher)
 			fileHandler = handler.NewFileHandler(fileSvc)
 		}
 	}

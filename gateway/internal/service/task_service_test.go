@@ -47,12 +47,14 @@ func (r *stubResourceRepositoryForTask) GetByUUIDAndUserID(ctx context.Context, 
 var _ repository.ResourceRepository = (*stubResourceRepositoryForTask)(nil)
 
 type stubTaskRepositoryForTask struct {
-	createFunc         func(ctx context.Context, t *model.Task) error
-	getByUUIDFunc      func(ctx context.Context, uuid string) (*model.Task, error)
-	getByUUIDAndUserID func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
-	listByUserIDFunc   func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
-	updateStatusFunc   func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
-	updateProgressFunc func(ctx context.Context, id uint64, progress uint8) error
+	createFunc               func(ctx context.Context, t *model.Task) error
+	getByUUIDFunc            func(ctx context.Context, uuid string) (*model.Task, error)
+	getByUUIDAndUserID       func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	listByUserIDFunc         func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
+	updateStatusFunc         func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
+	updateStatusWithAttemptFunc func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error
+	updateProgressFunc       func(ctx context.Context, id uint64, progress uint8) error
+	resetForRetryFunc        func(ctx context.Context, id uint64) error
 }
 
 func (r *stubTaskRepositoryForTask) Create(ctx context.Context, t *model.Task) error {
@@ -97,12 +99,40 @@ func (r *stubTaskRepositoryForTask) UpdateProgress(ctx context.Context, id uint6
 	return nil
 }
 
+func (r *stubTaskRepositoryForTask) UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error {
+	if r.updateStatusWithAttemptFunc != nil {
+		return r.updateStatusWithAttemptFunc(ctx, id, status, progress, result, errMsg, attemptCount)
+	}
+	return nil
+}
+
+func (r *stubTaskRepositoryForTask) ResetForRetry(ctx context.Context, id uint64) error {
+	if r.resetForRetryFunc != nil {
+		return r.resetForRetryFunc(ctx, id)
+	}
+	return nil
+}
+
 var _ repository.TaskRepository = (*stubTaskRepositoryForTask)(nil)
+
+type fakeTaskDispatcher struct {
+	calls []dispatchCall
+}
+
+type dispatchCall struct {
+	Task     *model.Task
+	Resource *model.Resource
+}
+
+func (d *fakeTaskDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
+	d.calls = append(d.calls, dispatchCall{Task: task, Resource: resource})
+	return nil
+}
 
 func newTestTaskService(t *testing.T) (*taskService, *stubResourceRepositoryForTask, *stubTaskRepositoryForTask) {
 	resourceRepo := &stubResourceRepositoryForTask{}
 	taskRepo := &stubTaskRepositoryForTask{}
-	svc := NewTaskService(zap.NewNop(), resourceRepo, taskRepo, nil).(*taskService)
+	svc := NewTaskService(zap.NewNop(), resourceRepo, taskRepo, nil, nil, 5*time.Minute).(*taskService)
 	return svc, resourceRepo, taskRepo
 }
 
@@ -378,8 +408,8 @@ func TestTaskService_canTransition(t *testing.T) {
 	assert.True(t, canTransition(model.TaskStatusPending, model.TaskStatusRunning))
 	assert.True(t, canTransition(model.TaskStatusRunning, model.TaskStatusCompleted))
 	assert.True(t, canTransition(model.TaskStatusRunning, model.TaskStatusFailed))
+	assert.True(t, canTransition(model.TaskStatusFailed, model.TaskStatusRunning))
 	assert.False(t, canTransition(model.TaskStatusCompleted, model.TaskStatusRunning))
-	assert.False(t, canTransition(model.TaskStatusFailed, model.TaskStatusRunning))
 	assert.False(t, canTransition(model.TaskStatusPending, model.TaskStatusCompleted))
 }
 
@@ -427,7 +457,7 @@ func TestTaskService_UpdateProgress_PublishesEvent(t *testing.T) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
 		},
 		updateProgressFunc: func(ctx context.Context, id uint64, p uint8) error { return nil },
-	}, broadcaster).(*taskService)
+	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.UpdateProgress(context.Background(), "task-uuid", 60)
 
@@ -445,7 +475,7 @@ func TestTaskService_MarkRunning_PublishesStatusEvent(t *testing.T) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusPending}, nil
 		},
 		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
-	}, broadcaster).(*taskService)
+	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.MarkRunning(context.Background(), "task-uuid")
 
@@ -462,7 +492,7 @@ func TestTaskService_MarkCompleted_PublishesDoneEvent(t *testing.T) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
 		},
 		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
-	}, broadcaster).(*taskService)
+	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.MarkCompleted(context.Background(), "task-uuid", json.RawMessage(`{"ok":true}`))
 
@@ -480,7 +510,7 @@ func TestTaskService_MarkFailed_PublishesErrorEvent(t *testing.T) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
 		},
 		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
-	}, broadcaster).(*taskService)
+	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.MarkFailed(context.Background(), "task-uuid", "boom")
 
@@ -490,4 +520,131 @@ func TestTaskService_MarkFailed_PublishesErrorEvent(t *testing.T) {
 	assert.Equal(t, "failed", broadcaster.events[0].Status)
 	require.NotNil(t, broadcaster.events[0].Message)
 	assert.Equal(t, "boom", *broadcaster.events[0].Message)
+}
+
+func TestTaskService_Retry_Success(t *testing.T) {
+	resourceRepo := &stubResourceRepositoryForTask{}
+	taskRepo := &stubTaskRepositoryForTask{}
+	dispatcher := &fakeTaskDispatcher{}
+	now := time.Now().Add(-10 * time.Minute)
+	taskUUID := uuid.NewString()
+	resourceUUID := uuid.NewString()
+
+	taskRepo.getByUUIDAndUserID = func(ctx context.Context, uuid string, userID uint64) (*model.Task, error) {
+		return &model.Task{
+			ID:         1,
+			UUID:       taskUUID,
+			UserID:     userID,
+			ResourceID: 10,
+			Resource:   model.Resource{UUID: resourceUUID, Name: "test.pdf", StorageKey: "k"},
+			Type:       model.TaskTypeMediaParse,
+			Status:     model.TaskStatusFailed,
+			RetryCount: 2,
+			UpdatedAt:  now,
+		}, nil
+	}
+	var resetCalled bool
+	taskRepo.resetForRetryFunc = func(ctx context.Context, id uint64) error {
+		resetCalled = true
+		return nil
+	}
+
+	svc := NewTaskService(zap.NewNop(), resourceRepo, taskRepo, nil, dispatcher, 5*time.Minute).(*taskService)
+	result, err := svc.Retry(context.Background(), 42, taskUUID)
+
+	require.NoError(t, err)
+	assert.Equal(t, taskUUID, result.TaskID)
+	assert.Equal(t, model.TaskStatusPending, result.Status)
+	assert.Equal(t, uint8(0), result.AttemptCount)
+	assert.True(t, resetCalled)
+	require.Len(t, dispatcher.calls, 1)
+	assert.Equal(t, model.TaskTypeMediaParse, dispatcher.calls[0].Task.Type)
+	assert.Equal(t, resourceUUID, dispatcher.calls[0].Resource.UUID)
+}
+
+func TestTaskService_Retry_NotAllowed(t *testing.T) {
+	svc, _, taskRepo := newTestTaskService(t)
+	taskRepo.getByUUIDAndUserID = func(ctx context.Context, uuid string, userID uint64) (*model.Task, error) {
+		return &model.Task{UUID: uuid, UserID: userID, Status: model.TaskStatusRunning}, nil
+	}
+
+	_, err := svc.Retry(context.Background(), 42, uuid.NewString())
+
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusBadRequest, appErr.Status)
+	assert.Equal(t, apperrors.CodeTaskNotRetryable, appErr.Code)
+}
+
+func TestTaskService_Retry_TooFrequent(t *testing.T) {
+	svc, _, taskRepo := newTestTaskService(t)
+	taskRepo.getByUUIDAndUserID = func(ctx context.Context, uuid string, userID uint64) (*model.Task, error) {
+		return &model.Task{UUID: uuid, UserID: userID, Status: model.TaskStatusFailed, UpdatedAt: time.Now()}, nil
+	}
+
+	_, err := svc.Retry(context.Background(), 42, uuid.NewString())
+
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusTooManyRequests, appErr.Status)
+	assert.Equal(t, apperrors.CodeRetryTooFrequent, appErr.Code)
+}
+
+func TestTaskService_ProcessInternalStatusUpdate_WithAttemptCount(t *testing.T) {
+	svc, _, taskRepo := newTestTaskService(t)
+	taskRepo.getByUUIDFunc = func(ctx context.Context, uuid string) (*model.Task, error) {
+		return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
+	}
+	var attempt uint8
+	taskRepo.updateStatusWithAttemptFunc = func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, ac uint8) error {
+		attempt = ac
+		return nil
+	}
+
+	ac := uint8(2)
+	err := svc.ProcessInternalStatusUpdate(context.Background(), "task-uuid", InternalStatusUpdate{Status: model.TaskStatusCompleted, Result: json.RawMessage(`{}`), AttemptCount: &ac})
+
+	require.NoError(t, err)
+	assert.Equal(t, uint8(2), attempt)
+}
+
+func TestTaskService_ProcessInternalStatusUpdate_FailedToRunning(t *testing.T) {
+	svc, _, taskRepo := newTestTaskService(t)
+	taskRepo.getByUUIDFunc = func(ctx context.Context, uuid string) (*model.Task, error) {
+		return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusFailed}, nil
+	}
+	var status string
+	taskRepo.updateStatusFunc = func(ctx context.Context, id uint64, s string, progress uint8, result json.RawMessage, errMsg string) error {
+		status = s
+		return nil
+	}
+
+	err := svc.ProcessInternalStatusUpdate(context.Background(), "task-uuid", InternalStatusUpdate{Status: model.TaskStatusRunning})
+
+	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusRunning, status)
+}
+
+func TestTaskService_Create_AutoDispatch(t *testing.T) {
+	resourceRepo := &stubResourceRepositoryForTask{}
+	taskRepo := &stubTaskRepositoryForTask{}
+	dispatcher := &fakeTaskDispatcher{}
+	resourceUUID := uuid.NewString()
+
+	resourceRepo.getByUUIDAndUserFunc = func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
+		return &model.Resource{ID: 1, UUID: uuid, Name: "test.mp3", Type: model.TaskTypeMediaParse}, nil
+	}
+	taskRepo.createFunc = func(ctx context.Context, t *model.Task) error {
+		t.ID = 10
+		return nil
+	}
+
+	svc := NewTaskService(zap.NewNop(), resourceRepo, taskRepo, nil, dispatcher, 0).(*taskService)
+	_, err := svc.Create(context.Background(), 42, CreateTaskRequest{ResourceID: resourceUUID})
+
+	require.NoError(t, err)
+	require.Len(t, dispatcher.calls, 1)
+	assert.Equal(t, model.TaskTypeMediaParse, dispatcher.calls[0].Task.Type)
 }

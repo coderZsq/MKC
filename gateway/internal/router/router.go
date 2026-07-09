@@ -55,6 +55,7 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 				api.GET("/tasks", middleware.JWTAuth(jwtMgr), task.List)
 				api.GET("/tasks/:task_id", middleware.JWTAuth(jwtMgr), task.Get)
 				api.POST("/tasks", middleware.JWTAuth(jwtMgr), task.Create)
+				api.POST("/tasks/:task_id/retry", middleware.JWTAuth(jwtMgr), task.Retry)
 				if internalTask != nil {
 					internal := api.Group("/internal")
 					internal.Use(middleware.InternalAuth(cfg))

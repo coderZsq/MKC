@@ -35,6 +35,10 @@ func (r *stubTaskRepo) UpdateStatus(ctx context.Context, id uint64, status strin
 	return nil
 }
 func (r *stubTaskRepo) UpdateProgress(ctx context.Context, id uint64, progress uint8) error { return nil }
+func (r *stubTaskRepo) UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error {
+	return nil
+}
+func (r *stubTaskRepo) ResetForRetry(ctx context.Context, id uint64) error { return nil }
 
 var _ repository.TaskRepository = (*stubTaskRepo)(nil)
 

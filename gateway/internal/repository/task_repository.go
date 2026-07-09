@@ -18,7 +18,9 @@ type TaskRepository interface {
 	GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
 	ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
 	UpdateStatus(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
+	UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error
 	UpdateProgress(ctx context.Context, id uint64, progress uint8) error
+	ResetForRetry(ctx context.Context, id uint64) error
 }
 
 // GORMTaskRepository is a GORM-backed TaskRepository.
@@ -109,6 +111,53 @@ func (r *GORMTaskRepository) UpdateStatus(ctx context.Context, id uint64, status
 		Where("id = ?", id).
 		Updates(updates).Error; err != nil {
 		return fmt.Errorf("failed to update task status: %w", err)
+	}
+	return nil
+}
+
+// UpdateStatusWithAttempt updates the task status and records the current attempt count.
+func (r *GORMTaskRepository) UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error {
+	updates := map[string]any{
+		"status":       status,
+		"progress":     progress,
+		"result":       result,
+		"retry_count":  attemptCount,
+	}
+	if errMsg != "" {
+		updates["error_message"] = errMsg
+	}
+	now := time.Now()
+	if status == model.TaskStatusRunning {
+		updates["started_at"] = now
+	}
+	if status == model.TaskStatusCompleted || status == model.TaskStatusFailed {
+		updates["completed_at"] = now
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(&model.Task{}).
+		Where("id = ?", id).
+		Updates(updates).Error; err != nil {
+		return fmt.Errorf("failed to update task status with attempt: %w", err)
+	}
+	return nil
+}
+
+// ResetForRetry transitions a failed/completed task back to pending and clears prior result and error.
+func (r *GORMTaskRepository) ResetForRetry(ctx context.Context, id uint64) error {
+	updates := map[string]any{
+		"status":        model.TaskStatusPending,
+		"progress":      0,
+		"retry_count":   0,
+		"error_message": "",
+		"result":        nil,
+		"completed_at":  nil,
+	}
+	if err := r.db.WithContext(ctx).
+		Model(&model.Task{}).
+		Where("id = ?", id).
+		Updates(updates).Error; err != nil {
+		return fmt.Errorf("failed to reset task for retry: %w", err)
 	}
 	return nil
 }

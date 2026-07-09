@@ -61,6 +61,14 @@ type AIServiceConfig struct {
 	InternalKey string        `mapstructure:"internal_key"`
 }
 
+// TaskConfig holds asynchronous task dispatch and retry options.
+type TaskConfig struct {
+	MaxRetries      int             `mapstructure:"max_retries"`
+	RetryDelays     []time.Duration `mapstructure:"retry_delays"`
+	RetryCooldown   time.Duration   `mapstructure:"retry_cooldown"`
+	DispatchTimeout time.Duration   `mapstructure:"dispatch_timeout"`
+}
+
 // MinIOConfig holds object storage connection options.
 type MinIOConfig struct {
 	Endpoint       string        `mapstructure:"endpoint"`
@@ -82,6 +90,7 @@ type Config struct {
 	Redis     RedisConfig     `mapstructure:"redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	AIService AIServiceConfig `mapstructure:"ai_service"`
+	Task      TaskConfig      `mapstructure:"task"`
 	MinIO     MinIOConfig     `mapstructure:"minio"`
 }
 
@@ -143,6 +152,18 @@ func (c *Config) validate() error {
 	}
 	if c.AIService.Timeout <= 0 {
 		c.AIService.Timeout = 60 * time.Second
+	}
+	if c.Task.MaxRetries <= 0 {
+		c.Task.MaxRetries = 3
+	}
+	if len(c.Task.RetryDelays) == 0 {
+		c.Task.RetryDelays = []time.Duration{60 * time.Second, 5 * time.Minute, 15 * time.Minute}
+	}
+	if c.Task.RetryCooldown <= 0 {
+		c.Task.RetryCooldown = 5 * time.Minute
+	}
+	if c.Task.DispatchTimeout <= 0 {
+		c.Task.DispatchTimeout = 10 * time.Second
 	}
 	if c.MinIO.PresignedExpiry <= 0 {
 		c.MinIO.PresignedExpiry = time.Hour

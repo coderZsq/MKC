@@ -76,9 +76,10 @@ func TestInternalTaskHandler_UpdateProgress_NotFound(t *testing.T) {
 func TestInternalTaskHandler_UpdateStatus_Running(t *testing.T) {
 	called := false
 	svc := &stubTaskService{
-		markRunningFunc: func(ctx context.Context, taskUUID string) error {
+		processInternalStatusUpdateFunc: func(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
 			called = true
 			assert.Equal(t, "task-uuid", taskUUID)
+			assert.Equal(t, "running", update.Status)
 			return nil
 		},
 	}
@@ -100,10 +101,11 @@ func TestInternalTaskHandler_UpdateStatus_Running(t *testing.T) {
 func TestInternalTaskHandler_UpdateStatus_Completed(t *testing.T) {
 	called := false
 	svc := &stubTaskService{
-		markCompletedFunc: func(ctx context.Context, taskUUID string, result json.RawMessage) error {
+		processInternalStatusUpdateFunc: func(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
 			called = true
 			assert.Equal(t, "task-uuid", taskUUID)
-			assert.JSONEq(t, `{"text":"hello"}`, string(result))
+			assert.Equal(t, "completed", update.Status)
+			assert.JSONEq(t, `{"text":"hello"}`, string(update.Result))
 			return nil
 		},
 	}
@@ -121,15 +123,37 @@ func TestInternalTaskHandler_UpdateStatus_Completed(t *testing.T) {
 func TestInternalTaskHandler_UpdateStatus_Failed(t *testing.T) {
 	called := false
 	svc := &stubTaskService{
-		markFailedFunc: func(ctx context.Context, taskUUID string, errMsg string) error {
+		processInternalStatusUpdateFunc: func(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
 			called = true
 			assert.Equal(t, "task-uuid", taskUUID)
-			assert.Equal(t, "processing failed", errMsg)
+			assert.Equal(t, "failed", update.Status)
+			assert.Equal(t, "processing failed", update.ErrorMessage)
 			return nil
 		},
 	}
 	h := NewInternalTaskHandler(svc)
 	body := bytes.NewBufferString(`{"status":"failed","error_message":"processing failed"}`)
+	w, c := newInternalTaskTestContext(t, http.MethodPost, "/api/v1/internal/tasks/task-uuid/status", body)
+	c.Params = []gin.Param{{Key: "task_id", Value: "task-uuid"}}
+
+	h.UpdateStatus(c)
+
+	assert.True(t, called)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestInternalTaskHandler_UpdateStatus_AttemptCount(t *testing.T) {
+	called := false
+	svc := &stubTaskService{
+		processInternalStatusUpdateFunc: func(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
+			called = true
+			require.NotNil(t, update.AttemptCount)
+			assert.Equal(t, uint8(2), *update.AttemptCount)
+			return nil
+		},
+	}
+	h := NewInternalTaskHandler(svc)
+	body := bytes.NewBufferString(`{"status":"running","attempt_count":2}`)
 	w, c := newInternalTaskTestContext(t, http.MethodPost, "/api/v1/internal/tasks/task-uuid/status", body)
 	c.Params = []gin.Param{{Key: "task_id", Value: "task-uuid"}}
 
@@ -156,7 +180,7 @@ func TestInternalTaskHandler_UpdateStatus_InvalidStatus(t *testing.T) {
 
 func TestInternalTaskHandler_UpdateStatus_InvalidTransition(t *testing.T) {
 	svc := &stubTaskService{
-		markRunningFunc: func(ctx context.Context, taskUUID string) error {
+		processInternalStatusUpdateFunc: func(ctx context.Context, taskUUID string, update service.InternalStatusUpdate) error {
 			return apperrors.New(400, apperrors.CodeInvalidStateTransition, "cannot transition")
 		},
 	}
