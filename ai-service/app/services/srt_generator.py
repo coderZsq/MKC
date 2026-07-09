@@ -93,14 +93,10 @@ class SrtGenerator:
         return self._generate_srt(merged)
 
     def save_to_minio(self, content: str, key: str) -> str:
-        """Upload ``content`` to MinIO under ``key`` and return a presigned URL."""
+        """Upload ``content`` to MinIO under ``key`` and return a ``minio://`` URI."""
         minio_cfg = (settings.ai_config or {}).get("minio", {})
         bucket = minio_cfg.get("bucket") or settings.minio_bucket or "mkc-resources"
         client = _build_minio_client(minio_cfg)
-        expiry = max(
-            minio_cfg.get("presigned_expiry", self.presigned_expiry),
-            self.presigned_expiry,
-        )
 
         data = BytesIO(content.encode("utf-8"))
         try:
@@ -111,7 +107,7 @@ class SrtGenerator:
                 length=len(data.getvalue()),
                 content_type="text/plain; charset=utf-8",
             )
-            return str(client.presigned_get_object(bucket, key, expires=expiry))
+            return f"minio://{bucket}/{key}"
         except SubtitleGenerationError:
             raise
         except Exception as exc:

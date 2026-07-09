@@ -46,11 +46,8 @@ class TestDownloadFile:
 class TestUploadJson:
     @patch("app.services.minio_storage._minio_client")
     def test_upload_json_success(self, mock_minio_client: MagicMock) -> None:
-        mock_minio_client.return_value.presigned_get_object.return_value = (
-            "http://minio/results/parsed.json"
-        )
         url = upload_json({"pages": []}, "results/task-1/parsed.json")
-        assert url == "http://minio/results/parsed.json"
+        assert url == "minio://mkc-resources/results/task-1/parsed.json"
         mock_minio_client.return_value.put_object.assert_called_once()
 
     @patch("app.services.minio_storage._minio_client")

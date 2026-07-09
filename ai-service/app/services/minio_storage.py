@@ -79,11 +79,15 @@ def _normalize_object_name(path: str) -> str:
 
 
 def upload_json(data: dict[str, Any], key: str, content_type: str = "application/json") -> str:
-    """Upload JSON data to MinIO under ``key`` and return a presigned URL."""
+    """Upload JSON data to MinIO under ``key`` and return a ``minio://`` URI.
+
+    The Gateway is responsible for generating presigned download URLs; workers
+    must store stable ``minio://bucket/object`` references so that bucket
+    migrations and URL expiry do not invalidate task results.
+    """
     minio_cfg = (settings.ai_config or {}).get("minio", {})
     bucket = minio_cfg.get("bucket") or settings.minio_bucket or "mkc-resources"
     client = _minio_client(minio_cfg)
-    expiry = minio_cfg.get("presigned_expiry", 3600)
 
     content = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
     body = BytesIO(content)
@@ -95,7 +99,7 @@ def upload_json(data: dict[str, Any], key: str, content_type: str = "application
             length=len(content),
             content_type=content_type,
         )
-        return str(client.presigned_get_object(bucket, key, expires=expiry))
+        return f"minio://{bucket}/{key}"
     except Exception as exc:
         logger.exception("failed to upload JSON result to minio: %s", key)
         raise PdfParseError(f"failed to upload PDF result to minio: {exc}") from exc

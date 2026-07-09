@@ -36,19 +36,21 @@ def fake_reporter() -> MagicMock:
     return MagicMock()
 
 
+@patch("app.services.asr_service.upload_json")
 @patch("app.services.srt_generator._build_minio_client")
 @patch("app.services.asr_service._default_subtitle_generator")
 def test_asr_flow_generates_and_uploads_subtitle(
     mock_default_generator: MagicMock,
     mock_build_minio_client: MagicMock,
+    mock_upload_json: MagicMock,
     fake_engine: MagicMock,
     fake_processor: MagicMock,
     fake_reporter: MagicMock,
 ) -> None:
     from app.services.srt_generator import SrtGenerator
 
+    mock_upload_json.return_value = "minio://mkc-resources/results/task-1/transcript.json"
     mock_minio_client = MagicMock()
-    mock_minio_client.presigned_get_object.return_value = "http://minio/results/task-1/subtitle.srt"
     mock_build_minio_client.return_value = mock_minio_client
 
     mock_default_generator.return_value = SrtGenerator(
@@ -75,7 +77,8 @@ def test_asr_flow_generates_and_uploads_subtitle(
     result = service.process(task)
 
     assert isinstance(result, AsrResult)
-    assert result.subtitle_url == "http://minio/results/task-1/subtitle.srt"
+    assert result.subtitle_url == "minio://mkc-resources/results/task-1/subtitle.srt"
+    assert result.transcript_url == "minio://mkc-resources/results/task-1/transcript.json"
     mock_minio_client.put_object.assert_called_once()
     fake_reporter.mark_status.assert_any_call(
         "task-1",
@@ -84,9 +87,11 @@ def test_asr_flow_generates_and_uploads_subtitle(
     )
 
 
+@patch("app.services.asr_service.upload_json")
 @patch("app.services.asr_service._default_subtitle_generator")
 def test_asr_flow_reports_failure_on_subtitle_upload_error(
     mock_default_generator: MagicMock,
+    mock_upload_json: MagicMock,
     fake_engine: MagicMock,
     fake_processor: MagicMock,
     fake_reporter: MagicMock,
@@ -94,6 +99,7 @@ def test_asr_flow_reports_failure_on_subtitle_upload_error(
     from app.core.exceptions import SubtitleGenerationError
     from app.services.srt_generator import SrtGenerator
 
+    mock_upload_json.return_value = "minio://mkc-resources/results/task-2/transcript.json"
     mock_default_generator.return_value = SrtGenerator(output_format="srt")
 
     with patch(

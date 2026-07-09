@@ -50,6 +50,7 @@ func main() {
 	var taskHandler *handler.TaskHandler
 	var internalTaskHandler *handler.InternalTaskHandler
 	var taskSSEHandler *handler.TaskSSEHandler
+	var resultHandler *handler.ResultHandler
 	var jwtMgr *jwt.Manager
 	if db != nil && redisClient != nil {
 		userRepo := repository.NewUserRepository(db)
@@ -70,12 +71,16 @@ func main() {
 		if err != nil {
 			appLogger.Warn("minio connection failed", zap.Error(err))
 		} else {
+			resultsClient := minioClient.WithBucket(cfg.MinIO.ResultsBucket)
+			resultSvc := service.NewResultService(appLogger, taskRepo, resultsClient, cfg.MinIO.PresignedExpiry, cfg.MinIO.ResultsBucket)
+			resultHandler = handler.NewResultHandler(resultSvc)
+
 			fileSvc := service.NewFileService(minioClient, resourceRepo, taskRepo)
 			fileHandler = handler.NewFileHandler(fileSvc)
 		}
 	}
 
-	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, jwtMgr)
+	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, resultHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
