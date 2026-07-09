@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import AsrProcessingError, AudioProcessingError
+from app.core.exceptions import AsrProcessingError, AudioProcessingError, SubtitleGenerationError
 from app.models.asr import AsrResult, AsrSegment, AsrTaskRequest
 from app.services.asr_service import AsrService
 from app.services.gateway_reporter import GatewayProgressReporter
@@ -17,6 +17,15 @@ def reporter() -> GatewayProgressReporter:
         base_url="http://gateway",
         internal_key="test-key",
     )
+
+
+@pytest.fixture
+def fake_subtitle_generator() -> MagicMock:
+    generator = MagicMock()
+    generator.output_format = "srt"
+    generator.generate.return_value = "1\n00:00:00,000 --> 00:00:01,000\nhello\n"
+    generator.save_to_minio.return_value = "http://minio/results/task-1/subtitle.srt"
+    return generator
 
 
 class TestGatewayProgressReporter:
@@ -105,6 +114,7 @@ class TestAsrService:
         fake_engine: MagicMock,
         fake_processor: MagicMock,
         fake_reporter: MagicMock,
+        fake_subtitle_generator: MagicMock,
     ) -> AsrService:
         return AsrService(
             engine=fake_engine,
@@ -112,6 +122,7 @@ class TestAsrService:
             reporter=fake_reporter,
             download_func=lambda _url, target: target.write_text("fake"),
             progress_interval=0.0,
+            subtitle_generator=fake_subtitle_generator,
         )
 
     def test_process_success(
@@ -119,6 +130,7 @@ class TestAsrService:
         service: AsrService,
         fake_engine: MagicMock,
         fake_reporter: MagicMock,
+        fake_subtitle_generator: MagicMock,
     ) -> None:
         task = AsrTaskRequest(
             task_id="task-1",
@@ -136,11 +148,39 @@ class TestAsrService:
         assert result.text == "你好世界"
         assert len(result.segments) == 2
         assert result.segments[0] == AsrSegment(start=0.0, end=2.0, text="你好", confidence=-0.5)
+        assert result.subtitle_url == "http://minio/results/task-1/subtitle.srt"
         fake_reporter.mark_status.assert_any_call("task-1", "running")
         fake_reporter.mark_status.assert_any_call(
             "task-1",
             "completed",
             result=result.model_dump(),
+        )
+        fake_subtitle_generator.generate.assert_called_once()
+        fake_subtitle_generator.save_to_minio.assert_called_once()
+
+    def test_process_subtitle_generation_failure(
+        self,
+        service: AsrService,
+        fake_subtitle_generator: MagicMock,
+        fake_reporter: MagicMock,
+    ) -> None:
+        fake_subtitle_generator.save_to_minio.side_effect = SubtitleGenerationError(
+            "STORAGE_ERROR", "字幕存储失败"
+        )
+
+        task = AsrTaskRequest(
+            task_id="task-4",
+            resource_id="res-4",
+            audio_url="minio://resources/audio.mp3",
+        )
+
+        with pytest.raises(SubtitleGenerationError):
+            service.process(task)
+
+        fake_reporter.mark_status.assert_called_with(
+            "task-4",
+            "failed",
+            error_message="字幕存储失败",
         )
 
     def test_process_download_failure(
