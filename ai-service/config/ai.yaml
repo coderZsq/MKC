@@ -15,6 +15,29 @@ asr:
   sample_rate: 16000
   progress_interval: 5.0
 
+srt:
+  min_duration: 1.0
+  max_duration: 6.0
+  max_chars: 80
+  output_format: srt
+  presigned_expiry: 3600
+
+text_cleaning:
+  enabled: true
+  mode: rule          # rule / llm / hybrid
+  llm_model: glm-4-flash
+  temperature: 0.1
+  max_tokens: 2048
+  batch_size: 10
+  fallback_on_error: true
+  filler_words:
+    - "嗯"
+    - "啊"
+    - "哦"
+    - "呃"
+    - "那个"
+    - "就是"
+
 minio:
   endpoint: localhost:9000
   # MinIO credentials are read from environment variables:

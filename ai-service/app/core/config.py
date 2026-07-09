@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     minio_use_ssl: bool = False
     minio_region: str | None = None
 
+    zhipu_api_key: str = ""
+    # ZHIPU_API_KEY can also be set via the environment variable.
+
     @property
     def ai_config(self) -> dict[str, Any]:
         return load_yaml_config(self.ai_config_path)

@@ -24,3 +24,23 @@ class ModelLoadError(APIException):
 class AsrProcessingError(APIException):
     def __init__(self, message: str = "转录失败，请重试") -> None:
         super().__init__("ASR_FAILED", message, 500)
+
+
+class SubtitleGenerationError(APIException):
+    def __init__(
+        self,
+        code: str = "SUBTITLE_GENERATION_ERROR",
+        message: str = "字幕生成失败",
+        status_code: int = 500,
+    ) -> None:
+        super().__init__(code, message, status_code)
+
+
+class TextCleaningError(APIException):
+    def __init__(
+        self,
+        code: str = "TEXT_CLEANING_ERROR",
+        message: str = "文本清洗失败",
+        status_code: int = 500,
+    ) -> None:
+        super().__init__(code, message, status_code)
