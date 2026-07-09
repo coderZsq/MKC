@@ -1,6 +1,7 @@
 import '../../../shared/result.dart';
-import 'api_client.dart';
 import '../../models/task_model.dart';
+import '../../models/task_result_model.dart';
+import 'api_client.dart';
 
 /// Remote task API endpoints.
 class TaskApi {
@@ -27,6 +28,13 @@ class TaskApi {
     return _client.get<TaskModel>(
       '$_path/$taskId',
       parser: (dynamic data) => TaskModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  Future<Result<TaskResultModel>> getResult(String taskId) async {
+    return _client.get<TaskResultModel>(
+      '$_path/$taskId/result',
+      parser: (dynamic data) => TaskResultModel.fromJson(data as Map<String, dynamic>),
     );
   }
 }

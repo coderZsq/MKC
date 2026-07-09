@@ -196,5 +196,37 @@ void main() {
         isTrue,
       );
     });
+
+    test('logs requests and responses without exposing tokens or bodies', () async {
+      final logs = <String>[];
+      dio.httpClientAdapter = _MockAdapter(
+        onFetch: (options) {
+          return _jsonBody(
+            {'success': true, 'data': 42, 'error': null, 'meta': null},
+            statusCode: 200,
+          );
+        },
+      );
+
+      final client = ApiClient(
+        baseUrl: 'http://localhost:8080',
+        tokenProvider: tokenProvider,
+        dio: dio,
+        logger: logs.add,
+      );
+
+      await client.get<int>(
+        '/test',
+        parser: (dynamic data) => data as int,
+      );
+
+      expect(logs.length, greaterThanOrEqualTo(2));
+      expect(logs.first, contains('--> GET'));
+      expect(logs[1], contains('<-- 200'));
+      for (final log in logs) {
+        expect(log, isNot(contains('initial-token')));
+        expect(log, isNot(contains('42')));
+      }
+    });
   });
 }
