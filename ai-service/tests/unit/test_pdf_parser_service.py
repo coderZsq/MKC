@@ -56,7 +56,7 @@ class TestPdfParserService:
             extractor=fake_extractor,
             reporter=fake_reporter,
             download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
-            upload_func=lambda _data, _key: "http://minio/results/task-1/parsed.json",
+            upload_func=lambda _data, _key: "minio://mkc-resources/results/task-1/parsed.json",
             progress_interval=0.0,
             ocr_fallback=True,
             ocr_threshold=50,
@@ -80,7 +80,7 @@ class TestPdfParserService:
         result = completed_call.kwargs["result"]
         assert result["total_pages"] == 2
         assert result["pages"][0]["page_number"] == 1
-        assert result["parsed_url"] == "http://minio/results/task-1/parsed.json"
+        assert result["parsed_url"] == "minio://mkc-resources/results/task-1/parsed.json"
 
     def test_progress_reported_for_each_page(
         self,
@@ -117,7 +117,7 @@ class TestPdfParserService:
             extractor=fake_extractor,
             reporter=fake_reporter,
             download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
-            upload_func=lambda _data, _key: "http://minio/results/task-1/parsed.json",
+            upload_func=lambda _data, _key: "minio://mkc-resources/results/task-1/parsed.json",
             progress_interval=0.0,
             ocr_fallback=True,
             ocr_threshold=50,
@@ -341,7 +341,7 @@ class TestPdfParserService:
             extractor=fake_extractor,
             reporter=fake_reporter,
             download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
-            upload_func=lambda _data, _key: "http://minio/results/task-1/parsed.json",
+            upload_func=lambda _data, _key: "minio://mkc-resources/results/task-1/parsed.json",
             progress_interval=0.0,
             ocr_fallback=False,
             ocr_threshold=50,
@@ -358,7 +358,7 @@ class TestPdfParserService:
         assert completed_call.args[1] == "completed"
         assert (
             completed_call.kwargs["result"]["parsed_url"]
-            == "http://minio/results/task-1/parsed.json"
+            == "minio://mkc-resources/results/task-1/parsed.json"
         )
 
     def test_scanned_pdf_triggers_ocr_fallback(
@@ -399,7 +399,7 @@ class TestPdfParserService:
             extractor=fake_extractor,
             reporter=fake_reporter,
             download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
-            upload_func=lambda _data, _key: "http://minio/results/task-1/parsed.json",
+            upload_func=lambda _data, _key: "minio://mkc-resources/results/task-1/parsed.json",
             ocr_service=ocr_service,
             progress_interval=0.0,
             ocr_fallback=True,

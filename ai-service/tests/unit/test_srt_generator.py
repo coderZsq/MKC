@@ -72,9 +72,8 @@ class TestSrtGenerator:
             SrtGenerator(output_format="ass")
         assert exc_info.value.code == "INVALID_OUTPUT_FORMAT"
 
-    def test_save_to_minio_returns_presigned_url(self, generator: SrtGenerator) -> None:
+    def test_save_to_minio_returns_minio_uri(self, generator: SrtGenerator) -> None:
         mock_client = MagicMock()
-        mock_client.presigned_get_object.return_value = "http://minio/results/task-1/subtitle.srt"
         content = "1\n00:00:00,000 --> 00:00:01,000\nhello\n"
 
         with patch(
@@ -89,12 +88,7 @@ class TestSrtGenerator:
         assert call_args.args[1] == "results/task-1/subtitle.srt"
         assert isinstance(call_args.args[2], BytesIO)
         assert call_args.kwargs["length"] == len(content.encode("utf-8"))
-        mock_client.presigned_get_object.assert_called_once_with(
-            "mkc-resources",
-            "results/task-1/subtitle.srt",
-            expires=3600,
-        )
-        assert url == "http://minio/results/task-1/subtitle.srt"
+        assert url == "minio://mkc-resources/results/task-1/subtitle.srt"
 
     def test_save_to_minio_failure_raises_storage_error(self, generator: SrtGenerator) -> None:
         mock_client = MagicMock()
@@ -115,7 +109,6 @@ class TestSrtGenerator:
         self, generator: SrtGenerator
     ) -> None:
         mock_client = MagicMock()
-        mock_client.presigned_get_object.return_value = "http://minio/url"
 
         with patch(
             "app.services.srt_generator._build_minio_client",
@@ -123,8 +116,7 @@ class TestSrtGenerator:
         ):
             generator.save_to_minio("content", "key")
 
-        expiry = mock_client.presigned_get_object.call_args.kwargs["expires"]
-        assert expiry >= 3600
+        mock_client.put_object.assert_called_once()
 
     def test_srt_is_parseable_into_blocks(self, generator: SrtGenerator) -> None:
         segments = [

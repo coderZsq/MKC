@@ -29,6 +29,9 @@ const (
 	CodeInvalidToken           = "AUTH_INVALID_TOKEN"
 	CodeTokenExpired           = "AUTH_TOKEN_EXPIRED"
 	CodeInvalidStateTransition = "INVALID_STATE_TRANSITION"
+	CodeTaskNotCompleted       = "TASK_NOT_COMPLETED"
+	CodePresignedURLFailed     = "PRESIGNED_URL_FAILED"
+	CodeStorageError           = "STORAGE_ERROR"
 )
 
 // New creates a new AppError.

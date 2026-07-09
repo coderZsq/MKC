@@ -41,5 +41,7 @@ minio:
   access_key: mkc
   secret_key: ""
   bucket: mkc-resources
+  results_bucket: mkc-resources
+  presigned_expiry: 1h
   use_ssl: false
   region: us-east-1

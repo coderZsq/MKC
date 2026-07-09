@@ -73,6 +73,14 @@ func (s *stubTaskServiceForRouter) MarkFailed(ctx context.Context, taskUUID stri
 
 var _ service.TaskService = (*stubTaskServiceForRouter)(nil)
 
+type stubResultServiceForRouter struct{}
+
+func (s *stubResultServiceForRouter) GetResult(ctx context.Context, userID uint64, taskUUID string) (*service.ResultSummary, error) {
+	return nil, nil
+}
+
+var _ service.ResultService = (*stubResultServiceForRouter)(nil)
+
 func TestHealthRoute(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -84,7 +92,7 @@ func TestHealthRoute(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil)
+	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
@@ -104,7 +112,7 @@ func TestDebugMode(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil)
+	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil)
 	assert.NotNil(t, r)
 }
 
@@ -121,7 +129,7 @@ func TestAuthRoutes_Registered(t *testing.T) {
 	authH := handler.NewAuthHandler(&stubAuthService{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, nil, nil, nil, nil, jwtMgr)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString("{invalid"))
@@ -145,7 +153,7 @@ func TestFileUploadRoute_Registered(t *testing.T) {
 	fileH := handler.NewFileHandler(&stubFileServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, fileH, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, fileH, nil, nil, nil, nil, jwtMgr)
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -184,7 +192,7 @@ func TestTaskRoutes_Registered(t *testing.T) {
 	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, nil, jwtMgr)
 
 	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
@@ -216,7 +224,7 @@ func TestInternalRoutes_RegisteredAndProtected(t *testing.T) {
 	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
 	internalTaskH := handler.NewInternalTaskHandler(&stubTaskServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
-	r := New(cfg, logger, nil, authH, nil, taskH, internalTaskH, nil, jwtMgr)
+	r := New(cfg, logger, nil, authH, nil, taskH, internalTaskH, nil, nil, jwtMgr)
 
 	// Missing key returns 401.
 	w := httptest.NewRecorder()
@@ -242,6 +250,34 @@ func TestInternalRoutes_RegisteredAndProtected(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+func TestResultRoute_Registered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{
+		App:    config.AppConfig{Env: "test"},
+		Server: config.ServerConfig{Port: 8080, Mode: "test"},
+	}
+	logger := zap.NewNop()
+	healthSvc := service.NewHealthService("0.1.0")
+	healthH := handler.NewHealthHandler(healthSvc)
+	authH := handler.NewAuthHandler(&stubAuthService{})
+	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
+	resultH := handler.NewResultHandler(&stubResultServiceForRouter{})
+	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
+
+	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, resultH, jwtMgr)
+
+	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tasks/task-uuid/result", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
 func TestNoRoute_ReturnsNotFoundEnvelope(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -253,7 +289,7 @@ func TestNoRoute_ReturnsNotFoundEnvelope(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil)
+	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/not-a-real-path", nil)

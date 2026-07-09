@@ -63,12 +63,14 @@ type AIServiceConfig struct {
 
 // MinIOConfig holds object storage connection options.
 type MinIOConfig struct {
-	Endpoint  string `mapstructure:"endpoint"`
-	AccessKey string `mapstructure:"access_key"`
-	SecretKey string `mapstructure:"secret_key"`
-	Bucket    string `mapstructure:"bucket"`
-	UseSSL    bool   `mapstructure:"use_ssl"`
-	Region    string `mapstructure:"region"`
+	Endpoint       string        `mapstructure:"endpoint"`
+	AccessKey      string        `mapstructure:"access_key"`
+	SecretKey      string        `mapstructure:"secret_key"`
+	Bucket         string        `mapstructure:"bucket"`
+	ResultsBucket  string        `mapstructure:"results_bucket"`
+	PresignedExpiry time.Duration `mapstructure:"presigned_expiry"`
+	UseSSL         bool          `mapstructure:"use_ssl"`
+	Region         string        `mapstructure:"region"`
 }
 
 // Config is the top-level configuration container.
@@ -141,6 +143,12 @@ func (c *Config) validate() error {
 	}
 	if c.AIService.Timeout <= 0 {
 		c.AIService.Timeout = 60 * time.Second
+	}
+	if c.MinIO.PresignedExpiry <= 0 {
+		c.MinIO.PresignedExpiry = time.Hour
+	}
+	if c.MinIO.ResultsBucket == "" {
+		c.MinIO.ResultsBucket = c.MinIO.Bucket
 	}
 	return nil
 }

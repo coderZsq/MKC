@@ -12,6 +12,7 @@ from app.core.exceptions import (
     SubtitleGenerationError,
 )
 from app.models.asr import AsrResult, AsrSegment, AsrTaskRequest
+from app.services.minio_storage import upload_json
 
 logger = logging.getLogger(__name__)
 
@@ -81,12 +82,18 @@ class AsrService:
                 segments = self._transcribe_with_progress(task, wav_path, duration)
                 cleaned_segments = self._text_cleaning_service.clean(segments)
 
+                transcript_key = f"results/{task.task_id}/transcript.json"
+                transcript_url = upload_json(
+                    {"segments": [segment.model_dump() for segment in cleaned_segments]},
+                    transcript_key,
+                )
                 result = AsrResult(
                     task_id=task.task_id,
                     resource_id=task.resource_id,
                     segments=cleaned_segments,
                     text=self._join_text(cleaned_segments, task.language),
                     duration=duration,
+                    transcript_url=transcript_url,
                     subtitle_url=self._generate_subtitle(task, cleaned_segments),
                 )
                 self.reporter.mark_status(

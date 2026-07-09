@@ -24,8 +24,15 @@ def fake_subtitle_generator() -> MagicMock:
     generator = MagicMock()
     generator.output_format = "srt"
     generator.generate.return_value = "1\n00:00:00,000 --> 00:00:01,000\nhello\n"
-    generator.save_to_minio.return_value = "http://minio/results/task-1/subtitle.srt"
+    generator.save_to_minio.return_value = "minio://mkc-resources/results/task-1/subtitle.srt"
     return generator
+
+
+@pytest.fixture
+def fake_text_cleaning_service() -> MagicMock:
+    cleaner = MagicMock()
+    cleaner.clean.side_effect = lambda segments: segments
+    return cleaner
 
 
 class TestGatewayProgressReporter:
@@ -115,6 +122,7 @@ class TestAsrService:
         fake_processor: MagicMock,
         fake_reporter: MagicMock,
         fake_subtitle_generator: MagicMock,
+        fake_text_cleaning_service: MagicMock,
     ) -> AsrService:
         return AsrService(
             engine=fake_engine,
@@ -123,6 +131,7 @@ class TestAsrService:
             download_func=lambda _url, target: target.write_text("fake"),
             progress_interval=0.0,
             subtitle_generator=fake_subtitle_generator,
+            text_cleaning_service=fake_text_cleaning_service,
         )
 
     def test_process_success(
@@ -132,15 +141,17 @@ class TestAsrService:
         fake_reporter: MagicMock,
         fake_subtitle_generator: MagicMock,
     ) -> None:
-        task = AsrTaskRequest(
-            task_id="task-1",
-            resource_id="res-1",
-            audio_url="minio://resources/audio.mp3",
-            language="zh",
-            model="small",
-        )
+        with patch("app.services.asr_service.upload_json") as upload_json_mock:
+            upload_json_mock.return_value = "minio://mkc-resources/results/task-1/transcript.json"
+            task = AsrTaskRequest(
+                task_id="task-1",
+                resource_id="res-1",
+                audio_url="minio://resources/audio.mp3",
+                language="zh",
+                model="small",
+            )
 
-        result = service.process(task)
+            result = service.process(task)
 
         assert isinstance(result, AsrResult)
         assert result.task_id == "task-1"
@@ -148,7 +159,8 @@ class TestAsrService:
         assert result.text == "你好世界"
         assert len(result.segments) == 2
         assert result.segments[0] == AsrSegment(start=0.0, end=2.0, text="你好", confidence=-0.5)
-        assert result.subtitle_url == "http://minio/results/task-1/subtitle.srt"
+        assert result.subtitle_url == "minio://mkc-resources/results/task-1/subtitle.srt"
+        assert result.transcript_url == "minio://mkc-resources/results/task-1/transcript.json"
         fake_reporter.mark_status.assert_any_call("task-1", "running")
         fake_reporter.mark_status.assert_any_call(
             "task-1",
@@ -157,6 +169,7 @@ class TestAsrService:
         )
         fake_subtitle_generator.generate.assert_called_once()
         fake_subtitle_generator.save_to_minio.assert_called_once()
+        upload_json_mock.assert_called_once()
 
     def test_process_subtitle_generation_failure(
         self,
@@ -168,14 +181,16 @@ class TestAsrService:
             "STORAGE_ERROR", "字幕存储失败"
         )
 
-        task = AsrTaskRequest(
-            task_id="task-4",
-            resource_id="res-4",
-            audio_url="minio://resources/audio.mp3",
-        )
+        with patch("app.services.asr_service.upload_json") as upload_json_mock:
+            upload_json_mock.return_value = "minio://mkc-resources/results/task-4/transcript.json"
+            task = AsrTaskRequest(
+                task_id="task-4",
+                resource_id="res-4",
+                audio_url="minio://resources/audio.mp3",
+            )
 
-        with pytest.raises(SubtitleGenerationError):
-            service.process(task)
+            with pytest.raises(SubtitleGenerationError):
+                service.process(task)
 
         fake_reporter.mark_status.assert_called_with(
             "task-4",

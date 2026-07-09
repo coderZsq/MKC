@@ -79,4 +79,11 @@ func (m *MinIOClient) PresignedGetURL(ctx context.Context, key string, expiry ti
 	return url.String(), nil
 }
 
+// WithBucket returns a new MinIOClient that shares the underlying connection
+// but targets the given bucket. This lets the Gateway use separate buckets for
+// uploaded resources and processed results without creating two connections.
+func (m *MinIOClient) WithBucket(bucket string) *MinIOClient {
+	return &MinIOClient{client: m.client, bucket: bucket}
+}
+
 var _ ObjectStorage = (*MinIOClient)(nil)

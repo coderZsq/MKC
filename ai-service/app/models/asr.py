@@ -30,6 +30,7 @@ class AsrResult(BaseModel):
     segments: list[AsrSegment]
     text: str
     duration: float | None = None
+    transcript_url: str | None = None
     subtitle_url: str | None = None
 
 
