@@ -11,6 +11,7 @@ class PdfBlock(BaseModel):
     width: float
     height: float
     text: str
+    confidence: float | None = None
 
 
 class PdfPage(BaseModel):

@@ -74,3 +74,18 @@ class PdfNotFoundError(APIException):
 class ParserUnavailableError(APIException):
     def __init__(self, message: str = "PDF 解析器不可用") -> None:
         super().__init__("PARSER_UNAVAILABLE", message, 503)
+
+
+class OcrUnavailableError(APIException):
+    def __init__(self, message: str = "OCR 引擎不可用") -> None:
+        super().__init__("OCR_UNAVAILABLE", message, 503)
+
+
+class OcrPageFailedError(APIException):
+    def __init__(self, message: str = "某页 OCR 失败") -> None:
+        super().__init__("OCR_PAGE_FAILED", message, 500)
+
+
+class OcrNoTextError(APIException):
+    def __init__(self, message: str = "无法识别文字") -> None:
+        super().__init__("OCR_NO_TEXT", message, 400)

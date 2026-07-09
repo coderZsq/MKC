@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.core.exceptions import ParserUnavailableError
-from celery_workers.tasks.pdf_parse_task import run_pdf_parse
+import pytest
+
+from app.core.exceptions import OcrUnavailableError, ParserUnavailableError
+from app.services.ocr_service import OcrService
+from celery_workers.tasks.pdf_parse_task import _build_ocr_service, run_pdf_parse
 
 
 def _task_payload() -> dict[str, str]:
@@ -14,6 +17,7 @@ def _task_payload() -> dict[str, str]:
     }
 
 
+@patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")
 @patch("celery_workers.tasks.pdf_parse_task._build_extractor")
 @patch("celery_workers.tasks.pdf_parse_task.GatewayProgressReporter")
 @patch("celery_workers.tasks.pdf_parse_task.PdfParserService")
@@ -23,6 +27,7 @@ def test_run_pdf_parse_success(
     mock_service_class: MagicMock,
     _mock_reporter_class: MagicMock,
     _mock_build_extractor: MagicMock,
+    _mock_build_ocr_service: MagicMock,
 ) -> None:
     mock_settings.ai_config = {"pdf": {"ocr_threshold": 50}}
     expected = {
@@ -47,6 +52,7 @@ def test_run_pdf_parse_success(
     service.parse.assert_called_once()
 
 
+@patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")
 @patch("celery_workers.tasks.pdf_parse_task._build_extractor")
 @patch("celery_workers.tasks.pdf_parse_task.GatewayProgressReporter")
 @patch("celery_workers.tasks.pdf_parse_task.PdfParserService")
@@ -56,6 +62,7 @@ def test_run_pdf_parse_parser_unavailable_retries(
     mock_service_class: MagicMock,
     _mock_reporter_class: MagicMock,
     mock_build_extractor: MagicMock,
+    _mock_build_ocr_service: MagicMock,
 ) -> None:
     mock_settings.ai_config = {"pdf": {}}
     mock_build_extractor.side_effect = ParserUnavailableError("PyMuPDF missing")
@@ -75,6 +82,7 @@ def test_run_pdf_parse_parser_unavailable_retries(
     retry_mock.assert_called_once()
 
 
+@patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")
 @patch("celery_workers.tasks.pdf_parse_task._build_extractor")
 @patch("celery_workers.tasks.pdf_parse_task.GatewayProgressReporter")
 @patch("celery_workers.tasks.pdf_parse_task.PdfParserService")
@@ -84,6 +92,7 @@ def test_run_pdf_parse_parser_unavailable_exhausted(
     mock_service_class: MagicMock,
     mock_reporter_class: MagicMock,
     mock_build_extractor: MagicMock,
+    _mock_build_ocr_service: MagicMock,
 ) -> None:
     mock_settings.ai_config = {"pdf": {}}
     mock_build_extractor.side_effect = ParserUnavailableError("PyMuPDF missing")
@@ -105,3 +114,60 @@ def test_run_pdf_parse_parser_unavailable_exhausted(
         "failed",
         error_message="PyMuPDF missing",
     )
+
+
+@patch("celery_workers.tasks.pdf_parse_task.settings")
+def test_build_ocr_service_returns_none_when_disabled(mock_settings: MagicMock) -> None:
+    mock_settings.ai_config = {"ocr": {"enabled": False}}
+
+    service = _build_ocr_service()
+
+    assert service is None
+
+
+@patch("celery_workers.tasks.pdf_parse_task.PaddleOCREngine")
+@patch("celery_workers.tasks.pdf_parse_task.PdfRenderer")
+@patch("celery_workers.tasks.pdf_parse_task.settings")
+def test_build_ocr_service_returns_service_when_enabled(
+    mock_settings: MagicMock,
+    mock_renderer_class: MagicMock,
+    mock_engine_class: MagicMock,
+) -> None:
+    mock_settings.ai_config = {
+        "ocr": {
+            "enabled": True,
+            "lang": "en",
+            "dpi": 200,
+            "max_pages_in_memory": 3,
+            "use_gpu": True,
+        },
+    }
+    mock_engine_class.return_value = MagicMock()
+    mock_renderer_class.return_value = MagicMock()
+
+    service = _build_ocr_service()
+
+    assert isinstance(service, OcrService)
+    mock_engine_class.assert_called_once_with(lang="en", use_gpu=True)
+    mock_renderer_class.assert_called_once_with(dpi=200)
+
+
+@patch("celery_workers.tasks.pdf_parse_task.settings")
+def test_build_ocr_service_raises_for_unsupported_engine(mock_settings: MagicMock) -> None:
+    mock_settings.ai_config = {"ocr": {"enabled": True, "engine": "tesseract"}}
+
+    with pytest.raises(OcrUnavailableError):
+        _build_ocr_service()
+
+
+@patch("celery_workers.tasks.pdf_parse_task.PaddleOCREngine")
+@patch("celery_workers.tasks.pdf_parse_task.settings")
+def test_build_ocr_service_wraps_engine_error_as_unavailable(
+    mock_settings: MagicMock,
+    mock_engine_class: MagicMock,
+) -> None:
+    mock_settings.ai_config = {"ocr": {"enabled": True, "engine": "paddleocr"}}
+    mock_engine_class.side_effect = RuntimeError("dll load failed")
+
+    with pytest.raises(OcrUnavailableError):
+        _build_ocr_service()
