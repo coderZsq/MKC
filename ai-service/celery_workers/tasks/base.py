@@ -26,7 +26,7 @@ class BaseAITask(Task):
 
     def _business_task_id(self, args: Any, kwargs: Any, celery_task_id: str) -> str:
         """Return the business task id passed as the first positional argument or keyword."""
-        if args and isinstance(args, (list, tuple)):
+        if args and isinstance(args, list | tuple):
             return args[0]
         if kwargs and isinstance(kwargs, dict) and "task_id" in kwargs:
             return kwargs["task_id"]
