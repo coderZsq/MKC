@@ -3,6 +3,7 @@ import os
 os.environ["INTERNAL_API_KEY"] = "test-internal-key"
 os.environ.setdefault("EMBEDDING_PROVIDER", "mock")
 os.environ.setdefault("VECTOR_STORE_PROVIDER", "chroma")
+os.environ.setdefault("LLM_PROVIDER", "mock")
 
 import chromadb
 import pytest

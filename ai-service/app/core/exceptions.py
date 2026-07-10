@@ -163,3 +163,23 @@ class RetrievalForbiddenError(APIException):
 class RetrievalUnavailableError(APIException):
     def __init__(self, message: str = "检索服务不可用") -> None:
         super().__init__("RETRIEVAL_UNAVAILABLE", message, 503)
+
+
+class LLMAuthFailedError(APIException):
+    def __init__(self, message: str = "LLM 认证失败") -> None:
+        super().__init__("LLM_AUTH_FAILED", message, 401)
+
+
+class LLMUnavailableError(APIException):
+    def __init__(self, message: str = "LLM 服务不可用") -> None:
+        super().__init__("LLM_UNAVAILABLE", message, 503)
+
+
+class LLMStreamError(APIException):
+    def __init__(self, message: str = "流式输出中断") -> None:
+        super().__init__("LLM_STREAM_ERROR", message, 500)
+
+
+class LLMTimeoutError(APIException):
+    def __init__(self, message: str = "LLM 调用超时") -> None:
+        super().__init__("LLM_TIMEOUT", message, 504)

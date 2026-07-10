@@ -1,3 +1,4 @@
+import hmac
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
@@ -14,7 +15,10 @@ def check_internal_key() -> None:
     key = request.headers.get("X-Internal-Key")
     if key is None:
         raise APIException("UNAUTHORIZED", "缺少内部调用密钥", 401)
-    if key != settings.internal_api_key:
+    configured_key = settings.internal_api_key
+    if not configured_key or not key:
+        raise APIException("FORBIDDEN", "非法内部调用", 403)
+    if not hmac.compare_digest(key, configured_key):
         raise APIException("FORBIDDEN", "非法内部调用", 403)
 
 
