@@ -57,6 +57,7 @@ class PdfParserService:
         ocr_threshold: int = 50,
         max_pdf_size: int = 104_857_600,
         max_pages: int = 5_000,
+        report_status: bool = True,
     ) -> None:
         self._extractor = extractor
         self._reporter = reporter
@@ -68,6 +69,7 @@ class PdfParserService:
         self._ocr_threshold = ocr_threshold
         self._max_pdf_size = max_pdf_size
         self._max_pages = max_pages
+        self._report_status = report_status
 
     def parse(self, task: PdfParseTask) -> PdfDocument:
         """Download, extract, upload and report the result for a task."""
@@ -76,10 +78,10 @@ class PdfParserService:
                 pdf_path = Path(tmp_dir) / "source.pdf"
                 self._download_func(task.pdf_url, pdf_path)
                 self._enforce_size_limit(pdf_path)
-                self._reporter.mark_status(task.task_id, "running")
+                self._mark_status(task.task_id, "running")
                 document = self._extract_and_report(task, pdf_path)
                 result = self._build_result(task, document)
-                self._reporter.mark_status(
+                self._mark_status(
                     task.task_id,
                     "completed",
                     result=result,
@@ -87,7 +89,7 @@ class PdfParserService:
                 return document
         except PdfNotFoundError as exc:
             logger.error("PDF not found for task %s: %s", task.task_id, exc)
-            self._reporter.mark_status(
+            self._mark_status(
                 task.task_id,
                 "failed",
                 error_message=exc.message,
@@ -107,7 +109,7 @@ class PdfParserService:
                 task.task_id,
                 exc,
             )
-            self._reporter.mark_status(
+            self._mark_status(
                 task.task_id,
                 "failed",
                 error_message=exc.message,
@@ -115,12 +117,28 @@ class PdfParserService:
             raise
         except Exception as exc:
             logger.exception("unexpected error during PDF parse for task %s", task.task_id)
-            self._reporter.mark_status(
+            self._mark_status(
                 task.task_id,
                 "failed",
                 error_message="PDF parse failed unexpectedly",
             )
             raise PdfParseError("PDF parse failed unexpectedly") from exc
+
+    def _mark_status(
+        self,
+        task_id: str,
+        status: str,
+        result: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        if not self._report_status:
+            return
+        kwargs: dict[str, Any] = {}
+        if result is not None:
+            kwargs["result"] = result
+        if error_message is not None:
+            kwargs["error_message"] = error_message
+        self._reporter.mark_status(task_id, status, **kwargs)
 
     def _enforce_size_limit(self, pdf_path: Path) -> None:
         size = pdf_path.stat().st_size

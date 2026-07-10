@@ -82,6 +82,7 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
             ocr_threshold=pdf_cfg.get("ocr_threshold", 50),
             max_pdf_size=pdf_cfg.get("max_pdf_size", 104_857_600),
             max_pages=pdf_cfg.get("max_pages", 5_000),
+            report_status=False,
         )
         document = service.parse(task)
     except Exception as exc:

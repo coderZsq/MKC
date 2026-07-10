@@ -51,6 +51,7 @@ def test_run_pdf_parse_success(
 
     assert result == expected
     service.parse.assert_called_once()
+    assert mock_service_class.call_args.kwargs.get("report_status") is False
 
 
 @patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")

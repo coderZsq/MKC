@@ -82,6 +82,32 @@ class TestPdfParserService:
         assert result["pages"][0]["page_number"] == 1
         assert result["parsed_url"] == "minio://mkc-resources/results/task-1/parsed.json"
 
+    def test_report_status_false_skips_status_reports(
+        self,
+        fake_extractor: MagicMock,
+        fake_reporter: MagicMock,
+    ) -> None:
+        service = PdfParserService(
+            extractor=fake_extractor,
+            reporter=fake_reporter,
+            download_func=lambda _url, target: Path(target).write_bytes(b"pdf"),
+            upload_func=lambda _data, _key: "minio://mkc-resources/results/task-1/parsed.json",
+            progress_interval=0.0,
+            ocr_fallback=True,
+            ocr_threshold=50,
+            report_status=False,
+        )
+        task = PdfParseTask(
+            task_id="task-1",
+            resource_id="res-1",
+            pdf_url="minio://resources/doc.pdf",
+        )
+
+        document = service.parse(task)
+
+        assert document.total_pages == 2
+        fake_reporter.mark_status.assert_not_called()
+
     def test_progress_reported_for_each_page(
         self,
         service: PdfParserService,
