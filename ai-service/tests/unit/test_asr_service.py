@@ -5,7 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import AsrProcessingError, AudioProcessingError, SubtitleGenerationError
+from app.core.exceptions import (
+    AsrProcessingError,
+    AudioProcessingError,
+    SubtitleGenerationError,
+)
 from app.models.asr import AsrResult, AsrSegment, AsrTaskRequest
 from app.services.asr_service import AsrService
 from app.services.gateway_reporter import GatewayProgressReporter
