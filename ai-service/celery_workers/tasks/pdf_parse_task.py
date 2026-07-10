@@ -58,11 +58,12 @@ def _build_ocr_service() -> OcrService | None:
     )
 
 
-@celery_app.task(bind=True, base=BaseAITask)
+@celery_app.task(bind=True, base=BaseAITask, autoretry_for=())
 def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     """Celery task that extracts text from a PDF and reports the result.
 
-    Automatic retry and exponential backoff are handled by :class:`BaseAITask`.
+    Retries are triggered explicitly so that positional arguments are preserved
+    correctly.
     """
     task = PdfParseTask.model_validate(payload)
     pdf_cfg = (settings.ai_config or {}).get("pdf", {})
@@ -70,7 +71,6 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
     reporter = GatewayProgressReporter()
     reporter.mark_status(task_id, "running", attempt_count=self._attempt_count())
 
-    retry_payload = payload
     try:
         extractor = _build_extractor()
         try:
@@ -93,17 +93,15 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
         )
         document = service.parse(task)
     except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            reporter.mark_status(
-                task_id,
-                "failed",
-                error_message=str(exc),
-                attempt_count=self._attempt_count(),
-            )
-            self._failure_reported = True
-            raise
-        retry_exc = exc
-    else:
-        return document.model_dump()
+        if self.request.retries < self.request.max_retries:
+            raise self.retry(kwargs={"task_id": task_id, "payload": payload}) from exc
+        reporter.mark_status(
+            task_id,
+            "failed",
+            error_message=str(exc),
+            attempt_count=self._attempt_count(),
+        )
+        self._failure_reported = True
+        raise
 
-    raise self.retry(args=[task_id, retry_payload], exc=retry_exc)
+    return document

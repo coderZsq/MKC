@@ -71,8 +71,8 @@ class PdfParserService:
         self._max_pages = max_pages
         self._report_status = report_status
 
-    def parse(self, task: PdfParseTask) -> PdfDocument:
-        """Download, extract, upload and report the result for a task."""
+    def parse(self, task: PdfParseTask) -> dict[str, Any]:
+        """Download, extract, upload and return the result payload for a task."""
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
                 pdf_path = Path(tmp_dir) / "source.pdf"
@@ -86,7 +86,7 @@ class PdfParserService:
                     "completed",
                     result=result,
                 )
-                return document
+                return result
         except PdfNotFoundError as exc:
             logger.error("PDF not found for task %s: %s", task.task_id, exc)
             self._mark_status(

@@ -44,7 +44,7 @@ def test_run_pdf_parse_success(
         ],
     }
     service = MagicMock()
-    service.parse.return_value = MagicMock(model_dump=MagicMock(return_value=expected))
+    service.parse.return_value = expected
     mock_service_class.return_value = service
 
     result = run_pdf_parse.run(task_id="task-1", payload=_task_payload())
@@ -81,7 +81,7 @@ def test_run_pdf_parse_continues_when_ocr_unavailable(
         ],
     }
     service = MagicMock()
-    service.parse.return_value = MagicMock(model_dump=MagicMock(return_value=expected))
+    service.parse.return_value = expected
     mock_service_class.return_value = service
 
     result = run_pdf_parse.run(task_id="task-1", payload=_task_payload())
@@ -99,7 +99,7 @@ def test_run_pdf_parse_continues_when_ocr_unavailable(
 def test_run_pdf_parse_parser_unavailable_retries(
     mock_settings: MagicMock,
     mock_service_class: MagicMock,
-    _mock_reporter_class: MagicMock,
+    mock_reporter_class: MagicMock,
     mock_build_extractor: MagicMock,
     _mock_build_ocr_service: MagicMock,
 ) -> None:
@@ -113,7 +113,12 @@ def test_run_pdf_parse_parser_unavailable_retries(
     with patch.object(run_pdf_parse, "retry", retry_mock), pytest.raises(Retry):
         run_pdf_parse.run(task_id="task-1", payload=_task_payload())
 
-    retry_mock.assert_called_once()
+    retry_mock.assert_called_once_with(kwargs={"task_id": "task-1", "payload": _task_payload()})
+    mock_reporter_class.return_value.mark_status.assert_any_call(
+        "task-1",
+        "running",
+        attempt_count=1,
+    )
 
 
 @patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")
@@ -136,12 +141,8 @@ def test_run_pdf_parse_parser_unavailable_exhausted(
     run_pdf_parse.request.retries = 3
     run_pdf_parse.request.max_retries = 3
 
-    try:
+    with pytest.raises(ParserUnavailableError):
         run_pdf_parse.run(task_id="task-1", payload=_task_payload())
-    except ParserUnavailableError:
-        pass
-    else:
-        raise AssertionError("expected ParserUnavailableError to be raised")
 
     reporter.mark_status.assert_any_call(
         "task-1",

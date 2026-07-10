@@ -69,18 +69,18 @@ class TestPdfParserService:
             pdf_url="minio://resources/doc.pdf",
         )
 
-        document = service.parse(task)
+        result = service.parse(task)
 
-        assert document.resource_id == "res-1"
-        assert document.total_pages == 2
-        assert len(document.pages) == 2
+        assert result["resource_id"] == "res-1"
+        assert result["total_pages"] == 2
+        assert len(result["pages"]) == 2
         fake_reporter.mark_status.assert_any_call("task-1", "running")
         completed_call = fake_reporter.mark_status.call_args_list[-1]
         assert completed_call.args[1] == "completed"
-        result = completed_call.kwargs["result"]
-        assert result["total_pages"] == 2
-        assert result["pages"][0]["page_number"] == 1
-        assert result["parsed_url"] == "minio://mkc-resources/results/task-1/parsed.json"
+        result_payload = completed_call.kwargs["result"]
+        assert result_payload["total_pages"] == 2
+        assert result_payload["pages"][0]["page_number"] == 1
+        assert result_payload["parsed_url"] == "minio://mkc-resources/results/task-1/parsed.json"
 
     def test_report_status_false_skips_status_reports(
         self,
@@ -103,9 +103,9 @@ class TestPdfParserService:
             pdf_url="minio://resources/doc.pdf",
         )
 
-        document = service.parse(task)
+        result = service.parse(task)
 
-        assert document.total_pages == 2
+        assert result["total_pages"] == 2
         fake_reporter.mark_status.assert_not_called()
 
     def test_progress_reported_for_each_page(
@@ -379,7 +379,7 @@ class TestPdfParserService:
         )
 
         document = service.parse(task)
-        assert document.total_pages == 1
+        assert document["total_pages"] == 1
         completed_call = fake_reporter.mark_status.call_args_list[-1]
         assert completed_call.args[1] == "completed"
         assert (
@@ -439,7 +439,11 @@ class TestPdfParserService:
 
         document = service.parse(task)
 
-        assert document is ocr_document
+        assert document["pages"][0]["text"] == "OCR text"
+        assert (
+            document["parsed_url"]
+            == "minio://mkc-resources/results/task-1/parsed.json"
+        )
         ocr_service.process_pdf.assert_called_once()
         completed_call = fake_reporter.mark_status.call_args_list[-1]
         result = completed_call.kwargs["result"]
