@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from celery import Task
 
@@ -27,9 +27,9 @@ class BaseAITask(Task):
     def _business_task_id(self, args: Any, kwargs: Any, celery_task_id: str) -> str:
         """Return the business task id passed as the first positional argument or keyword."""
         if args and isinstance(args, list | tuple):
-            return args[0]
+            return cast(str, args[0])
         if kwargs and isinstance(kwargs, dict) and "task_id" in kwargs:
-            return kwargs["task_id"]
+            return cast(str, kwargs["task_id"])
         return celery_task_id
 
     def on_success(self, retval: Any, task_id: str, args: Any, kwargs: Any) -> None:
