@@ -138,3 +138,18 @@ class DimensionMismatchError(APIException):
 class EmbeddingProviderError(APIException):
     def __init__(self, message: str = "不支持的 Embedding Provider") -> None:
         super().__init__("EMBEDDING_PROVIDER_ERROR", message, 400)
+
+
+class VectorStoreError(APIException):
+    def __init__(self, message: str = "向量存储操作失败") -> None:
+        super().__init__("VECTOR_STORE_ERROR", message, 500)
+
+
+class VectorStoreUnavailableError(APIException):
+    def __init__(self, message: str = "向量存储服务不可用") -> None:
+        super().__init__("VECTOR_STORE_UNAVAILABLE", message, 503)
+
+
+class VectorStoreConfigError(APIException):
+    def __init__(self, message: str = "向量存储配置错误") -> None:
+        super().__init__("VECTOR_STORE_CONFIG_ERROR", message, 400)

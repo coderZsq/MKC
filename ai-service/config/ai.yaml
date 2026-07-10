@@ -96,8 +96,26 @@ minio:
   use_ssl: false
   region: us-east-1
 
+vector_store:
+  provider: "${VECTOR_STORE_PROVIDER:-milvus}"  # milvus / chroma
+  collection_name: "${VECTOR_STORE_COLLECTION_NAME:-mkc_vectors}"
+  uri: "${VECTOR_STORE_URI:-./milvus.db}"
+  db_name: "${VECTOR_STORE_DB_NAME:-default}"
+  user: "${VECTOR_STORE_USER:-}"
+  password: "${VECTOR_STORE_PASSWORD:-}"
+  token: "${VECTOR_STORE_TOKEN:-}"
+  fallback_provider: "${VECTOR_STORE_FALLBACK_PROVIDER:-chroma}"
+  chroma_path: "${VECTOR_STORE_CHROMA_PATH:-./chroma}"
+  dimensions: "${VECTOR_STORE_DIMENSIONS:-2048}"
+  metric_type: "${VECTOR_STORE_METRIC_TYPE:-COSINE}"
+  max_retries: "${VECTOR_STORE_MAX_RETRIES:-3}"
+  retry_min_wait: "${VECTOR_STORE_RETRY_MIN_WAIT:-1}"
+  retry_max_wait: "${VECTOR_STORE_RETRY_MAX_WAIT:-10}"
+  connect_timeout: "${VECTOR_STORE_CONNECT_TIMEOUT:-10}"
+
 gateway:
   base_url: http://localhost:8080
   # Internal API key is read from the INTERNAL_API_KEY environment variable.
   progress_path: /api/v1/internal/tasks/{task_id}/progress
   status_path: /api/v1/internal/tasks/{task_id}/status
+
