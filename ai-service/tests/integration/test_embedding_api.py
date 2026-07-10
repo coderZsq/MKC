@@ -6,9 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.exceptions import EmbeddingAuthenticationError
-from app.services.embedding.config import EmbeddingConfig
+from app.services.embedding.config import EmbeddingConfig, build_embedding_config
 from app.services.embedding.factory import (
-    build_embedding_config,
+    build_embedding_config as factory_build_embedding_config,
+)
+from app.services.embedding.factory import (
     validate_embedding_config,
 )
 from app.services.embedding.openai import OpenAiEmbeddingProvider
@@ -26,7 +28,8 @@ def _post(client, payload, headers=None):
 
 
 class TestEmbeddingEndpoint:
-    def test_embed_returns_2048_dimensions(self, client) -> None:
+    def test_embed_returns_configured_dimensions(self, client) -> None:
+        cfg = build_embedding_config()
         response = _post(
             client,
             {"chunks": [{"id": "c-1", "resource_id": "r-1", "text": "hello world"}]},
@@ -38,9 +41,9 @@ class TestEmbeddingEndpoint:
         assert len(embeddings) == 1
         assert embeddings[0]["chunk_id"] == "c-1"
         assert embeddings[0]["resource_id"] == "r-1"
-        assert embeddings[0]["model"] == "embedding-3"
-        assert embeddings[0]["dimensions"] == 2048
-        assert len(embeddings[0]["vector"]) == 2048
+        assert embeddings[0]["model"] == cfg.model
+        assert embeddings[0]["dimensions"] == cfg.dimensions
+        assert len(embeddings[0]["vector"]) == cfg.dimensions
 
     def test_embed_empty_batch_returns_400(self, client) -> None:
         response = _post(client, {"chunks": []})
@@ -137,7 +140,12 @@ class TestEmbeddingEndpoint:
         assert body["success"] is True
         assert len(body["data"]["embeddings"][0]["vector"]) == 2048
 
-    def test_embed_100_chunks_under_five_seconds(self, client) -> None:
+    def test_embed_100_chunks_under_five_seconds(self, app, client) -> None:
+        cfg = build_embedding_config()
+        mock_provider = MagicMock()
+        mock_provider.embed.side_effect = lambda texts: [[0.01] * cfg.dimensions for _ in texts]
+        app.extensions["embedding"] = EmbeddingService(mock_provider, cfg)
+
         chunks = [
             {"id": f"c-{index}", "resource_id": "r-1", "text": f"chunk {index}"}
             for index in range(100)
@@ -157,11 +165,20 @@ class TestEmbeddingStartupValidation:
         monkeypatch.setenv("ZHIPU_API_KEY", "")
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-        cfg = build_embedding_config()
+        cfg = factory_build_embedding_config()
         with pytest.raises(EmbeddingAuthenticationError) as exc_info:
             validate_embedding_config(cfg)
         assert exc_info.value.code == "EMBEDDING_AUTH_FAILED"
 
-    def test_validate_config_allows_mock_provider_without_key(self) -> None:
-        cfg = build_embedding_config()
-        validate_embedding_config(cfg)  # should not raise for mock provider
+    def test_validate_config_allows_local_providers_without_key(self) -> None:
+        for provider in ("mock", "opensource"):
+            cfg = factory_build_embedding_config({"provider": provider, "api_key": ""})
+            validate_embedding_config(cfg)  # should not raise
+
+    def test_create_app_accepts_injected_embedding_service(self) -> None:
+        from app import create_app
+
+        mock_service = MagicMock()
+        mock_service.embed.return_value = []
+        app = create_app(embedding_service=mock_service)
+        assert app.extensions["embedding"] is mock_service

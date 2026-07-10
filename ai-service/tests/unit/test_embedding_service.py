@@ -229,6 +229,18 @@ class TestEmbeddingFactory:
             build_embedding_provider(cfg)
         assert exc_info.value.code == "EMBEDDING_AUTH_FAILED"
 
+    def test_missing_api_key_blocks_openai_startup(self) -> None:
+        cfg = EmbeddingConfig(provider="openai", api_key="")
+        with pytest.raises(EmbeddingAuthenticationError) as exc_info:
+            build_embedding_provider(cfg)
+        assert exc_info.value.code == "EMBEDDING_AUTH_FAILED"
+
+    def test_local_providers_do_not_require_api_key(self) -> None:
+        for provider in ("mock", "opensource"):
+            cfg = EmbeddingConfig(provider=provider, api_key="")
+            provider_instance = build_embedding_provider(cfg)
+            assert provider_instance is not None
+
     def test_unknown_provider_raises(self) -> None:
         cfg = EmbeddingConfig(provider="unknown", api_key="key")
         with pytest.raises(EmbeddingProviderError) as exc_info:

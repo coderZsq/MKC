@@ -77,16 +77,16 @@ chunking:
   preserve_metadata: true
 
 embedding:
-  provider: "${EMBEDDING_PROVIDER:-zhipuai}"  # zhipuai / openai / mock
-  model: embedding-3
-  api_key: "${ZHIPU_API_KEY}"
-  base_url: "https://open.bigmodel.cn/api/paas/v4"
-  batch_size: 64
+  provider: "${EMBEDDING_PROVIDER:-zhipuai}"  # zhipuai / openai / opensource / mock
+  model: "${EMBEDDING_MODEL:-embedding-3}"
+  api_key: "${EMBEDDING_API_KEY:-}"
+  base_url: "${EMBEDDING_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}"
+  batch_size: "${EMBEDDING_BATCH_SIZE:-64}"
   max_retries: 3
-  timeout: 30
-  dimensions: 2048
+  timeout: "${EMBEDDING_TIMEOUT:-30}"
+  dimensions: "${EMBEDDING_DIMENSIONS:-2048}"
   normalize: true
-  max_text_chars: 8000
+  max_text_chars: "${EMBEDDING_MAX_TEXT_CHARS:-8000}"
 
 minio:
   endpoint: localhost:9000

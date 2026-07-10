@@ -28,6 +28,10 @@ jobs:
         working-directory: ./ai-service
     env:
       INTERNAL_API_KEY: ci-test-internal-key
+      EMBEDDING_PROVIDER: opensource
+      EMBEDDING_MODEL: BAAI/bge-small-zh-v1.5
+      EMBEDDING_DIMENSIONS: 512
+      EMBEDDING_MAX_TEXT_CHARS: 512
     steps:
       - uses: actions/checkout@v4
 

@@ -19,10 +19,11 @@ minio==7.2.7
 PyMuPDF==1.24.11
 tiktoken==0.7.0
 
-# Embedding (text-embedding-v3, OpenAI-compatible providers, retry)
+# Embedding (text-embedding-v3, OpenAI-compatible providers, open-source models, retry)
 zhipuai>=2.0,<3.0
 openai>=1.30.0,<2.0.0
 tenacity>=8.0.0,<9.0.0
+sentence-transformers>=3.0.0,<4.0.0
 
 # OCR (PaddleOCR fallback for scanned PDFs)
 paddleocr>=2.7.0,<3.0.0

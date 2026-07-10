@@ -11,15 +11,19 @@ from app.core.exceptions import APIException
 from app.core.response import make_response
 from app.middleware.logging import init_request_logging
 from app.middleware.request_id import init_request_id
-from app.services.embedding.factory import build_embedding_service, validate_embedding_config
+from app.services.embedding.factory import (
+    build_embedding_service,
+    validate_embedding_config,
+)
+from app.services.embedding.service import EmbeddingService
 from celery_workers.celery_app import celery_app
 
 
-def create_app() -> Flask:
+def create_app(embedding_service: EmbeddingService | None = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(settings)
 
-    init_extensions(app)
+    init_extensions(app, embedding_service=embedding_service)
     init_request_id(app)
     init_request_logging(app)
     register_blueprints(app)
@@ -28,9 +32,12 @@ def create_app() -> Flask:
     return app
 
 
-def init_extensions(app: Flask) -> None:
-    validate_embedding_config()
-    app.extensions["embedding"] = build_embedding_service()
+def init_extensions(app: Flask, embedding_service: EmbeddingService | None = None) -> None:
+    if embedding_service is not None:
+        app.extensions["embedding"] = embedding_service
+    else:
+        validate_embedding_config()
+        app.extensions["embedding"] = build_embedding_service()
     celery_app.conf.update(
         broker_url=settings.celery_broker_url,
         result_backend=settings.celery_result_backend,
