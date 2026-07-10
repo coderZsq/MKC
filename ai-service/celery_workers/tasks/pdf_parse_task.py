@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from celery import Task
@@ -16,6 +17,8 @@ from app.services.pymupdf_extractor import PyMuPDFExtractor
 from app.utils.pdf_renderer import PdfRenderer
 from celery_workers.celery_app import celery_app
 from celery_workers.tasks.base import BaseAITask
+
+logger = logging.getLogger(__name__)
 
 
 def _build_extractor() -> PyMuPDFExtractor:
@@ -40,7 +43,6 @@ def _build_ocr_service() -> OcrService | None:
     try:
         engine = PaddleOCREngine(
             lang=ocr_cfg.get("lang", "ch"),
-            use_gpu=ocr_cfg.get("use_gpu", False),
         )
         renderer = PdfRenderer(dpi=ocr_cfg.get("dpi", 300))
     except OcrUnavailableError:
@@ -55,11 +57,12 @@ def _build_ocr_service() -> OcrService | None:
     )
 
 
-@celery_app.task(bind=True, base=BaseAITask)
+@celery_app.task(bind=True, base=BaseAITask, autoretry_for=())
 def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     """Celery task that extracts text from a PDF and reports the result.
 
-    Automatic retry and exponential backoff are handled by :class:`BaseAITask`.
+    Retries are triggered explicitly so that positional arguments are preserved
+    correctly.
     """
     task = PdfParseTask.model_validate(payload)
     pdf_cfg = (settings.ai_config or {}).get("pdf", {})
@@ -67,10 +70,13 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
     reporter = GatewayProgressReporter()
     reporter.mark_status(task_id, "running", attempt_count=self._attempt_count())
 
-    retry_payload = payload
     try:
         extractor = _build_extractor()
-        ocr_service = _build_ocr_service()
+        try:
+            ocr_service = _build_ocr_service()
+        except OcrUnavailableError as exc:
+            logger.warning("OCR unavailable, disabling OCR fallback: %s", exc)
+            ocr_service = None
         service = PdfParserService(
             extractor=extractor,
             reporter=reporter,
@@ -82,20 +88,19 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
             ocr_threshold=pdf_cfg.get("ocr_threshold", 50),
             max_pdf_size=pdf_cfg.get("max_pdf_size", 104_857_600),
             max_pages=pdf_cfg.get("max_pages", 5_000),
+            report_status=False,
         )
         document = service.parse(task)
     except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            reporter.mark_status(
-                task_id,
-                "failed",
-                error_message=str(exc),
-                attempt_count=self._attempt_count(),
-            )
-            self._failure_reported = True
-            raise
-        retry_exc = exc
-    else:
-        return document.model_dump()
+        if self.request.retries < self.request.max_retries:
+            raise self.retry(kwargs={"task_id": task_id, "payload": payload}) from exc
+        reporter.mark_status(
+            task_id,
+            "failed",
+            error_message=str(exc),
+            attempt_count=self._attempt_count(),
+        )
+        self._failure_reported = True
+        raise
 
-    raise self.retry(args=[task_id, retry_payload], exc=retry_exc)
+    return document

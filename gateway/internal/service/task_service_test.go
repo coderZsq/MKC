@@ -406,6 +406,7 @@ func TestTaskService_MarkFailed_Success(t *testing.T) {
 
 func TestTaskService_canTransition(t *testing.T) {
 	assert.True(t, canTransition(model.TaskStatusPending, model.TaskStatusRunning))
+	assert.True(t, canTransition(model.TaskStatusRunning, model.TaskStatusRunning))
 	assert.True(t, canTransition(model.TaskStatusRunning, model.TaskStatusCompleted))
 	assert.True(t, canTransition(model.TaskStatusRunning, model.TaskStatusFailed))
 	assert.True(t, canTransition(model.TaskStatusFailed, model.TaskStatusRunning))
