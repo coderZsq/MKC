@@ -84,6 +84,28 @@ class TestChromaStore:
         assert len(results) == 1
         assert results[0].id == "a"
 
+    def test_search_with_multiple_resource_ids(self, store: ChromaStore) -> None:
+        store.upsert(
+            [
+                _record(record_id="a", resource_id="res1", user_id="u1"),
+                _record(record_id="b", resource_id="res2", user_id="u1"),
+                _record(record_id="c", resource_id="res3", user_id="u1"),
+            ]
+        )
+        results = store.search(
+            [1.0, 0.0, 0.0],
+            filters={"resource_ids": ["res1", "res2"], "user_id": "u1"},
+        )
+        assert {r.id for r in results} == {"a", "b"}
+
+    def test_search_with_empty_resource_ids_list_returns_empty(self, store: ChromaStore) -> None:
+        store.upsert([_record(record_id="a", resource_id="res1", user_id="u1")])
+        results = store.search(
+            [1.0, 0.0, 0.0],
+            filters={"resource_ids": [], "user_id": "u1"},
+        )
+        assert results == []
+
     def test_search_returns_metadata_without_reserved_keys(self, store: ChromaStore) -> None:
         record = _record(metadata={"custom": "value"})
         store.upsert([record])
@@ -155,6 +177,20 @@ class TestMilvusStore:
         results = store.search([1.0] * 8, filters={"resource_id": "res1", "user_id": "u1"})
         assert len(results) == 1
         assert results[0].id == "a"
+
+    def test_search_with_multiple_resource_ids(self, store: MilvusStore) -> None:
+        store.upsert(
+            [
+                _record(record_id="a", resource_id="res1", user_id="u1", vector=[1.0] * 8),
+                _record(record_id="b", resource_id="res2", user_id="u1", vector=[1.0] * 8),
+                _record(record_id="c", resource_id="res3", user_id="u1", vector=[1.0] * 8),
+            ]
+        )
+        results = store.search(
+            [1.0] * 8,
+            filters={"resource_ids": ["res1", "res2"], "user_id": "u1"},
+        )
+        assert {r.id for r in results} == {"a", "b"}
 
     def test_dimension_mismatch_raises_config_error(self, tmp_path: Any) -> None:
         db_path = tmp_path / "milvus_dim.db"

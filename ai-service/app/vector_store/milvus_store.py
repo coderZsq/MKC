@@ -268,13 +268,32 @@ def _resource_filter(resource_id: str, user_id: str | None) -> str:
 
 def _search_filter(filters: dict[str, Any]) -> str:
     clauses = []
-    if "resource_id" in filters:
-        clauses.append(f"resource_id == '{_escape_expr(str(filters['resource_id']))}'")
+    resource_ids = filters.get("resource_ids")
+    if resource_ids is None:
+        resource_ids = filters.get("resource_id")
+    resource_filter = _resource_id_filter(resource_ids)
+    if resource_filter:
+        clauses.append(resource_filter)
     if "user_id" in filters:
         clauses.append(f"user_id == '{_escape_expr(str(filters['user_id']))}'")
     if not clauses:
         return ""
     return " && ".join(clauses)
+
+
+def _resource_id_filter(resource_ids: Any) -> str:
+    if resource_ids is None:
+        return ""
+    if isinstance(resource_ids, str):
+        return f"resource_id == '{_escape_expr(resource_ids)}'"
+    ids = [str(rid) for rid in resource_ids]
+    if not ids:
+        return "resource_id == ''"
+    if len(ids) == 1:
+        return f"resource_id == '{_escape_expr(ids[0])}'"
+    escaped = [_escape_expr(rid) for rid in ids]
+    items = ", ".join(f"'{rid}'" for rid in escaped)
+    return f"resource_id in [{items}]"
 
 
 def _escape_expr(value: str) -> str:

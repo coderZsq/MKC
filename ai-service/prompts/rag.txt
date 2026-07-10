@@ -1,0 +1,11 @@
+你是知识库助手。请基于以下上下文回答用户问题。
+上下文：
+{% for chunk in chunks %}
+[{{ loop.index }}] {{ chunk.text }} （来源：{{ chunk.metadata }}）
+{% endfor %}
+{% if not chunks %}
+无相关知识。
+{% endif %}
+
+用户问题：{{ question }}
+请给出简洁、准确的回答。

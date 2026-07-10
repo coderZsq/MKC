@@ -30,6 +30,17 @@ class EmbeddingService:
         self._provider = provider
         self._config = config
 
+    def embed_query(self, text: str) -> list[float]:
+        """Generate a single embedding for a query string.
+
+        This is a convenience wrapper around :meth:`embed` that preserves the
+        vector dimension and normalization configuration of the service.
+        """
+        embeddings = self.embed([ChunkInput(id="query", resource_id="query", text=text)])
+        if not embeddings:
+            return self._zero_vector()
+        return embeddings[0].vector
+
     def embed(self, chunks: list[ChunkInput]) -> list[Embedding]:
         """Generate embeddings for ``chunks`` while preserving input order."""
         if not chunks:
