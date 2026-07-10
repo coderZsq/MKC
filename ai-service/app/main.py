@@ -6,6 +6,7 @@ from app.api.embedding import embedding_bp
 from app.api.health import health_bp
 from app.api.internal import internal_bp
 from app.api.pdf import pdf_bp
+from app.api.vectors import vectors_bp
 from app.core.config import settings
 from app.core.exceptions import APIException
 from app.core.response import make_response
@@ -16,14 +17,23 @@ from app.services.embedding.factory import (
     validate_embedding_config,
 )
 from app.services.embedding.service import EmbeddingService
+from app.vector_store.factory import build_vector_store
+from app.vector_store.vector_store import VectorStore
 from celery_workers.celery_app import celery_app
 
 
-def create_app(embedding_service: EmbeddingService | None = None) -> Flask:
+def create_app(
+    embedding_service: EmbeddingService | None = None,
+    vector_store: VectorStore | None = None,
+) -> Flask:
     app = Flask(__name__)
     app.config.from_object(settings)
 
-    init_extensions(app, embedding_service=embedding_service)
+    init_extensions(
+        app,
+        embedding_service=embedding_service,
+        vector_store=vector_store,
+    )
     init_request_id(app)
     init_request_logging(app)
     register_blueprints(app)
@@ -32,12 +42,21 @@ def create_app(embedding_service: EmbeddingService | None = None) -> Flask:
     return app
 
 
-def init_extensions(app: Flask, embedding_service: EmbeddingService | None = None) -> None:
+def init_extensions(
+    app: Flask,
+    embedding_service: EmbeddingService | None = None,
+    vector_store: VectorStore | None = None,
+) -> None:
     if embedding_service is not None:
         app.extensions["embedding"] = embedding_service
     else:
         validate_embedding_config()
         app.extensions["embedding"] = build_embedding_service()
+
+    if vector_store is not None:
+        app.extensions["vector_store"] = vector_store
+    else:
+        app.extensions["vector_store"] = build_vector_store()
     celery_app.conf.update(
         broker_url=settings.celery_broker_url,
         result_backend=settings.celery_result_backend,
@@ -53,6 +72,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(pdf_bp, url_prefix="/ai/v1")
     app.register_blueprint(chunking_bp, url_prefix="/ai/v1")
     app.register_blueprint(embedding_bp, url_prefix="/ai/v1")
+    app.register_blueprint(vectors_bp, url_prefix="/ai/v1")
 
 
 def register_error_handlers(app: Flask) -> None:
