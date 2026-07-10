@@ -55,6 +55,7 @@ class AsrService:
         progress_interval: float = 5.0,
         subtitle_generator: Any | None = None,
         text_cleaning_service: Any | None = None,
+        report_status: bool = True,
     ) -> None:
         self.engine = engine
         self.processor = processor
@@ -63,12 +64,15 @@ class AsrService:
         self._progress_interval = progress_interval
         self._subtitle_generator = subtitle_generator or _default_subtitle_generator()
         self._text_cleaning_service = text_cleaning_service or _default_text_cleaning_service()
+        self._report_status = report_status
 
     def process(self, task: AsrTaskRequest) -> AsrResult:
         """Download, convert, transcribe and report the result for a task."""
         raw_path = None
         wav_path = None
         try:
+            if self._report_status:
+                self.reporter.mark_status(task.task_id, "running")
             with tempfile.TemporaryDirectory() as tmp_dir:
                 tmp = Path(tmp_dir)
                 raw_path = tmp / "source"
@@ -78,7 +82,6 @@ class AsrService:
                 self.processor.convert_to_wav(raw_path, wav_path)
                 duration = self.processor.get_duration(wav_path)
 
-                self.reporter.mark_status(task.task_id, "running")
                 segments = self._transcribe_with_progress(task, wav_path, duration)
                 cleaned_segments = self._text_cleaning_service.clean(segments)
 
@@ -96,28 +99,33 @@ class AsrService:
                     transcript_url=transcript_url,
                     subtitle_url=self._generate_subtitle(task, cleaned_segments),
                 )
-                self.reporter.mark_status(
-                    task.task_id,
-                    "completed",
-                    result=result.model_dump(),
-                )
+                if self._report_status:
+                    self.reporter.mark_status(
+                        task.task_id,
+                        "completed",
+                        result=result.model_dump(),
+                    )
                 return result
         except AudioProcessingError as exc:
             logger.error("audio processing failed for task %s: %s", task.task_id, exc)
-            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
+            self._mark_failed(task.task_id, str(exc))
             raise
         except SubtitleGenerationError as exc:
             logger.error("subtitle generation failed for task %s: %s", task.task_id, exc)
-            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
+            self._mark_failed(task.task_id, str(exc))
             raise
         except AsrProcessingError as exc:
             logger.error("asr processing failed for task %s: %s", task.task_id, exc)
-            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
+            self._mark_failed(task.task_id, str(exc))
             raise
         except Exception as exc:
             logger.exception("unexpected error during asr for task %s", task.task_id)
-            self.reporter.mark_status(task.task_id, "failed", error_message=str(exc))
+            self._mark_failed(task.task_id, str(exc))
             raise AsrProcessingError(str(exc)) from exc
+
+    def _mark_failed(self, task_id: str, error_message: str) -> None:
+        if self._report_status:
+            self.reporter.mark_status(task_id, "failed", error_message=error_message)
 
     def _transcribe_with_progress(
         self,

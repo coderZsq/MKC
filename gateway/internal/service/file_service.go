@@ -30,6 +30,7 @@ func MaxFileSize() int64 {
 
 var allowedMimeTypes = map[string]bool{
 	"audio/mpeg":  true,
+	"audio/mp3":   true,
 	"audio/wav":   true,
 	"audio/mp4":   true,
 	"video/mp4":   true,
@@ -208,7 +209,7 @@ func compatibleMime(declared, detected string) bool {
 		return detected == "application/x-msi" || detected == "application/octet-stream"
 	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
 		return detected == "application/zip" || detected == "application/octet-stream"
-	case "audio/mpeg", "audio/mp4", "audio/wav":
+	case "audio/mpeg", "audio/mp3", "audio/mp4", "audio/wav":
 		return strings.HasPrefix(detected, "audio/") || detected == "application/octet-stream"
 	case "video/mp4", "video/webm":
 		return strings.HasPrefix(detected, "video/") || detected == "application/octet-stream"

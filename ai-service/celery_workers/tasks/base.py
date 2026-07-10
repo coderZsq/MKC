@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from celery import Task
 
@@ -24,25 +24,35 @@ class BaseAITask(Task):
     def _reporter(self) -> GatewayProgressReporter:
         return GatewayProgressReporter()
 
+    def _business_task_id(self, args: Any, kwargs: Any, celery_task_id: str) -> str:
+        """Return the business task id passed as the first positional argument or keyword."""
+        if args and isinstance(args, list | tuple):
+            return cast(str, args[0])
+        if kwargs and isinstance(kwargs, dict) and "task_id" in kwargs:
+            return cast(str, kwargs["task_id"])
+        return celery_task_id
+
     def on_success(self, retval: Any, task_id: str, args: Any, kwargs: Any) -> None:
+        business_task_id = self._business_task_id(args, kwargs, task_id)
         if isinstance(retval, dict):
             self._reporter().mark_status(
-                task_id,
+                business_task_id,
                 "completed",
                 result=retval,
                 attempt_count=self._attempt_count(),
             )
         else:
             self._reporter().mark_status(
-                task_id,
+                business_task_id,
                 "completed",
                 attempt_count=self._attempt_count(),
             )
 
     def on_retry(self, exc: Exception, task_id: str, args: Any, kwargs: Any, einfo: Any) -> None:
         self._failure_reported = False
+        business_task_id = self._business_task_id(args, kwargs, task_id)
         self._reporter().mark_status(
-            task_id,
+            business_task_id,
             "running",
             attempt_count=self._attempt_count(),
         )
@@ -50,8 +60,9 @@ class BaseAITask(Task):
     def on_failure(self, exc: Exception, task_id: str, args: Any, kwargs: Any, einfo: Any) -> None:
         if getattr(self, "_failure_reported", False):
             return
+        business_task_id = self._business_task_id(args, kwargs, task_id)
         self._reporter().mark_status(
-            task_id,
+            business_task_id,
             "failed",
             error_message=str(exc),
             attempt_count=self._attempt_count(),

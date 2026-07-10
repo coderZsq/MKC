@@ -37,11 +37,11 @@ def fake_text_cleaning_service() -> MagicMock:
 
 class TestGatewayProgressReporter:
     def test_report_progress(self, reporter: GatewayProgressReporter) -> None:
-        mock_post = MagicMock()
-        with patch("app.services.gateway_reporter.requests.post", mock_post):
+        mock_patch = MagicMock()
+        with patch("app.services.gateway_reporter.requests.patch", mock_patch):
             reporter.report_progress("task-1", 35, "running")
 
-        mock_post.assert_called_once_with(
+        mock_patch.assert_called_once_with(
             "http://gateway/api/v1/internal/tasks/task-1/progress",
             json={"progress": 35, "status": "running"},
             headers={"X-Internal-Key": "test-key"},

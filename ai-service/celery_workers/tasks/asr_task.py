@@ -5,6 +5,7 @@ from typing import Any
 from celery import Task
 
 from app.core.config import settings
+from app.core.exceptions import ModelLoadError
 from app.models.asr import AsrTaskRequest
 from app.services.asr_service import AsrService
 from app.services.audio_downloader import download_audio
@@ -31,7 +32,7 @@ def _build_engine(model_name: str | None) -> WhisperEngine:
     )
 
 
-@celery_app.task(bind=True, base=BaseAITask)
+@celery_app.task(bind=True, base=BaseAITask, autoretry_for=())
 def run_asr(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     """Celery task that runs ASR for a queued audio file.
 
@@ -49,7 +50,6 @@ def run_asr(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]
     reporter = GatewayProgressReporter()
     reporter.mark_status(task_id, "running", attempt_count=self._attempt_count())
 
-    retry_payload = payload
     try:
         engine = _build_engine(task.model)
         processor = AudioProcessor(sample_rate=asr_cfg.get("sample_rate", 16000))
@@ -59,23 +59,23 @@ def run_asr(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]
             reporter=reporter,
             download_func=download_audio,
             progress_interval=asr_cfg.get("progress_interval", 5.0),
+            report_status=False,
         )
         result = service.process(task)
-    except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            reporter.mark_status(
-                task_id,
-                "failed",
-                error_message=str(exc),
-                attempt_count=self._attempt_count(),
-            )
-            self._failure_reported = True
-            raise
-        if fallback_model and task.model != fallback_model:
-            task.model = fallback_model
-        retry_payload = task.model_dump()
-        retry_exc = exc
-    else:
-        return result.model_dump()
+    except ModelLoadError as exc:
+        if self.request.retries < self.request.max_retries:
+            fallback_model = asr_cfg.get("fallback_model")
+            if fallback_model:
+                task.model = fallback_model
+            retry_payload = task.model_dump()
+            raise self.retry(args=[task_id, retry_payload]) from exc
+        reporter.mark_status(
+            task_id,
+            "failed",
+            error_message=str(exc),
+            attempt_count=self._attempt_count(),
+        )
+        self._failure_reported = True
+        raise
 
-    raise self.retry(args=[task_id, retry_payload], exc=retry_exc)
+    return result.model_dump()
