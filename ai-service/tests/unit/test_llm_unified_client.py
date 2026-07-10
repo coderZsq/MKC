@@ -7,7 +7,12 @@ from unittest.mock import MagicMock
 import pytest
 from tenacity import wait_none
 
-from app.core.exceptions import LLMAuthFailedError, LLMTimeoutError, LLMUnavailableError
+from app.core.exceptions import (
+    LLMAuthFailedError,
+    LLMStreamError,
+    LLMTimeoutError,
+    LLMUnavailableError,
+)
 from app.services.llm.config import LLMConfig
 from app.services.llm.llm_client import (
     LLMClient,
@@ -180,6 +185,20 @@ class TestLLMClientStream:
 
         chunks = [chunk async for chunk in client.stream_complete(_make_request())]
 
+        assert chunks[-1].finish_reason == "error"
+
+    async def test_stream_complete_stream_error_yields_error_chunk(self) -> None:
+        async def _failing_stream(request: LLMRequest) -> AsyncIterator[LLMStreamChunk]:
+            yield LLMStreamChunk(delta="partial")
+            raise LLMStreamError("interrupted")
+
+        provider = MagicMock()
+        provider.stream_complete.return_value = _failing_stream(_make_request())
+        client = LLMClient(provider=provider)
+
+        chunks = [chunk async for chunk in client.stream_complete(_make_request())]
+
+        assert chunks[0].delta == "partial"
         assert chunks[-1].finish_reason == "error"
 
 
