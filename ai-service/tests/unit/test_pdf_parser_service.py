@@ -440,10 +440,7 @@ class TestPdfParserService:
         document = service.parse(task)
 
         assert document["pages"][0]["text"] == "OCR text"
-        assert (
-            document["parsed_url"]
-            == "minio://mkc-resources/results/task-1/parsed.json"
-        )
+        assert document["parsed_url"] == "minio://mkc-resources/results/task-1/parsed.json"
         ocr_service.process_pdf.assert_called_once()
         completed_call = fake_reporter.mark_status.call_args_list[-1]
         result = completed_call.kwargs["result"]
