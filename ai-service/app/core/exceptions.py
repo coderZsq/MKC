@@ -89,3 +89,22 @@ class OcrPageFailedError(APIException):
 class OcrNoTextError(APIException):
     def __init__(self, message: str = "无法识别文字") -> None:
         super().__init__("OCR_NO_TEXT", message, 400)
+
+
+class InvalidChunkingStrategyError(APIException):
+    def __init__(self, strategy: str) -> None:
+        super().__init__(
+            "INVALID_STRATEGY",
+            f"不支持的分块策略: {strategy}",
+            400,
+        )
+
+
+class EmptyTextError(APIException):
+    def __init__(self, message: str = "输入文本为空") -> None:
+        super().__init__("EMPTY_TEXT", message, 400)
+
+
+class ChunkingError(APIException):
+    def __init__(self, message: str = "分块内部错误") -> None:
+        super().__init__("CHUNKING_ERROR", message, 500)
