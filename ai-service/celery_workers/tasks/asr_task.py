@@ -49,33 +49,14 @@ def run_asr(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]
     reporter = GatewayProgressReporter()
     reporter.mark_status(task_id, "running", attempt_count=self._attempt_count())
 
-    retry_payload = payload
-    try:
-        engine = _build_engine(task.model)
-        processor = AudioProcessor(sample_rate=asr_cfg.get("sample_rate", 16000))
-        service = AsrService(
-            engine=engine,
-            processor=processor,
-            reporter=reporter,
-            download_func=download_audio,
-            progress_interval=asr_cfg.get("progress_interval", 5.0),
-        )
-        result = service.process(task)
-    except Exception as exc:
-        if self.request.retries >= self.max_retries:
-            reporter.mark_status(
-                task_id,
-                "failed",
-                error_message=str(exc),
-                attempt_count=self._attempt_count(),
-            )
-            self._failure_reported = True
-            raise
-        if fallback_model and task.model != fallback_model:
-            task.model = fallback_model
-        retry_payload = task.model_dump()
-        retry_exc = exc
-    else:
-        return result.model_dump()
-
-    raise self.retry(args=[task_id, retry_payload], exc=retry_exc)
+    engine = _build_engine(task.model)
+    processor = AudioProcessor(sample_rate=asr_cfg.get("sample_rate", 16000))
+    service = AsrService(
+        engine=engine,
+        processor=processor,
+        reporter=reporter,
+        download_func=download_audio,
+        progress_interval=asr_cfg.get("progress_interval", 5.0),
+    )
+    result = service.process(task)
+    return result.model_dump()

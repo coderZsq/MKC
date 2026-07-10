@@ -78,7 +78,6 @@ class AsrService:
                 self.processor.convert_to_wav(raw_path, wav_path)
                 duration = self.processor.get_duration(wav_path)
 
-                self.reporter.mark_status(task.task_id, "running")
                 segments = self._transcribe_with_progress(task, wav_path, duration)
                 cleaned_segments = self._text_cleaning_service.clean(segments)
 
@@ -96,27 +95,18 @@ class AsrService:
                     transcript_url=transcript_url,
                     subtitle_url=self._generate_subtitle(task, cleaned_segments),
                 )
-                self.reporter.mark_status(
-                    task.task_id,
-                    "completed",
-                    result=result.model_dump(),
-                )
                 return result
         except AudioProcessingError as exc:
             logger.error("audio processing failed for task %s: %s", task.task_id, exc)
-            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
             raise
         except SubtitleGenerationError as exc:
             logger.error("subtitle generation failed for task %s: %s", task.task_id, exc)
-            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
             raise
         except AsrProcessingError as exc:
             logger.error("asr processing failed for task %s: %s", task.task_id, exc)
-            self.reporter.mark_status(task.task_id, "failed", error_message=exc.message)
             raise
         except Exception as exc:
             logger.exception("unexpected error during asr for task %s", task.task_id)
-            self.reporter.mark_status(task.task_id, "failed", error_message=str(exc))
             raise AsrProcessingError(str(exc)) from exc
 
     def _transcribe_with_progress(

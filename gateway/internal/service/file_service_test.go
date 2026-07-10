@@ -250,6 +250,30 @@ func TestFileService_Upload_MimeMismatch(t *testing.T) {
 	assert.Equal(t, "FILE_UNSUPPORTED_TYPE", appErr.Code)
 }
 
+func TestFileService_Upload_Success_MP3_AudioMp3(t *testing.T) {
+	svc, store, resourceRepo, _, _ := newTestFileService(t)
+
+	userUUID := uuid.NewString()
+	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
+		r.ID = 1
+		return nil
+	}
+
+	req := UploadRequest{
+		Header:   fileHeader("song.mp3", "audio/mp3", 10),
+		File:     newFakeFile([]byte{0xff, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
+		UserID:   42,
+		UserUUID: userUUID,
+	}
+
+	result, err := svc.Upload(context.Background(), req)
+
+	require.NoError(t, err)
+	assert.Equal(t, "audio/mp3", result.MimeType)
+	assert.Equal(t, "media_parse", result.Type)
+	assert.Len(t, store.putCalls, 1)
+}
+
 func TestFileService_Upload_Success(t *testing.T) {
 	svc, store, resourceRepo, _, _ := newTestFileService(t)
 
@@ -288,6 +312,7 @@ func TestFileService_Upload_TaskTypeMapping(t *testing.T) {
 		wantType string
 	}{
 		{"audio/mpeg", []byte{0xff, 0xfb, 0x00, 0x00}, "media_parse"},
+		{"audio/mp3", []byte{0xff, 0xfb, 0x00, 0x00}, "media_parse"},
 		{"video/mp4", []byte("\x00\x00\x00\x18ftypmp4"), "media_parse"},
 		{"application/pdf", []byte("%PDF-1.4"), "pdf_parse"},
 		{"text/plain", []byte("hello"), "document_parse"},

@@ -11,3 +11,7 @@ kubectl get pods -n mkc-dev
 kubectl logs -f deployment/gateway -n mkc-dev
 kubectl exec -it deployment/mysql -n mkc-dev -- mysql -u root -p
 ```
+
+## ASR 上传与转写链路排错
+
+详见 [ASR 上传与转写链路排错手册](./asr-upload-pipeline-debug.md)。

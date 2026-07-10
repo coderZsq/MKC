@@ -32,7 +32,7 @@ class GatewayProgressReporter:
         """Send a progress update to the Gateway."""
         url = self._build_url(self._progress_path, task_id)
         payload = {"progress": progress, "status": status}
-        self._post(url, payload)
+        self._patch(url, payload)
 
     def mark_status(
         self,
@@ -58,9 +58,24 @@ class GatewayProgressReporter:
         base_url = self._base_url.rstrip("/")
         return f"{base_url}{path}"
 
-    def _post(self, url: str, payload: dict[str, Any]) -> None:
+    def _patch(self, url: str, payload: dict[str, Any]) -> None:
         if not self._base_url:
             logger.warning("gateway base_url is not configured, skipping progress report")
+            return
+        try:
+            response = requests.patch(
+                url,
+                json=payload,
+                headers={"X-Internal-Key": self._internal_key},
+                timeout=self._timeout,
+            )
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            logger.warning("failed to report progress to gateway: %s", exc)
+
+    def _post(self, url: str, payload: dict[str, Any]) -> None:
+        if not self._base_url:
+            logger.warning("gateway base_url is not configured, skipping status report")
             return
         try:
             response = requests.post(
@@ -71,4 +86,4 @@ class GatewayProgressReporter:
             )
             response.raise_for_status()
         except requests.RequestException as exc:
-            logger.warning("failed to report progress to gateway: %s", exc)
+            logger.warning("failed to report status to gateway: %s", exc)

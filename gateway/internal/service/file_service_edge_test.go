@@ -61,6 +61,8 @@ func TestCompatibleMime(t *testing.T) {
 		{"application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/zip", true},
 		{"application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/octet-stream", true},
 		{"audio/mpeg", "audio/x-wav", true},
+		{"audio/mp3", "audio/mpeg", true},
+		{"audio/mp3", "audio/x-wav", true},
 		{"audio/wav", "audio/x-wav", true},
 		{"audio/mp4", "audio/mp4", true},
 		{"video/mp4", "video/mp4", true},

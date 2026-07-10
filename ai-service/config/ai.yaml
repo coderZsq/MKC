@@ -4,7 +4,7 @@ celery:
   task_track_started: true
 
 asr:
-  model_dir: /models/whisper
+  model_dir: /Users/zhushuangquan/Downloads/MKC/ai-service/models/whisper
   default_model: small
   fallback_model: tiny
   device: auto
