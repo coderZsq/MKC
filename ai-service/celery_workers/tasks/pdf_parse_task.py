@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from celery import Task
@@ -16,6 +17,8 @@ from app.services.pymupdf_extractor import PyMuPDFExtractor
 from app.utils.pdf_renderer import PdfRenderer
 from celery_workers.celery_app import celery_app
 from celery_workers.tasks.base import BaseAITask
+
+logger = logging.getLogger(__name__)
 
 
 def _build_extractor() -> PyMuPDFExtractor:
@@ -70,7 +73,11 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
     retry_payload = payload
     try:
         extractor = _build_extractor()
-        ocr_service = _build_ocr_service()
+        try:
+            ocr_service = _build_ocr_service()
+        except OcrUnavailableError as exc:
+            logger.warning("OCR unavailable, disabling OCR fallback: %s", exc)
+            ocr_service = None
         service = PdfParserService(
             extractor=extractor,
             reporter=reporter,
