@@ -193,7 +193,9 @@ def test_build_ocr_service_returns_service_when_enabled(
 
 
 @patch("celery_workers.tasks.pdf_parse_task.settings")
-def test_build_ocr_service_raises_for_unsupported_engine(mock_settings: MagicMock) -> None:
+def test_build_ocr_service_raises_for_unsupported_engine(
+    mock_settings: MagicMock,
+) -> None:
     mock_settings.ai_config = {"ocr": {"enabled": True, "engine": "tesseract"}}
 
     with pytest.raises(OcrUnavailableError):

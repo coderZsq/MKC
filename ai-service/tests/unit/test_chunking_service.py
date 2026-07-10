@@ -49,7 +49,9 @@ def test_chunking_service_unknown_strategy(service: ChunkingService) -> None:
     assert exc_info.value.code == "INVALID_STRATEGY"
 
 
-def test_chunking_config_empty_text_returns_empty_list(service: ChunkingService) -> None:
+def test_chunking_config_empty_text_returns_empty_list(
+    service: ChunkingService,
+) -> None:
     assert service.chunk("", "res-1", {}, strategy="paragraph") == []
 
 

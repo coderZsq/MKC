@@ -44,7 +44,10 @@ class TestBuildTextCleaningService:
         fake_openai.OpenAI.return_value = fake_client
 
         with (
-            patch("app.services.text_cleaning.factory.settings", MagicMock(zhipu_api_key="secret")),
+            patch(
+                "app.services.text_cleaning.factory.settings",
+                MagicMock(zhipu_api_key="secret"),
+            ),
             patch(
                 "app.services.text_cleaning.factory._create_openai_compatible_client"
             ) as mock_create,
@@ -61,7 +64,8 @@ class TestBuildTextCleaningService:
         ) as mock_create:
             mock_create.return_value = MagicMock()
             with patch(
-                "app.services.text_cleaning.factory.settings", MagicMock(zhipu_api_key="secret")
+                "app.services.text_cleaning.factory.settings",
+                MagicMock(zhipu_api_key="secret"),
             ):
                 service = build_text_cleaning_service({"mode": "hybrid", "enabled": True})
 
@@ -74,7 +78,10 @@ class TestBuildTextCleaningService:
         fake_openai.OpenAI.return_value = fake_client
 
         with (
-            patch("app.services.text_cleaning.factory.settings", MagicMock(zhipu_api_key="secret")),
+            patch(
+                "app.services.text_cleaning.factory.settings",
+                MagicMock(zhipu_api_key="secret"),
+            ),
             patch("builtins.__import__", _make_import_stub(openai=fake_openai)),
         ):
             service = build_text_cleaning_service({"mode": "llm", "enabled": True})
@@ -93,7 +100,10 @@ class TestBuildTextCleaningService:
         )
 
         with (
-            patch("app.services.text_cleaning.factory.settings", MagicMock(zhipu_api_key="secret")),
+            patch(
+                "app.services.text_cleaning.factory.settings",
+                MagicMock(zhipu_api_key="secret"),
+            ),
             patch("builtins.__import__", stub),
         ):
             service = build_text_cleaning_service({"mode": "llm", "enabled": True})
@@ -108,7 +118,10 @@ class TestBuildTextCleaningService:
         )
 
         with (
-            patch("app.services.text_cleaning.factory.settings", MagicMock(zhipu_api_key="secret")),
+            patch(
+                "app.services.text_cleaning.factory.settings",
+                MagicMock(zhipu_api_key="secret"),
+            ),
             patch("builtins.__import__", stub),
         ):
             service = build_text_cleaning_service({"mode": "llm", "enabled": True})

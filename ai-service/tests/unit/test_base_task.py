@@ -14,7 +14,9 @@ def _make_task() -> _DummyTask:
 
 
 @patch("celery_workers.tasks.base.GatewayProgressReporter")
-def test_on_retry_reports_running_with_attempt_count(mock_reporter_class: MagicMock) -> None:
+def test_on_retry_reports_running_with_attempt_count(
+    mock_reporter_class: MagicMock,
+) -> None:
     reporter = MagicMock()
     mock_reporter_class.return_value = reporter
 
@@ -30,7 +32,9 @@ def test_on_retry_reports_running_with_attempt_count(mock_reporter_class: MagicM
 
 
 @patch("celery_workers.tasks.base.GatewayProgressReporter")
-def test_on_failure_reports_failed_with_attempt_count(mock_reporter_class: MagicMock) -> None:
+def test_on_failure_reports_failed_with_attempt_count(
+    mock_reporter_class: MagicMock,
+) -> None:
     reporter = MagicMock()
     mock_reporter_class.return_value = reporter
 
@@ -59,7 +63,9 @@ def test_on_failure_skips_when_already_reported(mock_reporter_class: MagicMock) 
 
 
 @patch("celery_workers.tasks.base.GatewayProgressReporter")
-def test_on_success_reports_completed_with_result(mock_reporter_class: MagicMock) -> None:
+def test_on_success_reports_completed_with_result(
+    mock_reporter_class: MagicMock,
+) -> None:
     reporter = MagicMock()
     mock_reporter_class.return_value = reporter
 

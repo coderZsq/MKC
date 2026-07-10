@@ -2,6 +2,7 @@ from flask import Flask, Response
 
 from app.api.asr import asr_bp
 from app.api.chunking import chunking_bp
+from app.api.embedding import embedding_bp
 from app.api.health import health_bp
 from app.api.internal import internal_bp
 from app.api.pdf import pdf_bp
@@ -10,14 +11,19 @@ from app.core.exceptions import APIException
 from app.core.response import make_response
 from app.middleware.logging import init_request_logging
 from app.middleware.request_id import init_request_id
+from app.services.embedding.factory import (
+    build_embedding_service,
+    validate_embedding_config,
+)
+from app.services.embedding.service import EmbeddingService
 from celery_workers.celery_app import celery_app
 
 
-def create_app() -> Flask:
+def create_app(embedding_service: EmbeddingService | None = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(settings)
 
-    init_extensions(app)
+    init_extensions(app, embedding_service=embedding_service)
     init_request_id(app)
     init_request_logging(app)
     register_blueprints(app)
@@ -26,7 +32,12 @@ def create_app() -> Flask:
     return app
 
 
-def init_extensions(app: Flask) -> None:
+def init_extensions(app: Flask, embedding_service: EmbeddingService | None = None) -> None:
+    if embedding_service is not None:
+        app.extensions["embedding"] = embedding_service
+    else:
+        validate_embedding_config()
+        app.extensions["embedding"] = build_embedding_service()
     celery_app.conf.update(
         broker_url=settings.celery_broker_url,
         result_backend=settings.celery_result_backend,
@@ -41,6 +52,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(asr_bp, url_prefix="/ai/v1")
     app.register_blueprint(pdf_bp, url_prefix="/ai/v1")
     app.register_blueprint(chunking_bp, url_prefix="/ai/v1")
+    app.register_blueprint(embedding_bp, url_prefix="/ai/v1")
 
 
 def register_error_handlers(app: Flask) -> None:

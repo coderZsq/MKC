@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import mimetypes
 import sys
 import time
 import urllib.error
@@ -17,7 +16,9 @@ EMAIL = "test-pdf@example.com"
 PASSWORD = "Test1234"
 
 
-def _request(method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> dict:
+def _request(
+    method: str, path: str, body: bytes | None = None, headers: dict | None = None
+) -> dict:
     req = urllib.request.Request(f"{GATEWAY}{path}", data=body, method=method)
     req.add_header("Accept", "application/json")
     if headers:
@@ -32,7 +33,9 @@ def _request(method: str, path: str, body: bytes | None = None, headers: dict | 
         raise
 
 
-def _safe_request(method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[dict, int]:
+def _safe_request(
+    method: str, path: str, body: bytes | None = None, headers: dict | None = None
+) -> tuple[dict, int]:
     """Return (parsed_json, status_code), reading error body safely."""
     req = urllib.request.Request(f"{GATEWAY}{path}", data=body, method=method)
     req.add_header("Accept", "application/json")
@@ -65,7 +68,9 @@ def register_or_login() -> str:
     resp, status = _safe_request(
         "POST",
         "/api/v1/auth/register",
-        body=json.dumps({"email": EMAIL, "password": PASSWORD, "nickname": "PDF Tester"}).encode(),
+        body=json.dumps(
+            {"email": EMAIL, "password": PASSWORD, "nickname": "PDF Tester"}
+        ).encode(),
         headers={"Content-Type": "application/json"},
     )
     if status in (200, 201) and resp.get("success"):
@@ -104,13 +109,19 @@ def upload_pdf(token: str) -> dict:
     req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
     with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-        print(f"Upload response: {resp.status} {json.dumps(data, ensure_ascii=False)[:500]}")
+        print(
+            f"Upload response: {resp.status} {json.dumps(data, ensure_ascii=False)[:500]}"
+        )
         return data["data"]
 
 
 def poll_task(token: str, task_id: str, timeout: int = 180) -> dict:
     for i in range(timeout):
-        data = _request("GET", f"/api/v1/tasks/{task_id}", headers={"Authorization": f"Bearer {token}"})
+        data = _request(
+            "GET",
+            f"/api/v1/tasks/{task_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
         task = data["data"]
         status = task["status"]
         progress = task.get("progress", 0)
@@ -122,7 +133,9 @@ def poll_task(token: str, task_id: str, timeout: int = 180) -> dict:
 
 
 def get_result(token: str, task_id: str) -> dict | None:
-    data = _request("GET", f"/api/v1/tasks/{task_id}", headers={"Authorization": f"Bearer {token}"})
+    data = _request(
+        "GET", f"/api/v1/tasks/{task_id}", headers={"Authorization": f"Bearer {token}"}
+    )
     return data.get("data", {}).get("result")
 
 

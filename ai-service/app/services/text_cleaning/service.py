@@ -57,7 +57,8 @@ class TextCleaningService:
             if self.mode in (self.MODE_LLM, self.MODE_HYBRID):
                 if self.llm_cleaner is None:
                     logger.warning(
-                        "text cleaning mode is %s but no LLM cleaner is configured", self.mode
+                        "text cleaning mode is %s but no LLM cleaner is configured",
+                        self.mode,
                     )
                 else:
                     cleaned = self.llm_cleaner.clean_segments(cleaned)

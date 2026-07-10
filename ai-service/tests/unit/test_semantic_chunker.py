@@ -20,7 +20,9 @@ def test_semantic_chunker_empty_text(chunker: SemanticChunker) -> None:
     assert chunker.split("", "res-1", {}) == []
 
 
-def test_semantic_chunker_preserves_heading_boundaries(chunker: SemanticChunker) -> None:
+def test_semantic_chunker_preserves_heading_boundaries(
+    chunker: SemanticChunker,
+) -> None:
     text = "# 第一章\n第一章的内容。\n\n# 第二章\n第二章的内容。"
     chunks = chunker.split(text, "res-1", {"page": 1})
 
