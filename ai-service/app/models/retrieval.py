@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RetrievalRequest(BaseModel):
@@ -11,12 +11,19 @@ class RetrievalRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    question: str = Field(..., min_length=1)
-    user_id: str = Field(..., min_length=1)
-    resource_ids: list[str] = Field(default_factory=list)
+    question: str = Field(..., min_length=1, max_length=2000)
+    user_id: str = Field(..., min_length=1, max_length=128)
+    resource_ids: list[str] = Field(..., min_length=1, max_length=100)
     top_k: int = Field(default=5, ge=1, le=100)
     score_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     max_context_tokens: int | None = Field(default=None, ge=1)
+
+    @field_validator("resource_ids")
+    @classmethod
+    def _resource_ids_non_empty(cls, value: list[str]) -> list[str]:
+        if any(not isinstance(rid, str) or not rid.strip() for rid in value):
+            raise ValueError("resource_ids must contain non-empty strings")
+        return value
 
 
 class RetrievalChunk(BaseModel):

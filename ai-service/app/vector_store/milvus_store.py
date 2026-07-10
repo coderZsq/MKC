@@ -106,7 +106,9 @@ class MilvusStore:
         search_results = self._with_retry(_search)
         if not search_results:
             return []
-        return [_hit_to_result(hit) for hit in search_results[0]]
+        return [
+            _hit_to_result(hit, metric_type=self._config.metric_type) for hit in search_results[0]
+        ]
 
     def _create_client_with_retry(self) -> MilvusClient:
         def _connect() -> MilvusClient:
@@ -300,14 +302,32 @@ def _escape_expr(value: str) -> str:
     return value.replace("'", "''")
 
 
-def _hit_to_result(hit: dict[str, Any]) -> VectorSearchResult:
+def _hit_to_result(hit: dict[str, Any], metric_type: str) -> VectorSearchResult:
     entity = hit.get("entity", {})
+    distance = float(hit["distance"])
     return VectorSearchResult(
         id=str(hit["id"]),
         resource_id=str(entity.get("resource_id", "")),
         user_id=str(entity.get("user_id", "")),
         text=str(entity.get("text", "")),
         metadata=entity.get("metadata", {}) or {},
-        score=float(hit["distance"]),
+        score=_distance_to_score(distance, metric_type),
         created_at=int(entity.get("created_at", 0)),
     )
+
+
+def _distance_to_score(distance: float, metric_type: str) -> float:
+    """Normalize a Milvus search distance to a [0, 1] similarity score.
+
+    Milvus returns distances where smaller is better for every metric type.
+    - COSINE: distance = 1 - cosine_similarity; map to ``1 - distance``.
+    - L2: map with ``1 / (1 + distance)``.
+    - IP: distance = -inner_product; map to ``-distance`` and clamp at 0.
+    """
+    metric = metric_type.upper()
+    if metric == "L2":
+        return 1.0 / (1.0 + distance)
+    if metric == "IP":
+        return max(0.0, -distance)
+    # COSINE and anything else default to ``1 - distance``.
+    return 1.0 - distance

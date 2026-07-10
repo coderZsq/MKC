@@ -26,10 +26,8 @@ def retrieve_context() -> tuple[Response, int]:
         logger.warning("Retrieval request validation failed: %s", exc)
         raise ValidationException("请求参数错误") from exc
 
-    if not req.resource_ids:
-        raise ValidationException("resource_ids 不能为空")
-
     service = current_app.extensions["retrieval"]
+
     try:
         result = service.retrieve(req)
     except APIException:
