@@ -113,6 +113,12 @@ vector_store:
   retry_max_wait: "${VECTOR_STORE_RETRY_MAX_WAIT:-10}"
   connect_timeout: "${VECTOR_STORE_CONNECT_TIMEOUT:-10}"
 
+retrieval:
+  default_top_k: 5
+  score_threshold: 0.7
+  max_context_tokens: 4096
+  prompt_template: "prompts/rag.txt"
+
 gateway:
   base_url: http://localhost:8080
   # Internal API key is read from the INTERNAL_API_KEY environment variable.

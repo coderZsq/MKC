@@ -153,3 +153,13 @@ class VectorStoreUnavailableError(APIException):
 class VectorStoreConfigError(APIException):
     def __init__(self, message: str = "向量存储配置错误") -> None:
         super().__init__("VECTOR_STORE_CONFIG_ERROR", message, 400)
+
+
+class RetrievalForbiddenError(APIException):
+    def __init__(self, message: str = "无权访问资源") -> None:
+        super().__init__("FORBIDDEN", message, 403)
+
+
+class RetrievalUnavailableError(APIException):
+    def __init__(self, message: str = "检索服务不可用") -> None:
+        super().__init__("RETRIEVAL_UNAVAILABLE", message, 503)

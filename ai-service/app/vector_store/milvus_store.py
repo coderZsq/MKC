@@ -106,7 +106,9 @@ class MilvusStore:
         search_results = self._with_retry(_search)
         if not search_results:
             return []
-        return [_hit_to_result(hit) for hit in search_results[0]]
+        return [
+            _hit_to_result(hit, metric_type=self._config.metric_type) for hit in search_results[0]
+        ]
 
     def _create_client_with_retry(self) -> MilvusClient:
         def _connect() -> MilvusClient:
@@ -268,8 +270,12 @@ def _resource_filter(resource_id: str, user_id: str | None) -> str:
 
 def _search_filter(filters: dict[str, Any]) -> str:
     clauses = []
-    if "resource_id" in filters:
-        clauses.append(f"resource_id == '{_escape_expr(str(filters['resource_id']))}'")
+    resource_ids = filters.get("resource_ids")
+    if resource_ids is None:
+        resource_ids = filters.get("resource_id")
+    resource_filter = _resource_id_filter(resource_ids)
+    if resource_filter:
+        clauses.append(resource_filter)
     if "user_id" in filters:
         clauses.append(f"user_id == '{_escape_expr(str(filters['user_id']))}'")
     if not clauses:
@@ -277,18 +283,51 @@ def _search_filter(filters: dict[str, Any]) -> str:
     return " && ".join(clauses)
 
 
+def _resource_id_filter(resource_ids: Any) -> str:
+    if resource_ids is None:
+        return ""
+    if isinstance(resource_ids, str):
+        return f"resource_id == '{_escape_expr(resource_ids)}'"
+    ids = [str(rid) for rid in resource_ids]
+    if not ids:
+        return "resource_id == ''"
+    if len(ids) == 1:
+        return f"resource_id == '{_escape_expr(ids[0])}'"
+    escaped = [_escape_expr(rid) for rid in ids]
+    items = ", ".join(f"'{rid}'" for rid in escaped)
+    return f"resource_id in [{items}]"
+
+
 def _escape_expr(value: str) -> str:
     return value.replace("'", "''")
 
 
-def _hit_to_result(hit: dict[str, Any]) -> VectorSearchResult:
+def _hit_to_result(hit: dict[str, Any], metric_type: str) -> VectorSearchResult:
     entity = hit.get("entity", {})
+    distance = float(hit["distance"])
     return VectorSearchResult(
         id=str(hit["id"]),
         resource_id=str(entity.get("resource_id", "")),
         user_id=str(entity.get("user_id", "")),
         text=str(entity.get("text", "")),
         metadata=entity.get("metadata", {}) or {},
-        score=float(hit["distance"]),
+        score=_distance_to_score(distance, metric_type),
         created_at=int(entity.get("created_at", 0)),
     )
+
+
+def _distance_to_score(distance: float, metric_type: str) -> float:
+    """Normalize a Milvus search distance to a [0, 1] similarity score.
+
+    Milvus returns distances where smaller is better for every metric type.
+    - COSINE: distance = 1 - cosine_similarity; map to ``1 - distance``.
+    - L2: map with ``1 / (1 + distance)``.
+    - IP: distance = -inner_product; map to ``-distance`` and clamp at 0.
+    """
+    metric = metric_type.upper()
+    if metric == "L2":
+        return 1.0 / (1.0 + distance)
+    if metric == "IP":
+        return max(0.0, -distance)
+    # COSINE and anything else default to ``1 - distance``.
+    return 1.0 - distance

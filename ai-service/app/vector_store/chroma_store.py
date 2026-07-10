@@ -133,8 +133,12 @@ def _resource_filter(resource_id: str, user_id: str | None) -> dict[str, Any]:
 
 def _search_filter(filters: dict[str, Any]) -> dict[str, Any] | None:
     clauses: list[dict[str, Any]] = []
-    if "resource_id" in filters:
-        clauses.append({"resource_id": filters["resource_id"]})
+    resource_ids = filters.get("resource_ids")
+    if resource_ids is None:
+        resource_ids = filters.get("resource_id")
+    resource_filter = _resource_id_filter(resource_ids)
+    if resource_filter is not None:
+        clauses.append(resource_filter)
     if "user_id" in filters:
         clauses.append({"user_id": filters["user_id"]})
     if not clauses:
@@ -142,6 +146,19 @@ def _search_filter(filters: dict[str, Any]) -> dict[str, Any] | None:
     if len(clauses) == 1:
         return clauses[0]
     return {"$and": clauses}
+
+
+def _resource_id_filter(resource_ids: Any) -> dict[str, Any] | None:
+    if resource_ids is None:
+        return None
+    if isinstance(resource_ids, str):
+        return {"resource_id": resource_ids}
+    ids = [str(rid) for rid in resource_ids]
+    if not ids:
+        return {"resource_id": ""}
+    if len(ids) == 1:
+        return {"resource_id": ids[0]}
+    return {"$or": [{"resource_id": rid} for rid in ids]}
 
 
 def _distance_to_score(distance: float | None) -> float:

@@ -62,5 +62,8 @@ infra/k8s/**/secret*.yaml
 *.log
 logs/
 
-# Local user-uploaded test media
-resources/
+# Vector store local files
+ai-service/milvus.db
+ai-service/.milvus.db.lock
+ai-service/chroma/
+
