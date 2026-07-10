@@ -42,7 +42,6 @@ ocr:
   lang: ch
   dpi: 300
   max_pages_in_memory: 5
-  use_gpu: false
 
 # result_storage will be fully configured in S2-6; PDF parse already uploads JSON to MinIO.
 

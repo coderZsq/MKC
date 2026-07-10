@@ -12,22 +12,15 @@ logger = logging.getLogger(__name__)
 class PaddleOCREngine:
     """Thin wrapper around PaddleOCR for PDF page text recognition."""
 
-    def __init__(
-        self,
-        lang: str = "ch",
-        use_gpu: bool = False,
-        show_log: bool = False,
-    ) -> None:
+    def __init__(self, lang: str = "ch") -> None:
         try:
             from paddleocr import PaddleOCR
         except ImportError as exc:
             raise OcrUnavailableError("PaddleOCR is not installed") from exc
 
         self._ocr = PaddleOCR(
-            use_angle_cls=True,
             lang=lang,
-            use_gpu=use_gpu,
-            show_log=show_log,
+            use_textline_orientation=True,
         )
 
     def recognize(self, image_path: Path) -> list[PdfBlock]:

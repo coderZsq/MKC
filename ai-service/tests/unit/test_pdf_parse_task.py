@@ -180,7 +180,6 @@ def test_build_ocr_service_returns_service_when_enabled(
             "lang": "en",
             "dpi": 200,
             "max_pages_in_memory": 3,
-            "use_gpu": True,
         },
     }
     mock_engine_class.return_value = MagicMock()
@@ -189,7 +188,7 @@ def test_build_ocr_service_returns_service_when_enabled(
     service = _build_ocr_service()
 
     assert isinstance(service, OcrService)
-    mock_engine_class.assert_called_once_with(lang="en", use_gpu=True)
+    mock_engine_class.assert_called_once_with(lang="en")
     mock_renderer_class.assert_called_once_with(dpi=200)
 
 

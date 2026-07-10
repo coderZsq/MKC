@@ -43,7 +43,6 @@ def _build_ocr_service() -> OcrService | None:
     try:
         engine = PaddleOCREngine(
             lang=ocr_cfg.get("lang", "ch"),
-            use_gpu=ocr_cfg.get("use_gpu", False),
         )
         renderer = PdfRenderer(dpi=ocr_cfg.get("dpi", 300))
     except OcrUnavailableError:
