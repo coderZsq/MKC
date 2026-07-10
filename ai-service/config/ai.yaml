@@ -76,6 +76,18 @@ chunking:
     - ""
   preserve_metadata: true
 
+embedding:
+  provider: "${EMBEDDING_PROVIDER:-zhipuai}"  # zhipuai / openai / mock
+  model: embedding-3
+  api_key: "${ZHIPU_API_KEY}"
+  base_url: "https://open.bigmodel.cn/api/paas/v4"
+  batch_size: 64
+  max_retries: 3
+  timeout: 30
+  dimensions: 2048
+  normalize: true
+  max_text_chars: 8000
+
 minio:
   endpoint: localhost:9000
   # MinIO credentials are read from environment variables:

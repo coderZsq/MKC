@@ -108,3 +108,33 @@ class EmptyTextError(APIException):
 class ChunkingError(APIException):
     def __init__(self, message: str = "分块内部错误") -> None:
         super().__init__("CHUNKING_ERROR", message, 500)
+
+
+class EmptyBatchError(APIException):
+    def __init__(self, message: str = "输入批次为空") -> None:
+        super().__init__("EMPTY_BATCH", message, 400)
+
+
+class EmbeddingAuthenticationError(APIException):
+    def __init__(self, message: str = "Embedding 认证失败") -> None:
+        super().__init__("EMBEDDING_AUTH_FAILED", message, 401)
+
+
+class EmbeddingUnavailableError(APIException):
+    def __init__(self, message: str = "Embedding 服务不可用") -> None:
+        super().__init__("EMBEDDING_UNAVAILABLE", message, 503)
+
+
+class EmbeddingInternalError(APIException):
+    def __init__(self, message: str = "Embedding 内部错误") -> None:
+        super().__init__("EMBEDDING_INTERNAL_ERROR", message, 500)
+
+
+class DimensionMismatchError(APIException):
+    def __init__(self, message: str = "向量维度与配置不符") -> None:
+        super().__init__("DIMENSION_MISMATCH", message, 500)
+
+
+class EmbeddingProviderError(APIException):
+    def __init__(self, message: str = "不支持的 Embedding Provider") -> None:
+        super().__init__("EMBEDDING_PROVIDER_ERROR", message, 400)
