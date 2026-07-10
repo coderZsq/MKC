@@ -353,7 +353,7 @@ func canTransition(from, to string) bool {
 	case model.TaskStatusPending:
 		return to == model.TaskStatusRunning
 	case model.TaskStatusRunning:
-		return to == model.TaskStatusCompleted || to == model.TaskStatusFailed
+		return to == model.TaskStatusRunning || to == model.TaskStatusCompleted || to == model.TaskStatusFailed
 	case model.TaskStatusFailed:
 		return to == model.TaskStatusRunning
 	case model.TaskStatusCompleted:
