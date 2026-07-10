@@ -17,6 +17,7 @@ numpy==1.26.4
 requests==2.32.3
 minio==7.2.7
 PyMuPDF==1.24.11
+tiktoken==0.7.0
 
 # OCR (PaddleOCR fallback for scanned PDFs)
 paddleocr>=2.7.0,<3.0.0

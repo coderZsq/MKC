@@ -61,6 +61,21 @@ text_cleaning:
     - "那个"
     - "就是"
 
+chunking:
+  strategy: paragraph            # paragraph / fixed_token / semantic
+  chunk_size: 512                # 最大 token 数
+  chunk_overlap: 50              # 重叠 token 数
+  separators:
+    - "\n## "
+    - "\n# "
+    - "\n\n"
+    - "\n"
+    - "。"
+    - "，"
+    - " "
+    - ""
+  preserve_metadata: true
+
 minio:
   endpoint: localhost:9000
   # MinIO credentials are read from environment variables:
