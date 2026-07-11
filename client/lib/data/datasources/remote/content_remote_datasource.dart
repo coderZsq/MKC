@@ -50,8 +50,7 @@ class ContentRemoteDataSource {
     if (uri == null) return false;
     if (uri.scheme != 'http' && uri.scheme != 'https') return false;
     if (Env.isProd && uri.scheme != 'https') return false;
-    if (_expectedHost.isEmpty) return false;
-    if (uri.host != _expectedHost) return false;
+    if (_expectedHost.isNotEmpty && uri.host != _expectedHost) return false;
     return true;
   }
 
