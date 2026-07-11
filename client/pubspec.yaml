@@ -10,7 +10,7 @@ environment:
 
 dependencies:
   dio: ^5.4.3
-  file_picker: ^8.0.5
+  file_picker: ^11.0.2
   flutter:
     sdk: flutter
   flutter_localizations:
