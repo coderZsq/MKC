@@ -332,7 +332,3 @@ func TestQAService_Ask_UsesContextWindow(t *testing.T) {
 
 	require.Len(t, aiclient.lastRequest.History, 2)
 }
-
-func newTestUser(email, hash, nickname string) *model.User {
-	return &model.User{UUID: uuid.NewString(), Email: email, PasswordHash: hash, Nickname: nickname}
-}
