@@ -73,6 +73,16 @@ class ApiClient {
     );
   }
 
+  Future<Result<void>> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return _request<void>(
+      () => _dio.delete<dynamic>(path, queryParameters: queryParameters),
+      parser: (_) {},
+    );
+  }
+
   Future<Result<T>> post<T>(
     String path, {
     dynamic data,

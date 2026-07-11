@@ -26,6 +26,11 @@ String? validateConfirmPassword(String? password, String? confirm) {
   return null;
 }
 
+final _idRegex = RegExp(r'^[a-zA-Z0-9_-]{1,64}$');
+
+/// Validates a resource or conversation identifier.
+bool isValidResourceId(String value) => _idRegex.hasMatch(value);
+
 final _emailRegex = RegExp(
   r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
 );
