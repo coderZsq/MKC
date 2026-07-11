@@ -46,6 +46,11 @@ task:
   retry_cooldown: 5s
   dispatch_timeout: 30s
 
+conversation:
+  default_title: 新会话
+  max_context_messages: 20
+  max_context_tokens: 4096
+
 minio:
   endpoint: localhost:9000
   access_key: mkc

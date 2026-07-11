@@ -21,7 +21,7 @@ class MessageModel {
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
-      messageId: json['message_id'] as String? ?? '',
+      messageId: json['id'] as String? ?? (json['message_id'] as String? ?? ''),
       conversationId: json['conversation_id'] as String? ?? '',
       role: json['role'] as String? ?? 'user',
       content: json['content'] as String? ?? '',

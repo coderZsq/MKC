@@ -7,16 +7,19 @@ void main() {
       final conversation = Conversation(
         id: 'c1',
         title: 'old',
+        resourceIds: const ['r1'],
         createdAt: DateTime(2024, 1, 1),
         updatedAt: DateTime(2024, 1, 1),
       );
       final updated = conversation.copyWith(
         title: 'new',
         updatedAt: DateTime(2024, 1, 2),
+        resourceIds: const ['r2'],
       );
 
       expect(updated.title, 'new');
       expect(updated.updatedAt, DateTime(2024, 1, 2));
+      expect(updated.resourceIds, ['r2']);
       expect(updated.id, conversation.id);
       expect(updated.createdAt, conversation.createdAt);
     });

@@ -21,8 +21,14 @@ class ConversationRepositoryImpl implements ConversationRepository {
   }
 
   @override
-  Future<Result<Conversation>> createConversation() async {
-    final result = await _chatApi.createConversation();
+  Future<Result<Conversation>> createConversation({
+    String? title,
+    List<String>? resourceIds,
+  }) async {
+    final result = await _chatApi.createConversation(
+      title: title,
+      resourceIds: resourceIds,
+    );
     return result.when(
       success: (model) => Result.success(model.toDomain()),
       failure: (error) => Result<Conversation>.failure(error),
@@ -31,8 +37,6 @@ class ConversationRepositoryImpl implements ConversationRepository {
 
   @override
   Future<Result<void>> deleteConversation(String conversationId) async {
-    // The API layer does not expose a delete helper; reuse the underlying
-    // ApiClient directly via the chat endpoint path.
     final result = await _chatApi.deleteConversation(conversationId);
     return result.when(
       success: (_) => const Result<void>.success(null),

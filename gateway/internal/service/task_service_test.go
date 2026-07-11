@@ -18,9 +18,10 @@ import (
 )
 
 type stubResourceRepositoryForTask struct {
-	createFunc           func(ctx context.Context, r *model.Resource) error
-	updateStatusFunc     func(ctx context.Context, id uint64, status uint8) error
-	getByUUIDAndUserFunc func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+	createFunc              func(ctx context.Context, r *model.Resource) error
+	updateStatusFunc        func(ctx context.Context, id uint64, status uint8) error
+	getByUUIDAndUserFunc    func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+	countByUUIDsAndUserFunc func(ctx context.Context, uuids []string, userID uint64) (int64, error)
 }
 
 func (r *stubResourceRepositoryForTask) Create(ctx context.Context, resource *model.Resource) error {
@@ -44,17 +45,24 @@ func (r *stubResourceRepositoryForTask) GetByUUIDAndUserID(ctx context.Context, 
 	return nil, repository.ErrNotFound
 }
 
+func (r *stubResourceRepositoryForTask) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
+	if r.countByUUIDsAndUserFunc != nil {
+		return r.countByUUIDsAndUserFunc(ctx, uuids, userID)
+	}
+	return int64(len(uuids)), nil
+}
+
 var _ repository.ResourceRepository = (*stubResourceRepositoryForTask)(nil)
 
 type stubTaskRepositoryForTask struct {
-	createFunc               func(ctx context.Context, t *model.Task) error
-	getByUUIDFunc            func(ctx context.Context, uuid string) (*model.Task, error)
-	getByUUIDAndUserID       func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
-	listByUserIDFunc         func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
-	updateStatusFunc         func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
+	createFunc                  func(ctx context.Context, t *model.Task) error
+	getByUUIDFunc               func(ctx context.Context, uuid string) (*model.Task, error)
+	getByUUIDAndUserID          func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	listByUserIDFunc            func(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
+	updateStatusFunc            func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
 	updateStatusWithAttemptFunc func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error
-	updateProgressFunc       func(ctx context.Context, id uint64, progress uint8) error
-	resetForRetryFunc        func(ctx context.Context, id uint64) error
+	updateProgressFunc          func(ctx context.Context, id uint64, progress uint8) error
+	resetForRetryFunc           func(ctx context.Context, id uint64) error
 }
 
 func (r *stubTaskRepositoryForTask) Create(ctx context.Context, t *model.Task) error {
@@ -475,7 +483,9 @@ func TestTaskService_MarkRunning_PublishesStatusEvent(t *testing.T) {
 		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusPending}, nil
 		},
-		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
+		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error {
+			return nil
+		},
 	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.MarkRunning(context.Background(), "task-uuid")
@@ -492,7 +502,9 @@ func TestTaskService_MarkCompleted_PublishesDoneEvent(t *testing.T) {
 		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
 		},
-		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
+		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error {
+			return nil
+		},
 	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.MarkCompleted(context.Background(), "task-uuid", json.RawMessage(`{"ok":true}`))
@@ -510,7 +522,9 @@ func TestTaskService_MarkFailed_PublishesErrorEvent(t *testing.T) {
 		getByUUIDFunc: func(ctx context.Context, uuid string) (*model.Task, error) {
 			return &model.Task{ID: 1, UUID: uuid, Status: model.TaskStatusRunning}, nil
 		},
-		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error { return nil },
+		updateStatusFunc: func(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error {
+			return nil
+		},
 	}, broadcaster, nil, 0).(*taskService)
 
 	err := svc.MarkFailed(context.Background(), "task-uuid", "boom")

@@ -14,7 +14,8 @@ type Message struct {
 	Role            string          `gorm:"column:role;type:varchar(20);not null"`
 	Content         string          `gorm:"column:content;type:text;not null"`
 	Citations       json.RawMessage `gorm:"column:citations;type:json"`
-	TokenUsage      json.RawMessage `gorm:"column:token_usage;type:json"`
+	TokenUsage      int             `gorm:"column:token_usage;type:int"`
+	Model           string          `gorm:"column:model;type:varchar(100)"`
 	CreatedAt       time.Time       `gorm:"column:created_at;type:datetime;autoCreateTime"`
 
 	Conversation Conversation `gorm:"foreignKey:ConversationID;references:ID;constraint:OnDelete:CASCADE"`

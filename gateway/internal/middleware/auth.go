@@ -10,17 +10,12 @@ import (
 	"github.com/zhushuangquan/mkc/gateway/pkg/response"
 )
 
-// JWTAuth validates access tokens and sets user context values.
-// The token may be provided in the Authorization header as a Bearer token
-// or in the `token` query parameter for SSE/EventSource clients.
+// JWTAuth validates access tokens from the Authorization header.
 func JWTAuth(jwtMgr *jwt.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := extractBearerToken(c.GetHeader("Authorization"))
 		if token == "" {
-			token = c.Query("token")
-		}
-		if token == "" {
-			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "missing authorization header or token")
+			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "missing authorization header")
 			c.Abort()
 			return
 		}

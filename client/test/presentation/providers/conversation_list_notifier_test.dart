@@ -59,6 +59,20 @@ void main() {
       expect(repository.createCalls, 1);
     });
 
+    test('forwards title and resource ids to repository', () async {
+      repository.nextCreateResult = Result.success(
+        makeConversation(id: 'new', title: 'Project'),
+      );
+
+      await notifier.createConversation(
+        title: 'Project',
+        resourceIds: const ['res-1'],
+      );
+
+      expect(repository.lastCreateTitle, 'Project');
+      expect(repository.lastCreateResourceIds, ['res-1']);
+    });
+
     test('sets error on failure without modifying list', () async {
       repository.nextListResult = Result.success([makeConversation(id: 'c1')]);
       await notifier.loadConversations();

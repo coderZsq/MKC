@@ -52,6 +52,7 @@ func main() {
 	var taskSSEHandler *handler.TaskSSEHandler
 	var resultHandler *handler.ResultHandler
 	var qaSSEHandler *handler.QASSEHandler
+	var convHandler *handler.ConversationHandler
 	var jwtMgr *jwt.Manager
 	if db != nil && redisClient != nil {
 		userRepo := repository.NewUserRepository(db)
@@ -72,8 +73,13 @@ func main() {
 		taskSSEHandler = handler.NewTaskSSEHandler(taskSvc, taskBroadcaster)
 
 		aiClient := service.NewAIClient(cfg)
-		qaSvc := service.NewQAService(aiClient, convRepo, msgRepo, appLogger)
+		ctxWindow := service.NewContextWindowService(msgRepo, cfg.Conversation.MaxContextMessages, cfg.Conversation.MaxContextTokens)
+		uow := repository.NewUnitOfWork(db)
+		qaSvc := service.NewQAService(aiClient, convRepo, msgRepo, appLogger, service.WithContextWindowService(ctxWindow), service.WithUnitOfWork(uow))
 		qaSSEHandler = handler.NewQASSEHandler(qaSvc)
+
+		convSvc := service.NewConversationService(convRepo, msgRepo, resourceRepo, uow, cfg.Conversation.DefaultTitle, appLogger)
+		convHandler = handler.NewConversationHandler(convSvc)
 
 		minioClient, err := storage.NewMinIOClient(cfg.MinIO)
 		if err != nil {
@@ -88,7 +94,7 @@ func main() {
 		}
 	}
 
-	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, resultHandler, qaSSEHandler, jwtMgr)
+	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, resultHandler, qaSSEHandler, convHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),

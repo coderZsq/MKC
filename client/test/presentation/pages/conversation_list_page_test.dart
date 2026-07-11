@@ -27,6 +27,19 @@ void main() {
       expect(find.text('Second'), findsOneWidget);
     });
 
+    testWidgets('formats updated time with intl', (tester) async {
+      final updatedAt = DateTime(2024, 1, 1, 12, 30);
+      final repository = FakeConversationRepository()
+        ..nextListResult = Result.success([
+          makeConversation(id: 'c1', title: 'Timed', updatedAt: updatedAt),
+        ]);
+
+      await _pumpPage(tester, repository: repository);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Updated 1/1/2024 12:30'), findsOneWidget);
+    });
+
     testWidgets('creates new conversation and navigates', (tester) async {
       final repository = FakeConversationRepository()
         ..nextListResult = const Result.success([])

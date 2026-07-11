@@ -103,3 +103,35 @@ func TestResourceRepository_GetByUUIDAndUserID(t *testing.T) {
 	_, err = repo.GetByUUIDAndUserID(ctx, uuid.NewString(), user1.ID)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
+
+func TestResourceRepository_CountByUUIDsAndUserID(t *testing.T) {
+	db := setupResourceTestDB(t)
+	repo := NewResourceRepository(db)
+	ctx := context.Background()
+
+	user1 := newTestUser("count1@example.com", "hashed1", "Owner1")
+	user2 := newTestUser("count2@example.com", "hashed2", "Owner2")
+	require.NoError(t, db.WithContext(ctx).Create(user1).Error)
+	require.NoError(t, db.WithContext(ctx).Create(user2).Error)
+
+	r1 := newTestResource(user1.ID, "a.txt", "text/plain")
+	r2 := newTestResource(user1.ID, "b.txt", "text/plain")
+	r3 := newTestResource(user2.ID, "c.txt", "text/plain")
+	require.NoError(t, db.WithContext(ctx).Create(r1).Error)
+	require.NoError(t, db.WithContext(ctx).Create(r2).Error)
+	require.NoError(t, db.WithContext(ctx).Create(r3).Error)
+
+	count, err := repo.CountByUUIDsAndUserID(ctx, []string{r1.UUID, r2.UUID}, user1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), count)
+
+	// r3 belongs to user2, so only r1 counts for user1
+	count, err = repo.CountByUUIDsAndUserID(ctx, []string{r1.UUID, r3.UUID}, user1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), count)
+
+	// no matches
+	count, err = repo.CountByUUIDsAndUserID(ctx, []string{uuid.NewString()}, user1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), count)
+}

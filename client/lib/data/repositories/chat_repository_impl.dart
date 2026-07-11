@@ -17,11 +17,23 @@ class ChatRepositoryImpl implements ChatRepository {
   final ChatSseClient _sseClient;
 
   @override
-  Future<Result<List<Message>>> loadMessages(String conversationId) async {
-    final result = await _chatApi.loadMessages(conversationId);
+  Future<Result<List<Message>>> loadMessages(
+    String conversationId, {
+    int? page,
+    int? limit,
+  }) async {
+    final result = await _chatApi.loadMessages(
+      conversationId,
+      page: page,
+      limit: limit,
+    );
     return result.when(
       success: (models) => Result.success(
-        models.map((model) => model.toDomain()).toList(),
+        models
+            .map(
+              (model) => model.toDomain().copyWith(conversationId: conversationId),
+            )
+            .toList(),
       ),
       failure: (error) => Result<List<Message>>.failure(error),
     );

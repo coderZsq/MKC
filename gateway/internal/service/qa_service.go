@@ -26,24 +26,43 @@ type QAService interface {
 	Ask(ctx context.Context, userID uint64, userUUID string, conversationUUID string, question string) (<-chan SSEEvent, error)
 }
 
+// QAOption configures a QAService.
+type QAOption func(*qaService)
+
+// WithContextWindowService injects a context-window builder into QAService.
+func WithContextWindowService(svc ContextWindowService) QAOption {
+	return func(qs *qaService) { qs.ctxWindow = svc }
+}
+
+// WithUnitOfWork injects a transaction coordinator into QAService.
+func WithUnitOfWork(uow repository.UnitOfWork) QAOption {
+	return func(qs *qaService) { qs.uow = uow }
+}
+
 // NewQAService creates a QAService.
-func NewQAService(aiClient AIClient, convRepo repository.ConversationRepository, msgRepo repository.MessageRepository, logger *zap.Logger) QAService {
+func NewQAService(aiClient AIClient, convRepo repository.ConversationRepository, msgRepo repository.MessageRepository, logger *zap.Logger, opts ...QAOption) QAService {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	return &qaService{
+	svc := &qaService{
 		aiClient: aiClient,
 		convRepo: convRepo,
 		msgRepo:  msgRepo,
 		logger:   logger,
 	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
 }
 
 type qaService struct {
-	aiClient AIClient
-	convRepo repository.ConversationRepository
-	msgRepo  repository.MessageRepository
-	logger   *zap.Logger
+	aiClient  AIClient
+	convRepo  repository.ConversationRepository
+	msgRepo   repository.MessageRepository
+	uow       repository.UnitOfWork
+	ctxWindow ContextWindowService
+	logger    *zap.Logger
 }
 
 // Ask validates the conversation, persists the user message, and opens a streaming Q&A session.
@@ -57,11 +76,14 @@ func (s *qaService) Ask(ctx context.Context, userID uint64, userUUID string, con
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, apperrors.New(http.StatusNotFound, "CONVERSATION_NOT_FOUND", "会话不存在")
 		}
+		if errors.Is(err, repository.ErrForbidden) {
+			return nil, apperrors.Forbidden("无权访问该会话")
+		}
 		s.logger.Error("failed to load conversation", zap.Error(err))
 		return nil, apperrors.Internal("failed to load conversation")
 	}
 
-	history, err := s.msgRepo.ListByConversationID(ctx, conversation.ID, messageHistoryLimit)
+	history, err := s.loadHistory(ctx, conversation, question)
 	if err != nil {
 		s.logger.Error("failed to load message history", zap.Error(err))
 		return nil, apperrors.Internal("failed to load message history")
@@ -73,15 +95,9 @@ func (s *qaService) Ask(ctx context.Context, userID uint64, userUUID string, con
 		Role:           "user",
 		Content:        question,
 	}
-	if err := s.msgRepo.Create(ctx, userMsg); err != nil {
+	if err := s.saveUserMessageAndTitle(ctx, conversation, userMsg, question); err != nil {
 		s.logger.Error("failed to save user message", zap.Error(err))
 		return nil, apperrors.Internal("failed to save user message")
-	}
-
-	if conversation.Title == "" {
-		if err := s.convRepo.UpdateTitle(ctx, conversation.ID, truncate(question, 50)); err != nil {
-			s.logger.Warn("failed to update conversation title", zap.Error(err))
-		}
 	}
 
 	assistantMsgUUID := uuid.NewString()
@@ -91,7 +107,7 @@ func (s *qaService) Ask(ctx context.Context, userID uint64, userUUID string, con
 		MessageID:      assistantMsgUUID,
 		UserID:         userUUID,
 		ResourceIDs:    parseResourceIDs(conversation.ResourceIDs),
-		History:        mapMessagesToHistory(history),
+		History:        history,
 	}
 
 	aiEvents, err := s.aiClient.StreamQA(ctx, req)
@@ -122,7 +138,9 @@ func (s *qaService) stream(ctx context.Context, out chan<- SSEEvent, aiEvents <-
 			}
 			select {
 			case out <- ev:
-			default:
+			case <-ctx.Done():
+				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), citations)
+				return
 			}
 			switch ev.Event {
 			case "chunk":
@@ -166,20 +184,73 @@ func (s *qaService) saveAssistant(ctx context.Context, conversation *model.Conve
 		Role:            "assistant",
 		Content:         answer,
 		Citations:       citationsJSON,
+		TokenUsage:      estimateTokens(answer),
 	}
-	if err := s.msgRepo.Create(ctx, assistantMsg); err != nil {
+	if err := s.saveAssistantMessage(ctx, assistantMsg, conversation); err != nil {
 		s.logger.Error("failed to save assistant message", zap.Error(err))
-	}
-	if err := s.convRepo.Touch(ctx, conversation.ID); err != nil {
-		s.logger.Warn("failed to touch conversation", zap.Error(err))
 	}
 }
 
+func (s *qaService) saveUserMessageAndTitle(ctx context.Context, conversation *model.Conversation, userMsg *model.Message, question string) error {
+	if s.uow != nil {
+		return s.uow.Run(ctx, func(convRepo repository.ConversationRepository, msgRepo repository.MessageRepository) error {
+			if err := msgRepo.Create(ctx, userMsg); err != nil {
+				return err
+			}
+			if conversation.Title == "" {
+				if err := convRepo.UpdateTitleByIDAndUserID(ctx, conversation.ID, conversation.UserID, truncate(question, 20)); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+	if err := s.msgRepo.Create(ctx, userMsg); err != nil {
+		return err
+	}
+	if conversation.Title == "" {
+		if err := s.convRepo.UpdateTitleByIDAndUserID(ctx, conversation.ID, conversation.UserID, truncate(question, 20)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *qaService) saveAssistantMessage(ctx context.Context, assistantMsg *model.Message, conversation *model.Conversation) error {
+	if s.uow != nil {
+		return s.uow.Run(ctx, func(convRepo repository.ConversationRepository, msgRepo repository.MessageRepository) error {
+			if err := msgRepo.Create(ctx, assistantMsg); err != nil {
+				return err
+			}
+			return convRepo.TouchByIDAndUserID(ctx, conversation.ID, conversation.UserID)
+		})
+	}
+	if err := s.msgRepo.Create(ctx, assistantMsg); err != nil {
+		return err
+	}
+	if err := s.convRepo.TouchByIDAndUserID(ctx, conversation.ID, conversation.UserID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *qaService) loadHistory(ctx context.Context, conversation *model.Conversation, question string) ([]ChatMessage, error) {
+	if s.ctxWindow != nil {
+		return s.ctxWindow.BuildMessages(ctx, conversation.ID, question)
+	}
+	messages, err := s.msgRepo.ListByConversationID(ctx, conversation.ID, messageHistoryLimit)
+	if err != nil {
+		return nil, err
+	}
+	return mapMessagesToHistory(messages), nil
+}
+
 func truncate(text string, maxLen int) string {
-	if len(text) <= maxLen {
+	runes := []rune(text)
+	if len(runes) <= maxLen {
 		return text
 	}
-	return text[:maxLen]
+	return string(runes[:maxLen])
 }
 
 func parseResourceIDs(raw json.RawMessage) []string {

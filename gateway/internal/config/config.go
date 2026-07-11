@@ -75,6 +75,13 @@ type QAConfig struct {
 	MaxSSEConnections int           `mapstructure:"max_sse_connections"`
 }
 
+// ConversationConfig holds conversation and context-window options.
+type ConversationConfig struct {
+	DefaultTitle       string `mapstructure:"default_title"`
+	MaxContextMessages int    `mapstructure:"max_context_messages"`
+	MaxContextTokens   int    `mapstructure:"max_context_tokens"`
+}
+
 // MinIOConfig holds object storage connection options.
 type MinIOConfig struct {
 	Endpoint        string        `mapstructure:"endpoint"`
@@ -89,16 +96,17 @@ type MinIOConfig struct {
 
 // Config is the top-level configuration container.
 type Config struct {
-	App       AppConfig       `mapstructure:"app"`
-	Server    ServerConfig    `mapstructure:"server"`
-	Log       LogConfig       `mapstructure:"log"`
-	MySQL     MySQLConfig     `mapstructure:"mysql"`
-	Redis     RedisConfig     `mapstructure:"redis"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	AIService AIServiceConfig `mapstructure:"ai_service"`
-	Task      TaskConfig      `mapstructure:"task"`
-	QA        QAConfig        `mapstructure:"qa"`
-	MinIO     MinIOConfig     `mapstructure:"minio"`
+	App          AppConfig          `mapstructure:"app"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Log          LogConfig          `mapstructure:"log"`
+	MySQL        MySQLConfig        `mapstructure:"mysql"`
+	Redis        RedisConfig        `mapstructure:"redis"`
+	JWT          JWTConfig          `mapstructure:"jwt"`
+	AIService    AIServiceConfig    `mapstructure:"ai_service"`
+	Task         TaskConfig         `mapstructure:"task"`
+	QA           QAConfig           `mapstructure:"qa"`
+	Conversation ConversationConfig `mapstructure:"conversation"`
+	MinIO        MinIOConfig        `mapstructure:"minio"`
 }
 
 // Load reads configuration from the given YAML file and environment variables.
@@ -177,6 +185,15 @@ func (c *Config) validate() error {
 	}
 	if c.QA.MaxSSEConnections <= 0 {
 		c.QA.MaxSSEConnections = 10
+	}
+	if c.Conversation.DefaultTitle == "" {
+		c.Conversation.DefaultTitle = "新会话"
+	}
+	if c.Conversation.MaxContextMessages <= 0 {
+		c.Conversation.MaxContextMessages = 20
+	}
+	if c.Conversation.MaxContextTokens <= 0 {
+		c.Conversation.MaxContextTokens = 4096
 	}
 	if c.MinIO.PresignedExpiry <= 0 {
 		c.MinIO.PresignedExpiry = time.Hour

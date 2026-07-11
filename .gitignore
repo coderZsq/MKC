@@ -31,6 +31,8 @@ gateway/bin/
 gateway/vendor/
 gateway/*.exe
 gateway/coverage.out
+gateway/server
+coverage.out
 gateway/config/config.yaml
 
 # Python

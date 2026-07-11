@@ -7,7 +7,10 @@ abstract class ConversationRepository {
   Future<Result<List<Conversation>>> listConversations();
 
   /// Creates a new conversation and returns it.
-  Future<Result<Conversation>> createConversation();
+  Future<Result<Conversation>> createConversation({
+    String? title,
+    List<String>? resourceIds,
+  });
 
   /// Deletes the conversation with [conversationId].
   Future<Result<void>> deleteConversation(String conversationId);
