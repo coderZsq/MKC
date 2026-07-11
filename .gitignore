@@ -63,9 +63,9 @@ infra/k8s/**/secret*.yaml
 # Logs
 *.log
 logs/
+.mkc-dev/
 
 # Vector store local files
 ai-service/milvus.db
 ai-service/.milvus.db.lock
 ai-service/chroma/
-
