@@ -66,6 +66,7 @@ start_ai_service() {
     MINIO_BUCKET="${MINIO_BUCKET:-mkc-resources}"
     MINIO_ENDPOINT="${MINIO_ENDPOINT:-localhost:9000}"
     EMBEDDING_PROVIDER="${EMBEDDING_PROVIDER:-mock}"
+    LLM_PROVIDER="${LLM_PROVIDER:-mock}"
     set +a
     exec .venv/bin/flask --app app.main:create_app run \
       --host=0.0.0.0 \

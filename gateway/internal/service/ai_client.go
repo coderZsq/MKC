@@ -27,7 +27,7 @@ type QARequest struct {
 	ConversationID   string        `json:"conversation_id"`
 	MessageID        string        `json:"message_id"`
 	UserID           string        `json:"user_id"`
-	ResourceIDs      []string      `json:"resource_ids"`
+	ResourceIDs      []string      `json:"resource_ids,omitempty"`
 	History          []ChatMessage `json:"history,omitempty"`
 	TopK             *int          `json:"top_k,omitempty"`
 	ScoreThreshold   *float64      `json:"score_threshold,omitempty"`

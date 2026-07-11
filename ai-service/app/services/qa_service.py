@@ -36,27 +36,31 @@ class QAService:
         ``citation`` events for retrieved sources, and finally ``done`` or
         ``error``.
         """
-        try:
-            retrieval_kwargs: dict[str, Any] = {
-                "question": request.question,
-                "user_id": request.user_id,
-                "resource_ids": request.resource_ids,
-                "max_context_tokens": request.max_context_tokens,
-            }
-            if request.top_k is not None:
-                retrieval_kwargs["top_k"] = request.top_k
-            if request.score_threshold is not None:
-                retrieval_kwargs["score_threshold"] = request.score_threshold
-            retrieval_result = self._retrieval.retrieve(RetrievalRequest(**retrieval_kwargs))
-        except APIException as exc:
-            yield self._error_event(request, exc.code, exc.message)
-            return
-        except Exception:
-            logger.exception("Retrieval failed for question %s", request.question)
-            yield self._error_event(request, "RETRIEVAL_UNAVAILABLE", "检索不可用")
-            return
+        retrieval_result: Any | None = None
+        prompt = request.question
+        if request.resource_ids:
+            try:
+                retrieval_kwargs: dict[str, Any] = {
+                    "question": request.question,
+                    "user_id": request.user_id,
+                    "resource_ids": request.resource_ids,
+                    "max_context_tokens": request.max_context_tokens,
+                }
+                if request.top_k is not None:
+                    retrieval_kwargs["top_k"] = request.top_k
+                if request.score_threshold is not None:
+                    retrieval_kwargs["score_threshold"] = request.score_threshold
+                retrieval_result = self._retrieval.retrieve(RetrievalRequest(**retrieval_kwargs))
+                prompt = retrieval_result.prompt
+            except APIException as exc:
+                yield self._error_event(request, exc.code, exc.message)
+                return
+            except Exception:
+                logger.exception("Retrieval failed for question %s", request.question)
+                yield self._error_event(request, "RETRIEVAL_UNAVAILABLE", "检索不可用")
+                return
 
-        messages = self._build_messages(request, retrieval_result.prompt)
+        messages = self._build_messages(request, prompt)
         llm_request = LLMRequest(
             messages=[Message(role=m["role"], content=m["content"]) for m in messages],
             temperature=request.temperature or 0.7,
@@ -74,8 +78,9 @@ class QAService:
                     return
                 if chunk.finish_reason == "stop":
                     break
-            for citation_chunk in retrieval_result.chunks:
-                yield self._citation_event(request, citation_chunk)
+            if retrieval_result is not None:
+                for citation_chunk in retrieval_result.chunks:
+                    yield self._citation_event(request, citation_chunk)
             yield self._done_event(request)
         except (LLMUnavailableError, LLMTimeoutError) as exc:
             logger.warning("LLM stream failed: %s", exc.code)

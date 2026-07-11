@@ -79,23 +79,28 @@ class ChatSseClientImpl implements ChatSseClient {
 
       final response = await web.window.fetch(uri.toString().toJS, init).toDart;
       if (response.status == 401 || response.status == 403) {
-        controller.add(
-          ChatEvent(
-            type: 'error',
-            messageId: '',
-            conversationId: conversationId,
-            errorCode: 'UNAUTHORIZED',
-            errorMessage: 'Authentication failed',
-          ),
+        _addError(
+          controller,
+          conversationId,
+          'UNAUTHORIZED',
+          'Authentication failed',
         );
         await controller.close();
         return;
       }
       if (!response.ok) {
-        throw StateError('SSE request failed: ${response.status}');
+        _addError(
+          controller,
+          conversationId,
+          'HTTP_${response.status}',
+          'SSE request failed: ${response.status}',
+        );
+        await controller.close();
+        return;
       }
 
-      final reader = response.body?.getReader() as web.ReadableStreamDefaultReader?;
+      final reader =
+          response.body?.getReader() as web.ReadableStreamDefaultReader?;
       if (reader == null) {
         throw StateError('response body stream is null');
       }
@@ -138,7 +143,8 @@ class ChatSseClientImpl implements ChatSseClient {
     }
   }
 
-  void _startPolling(StreamController<ChatEvent> controller, String conversationId) {
+  void _startPolling(
+      StreamController<ChatEvent> controller, String conversationId) {
     Timer? pollTimer;
     pollTimer = Timer.periodic(
       const Duration(seconds: _fallbackPollIntervalSeconds),
@@ -158,7 +164,7 @@ class ChatSseClientImpl implements ChatSseClient {
             ),
           );
           if (response.statusCode != 200) return;
-          final data = response.data as List<dynamic>?;
+          final data = _messageItems(response.data);
           if (data == null || data.isEmpty) return;
           final lastMessage = _parseLastAssistantMessage(data);
           if (lastMessage != null) {
@@ -205,6 +211,37 @@ class ChatSseClientImpl implements ChatSseClient {
       }
     }
     return null;
+  }
+
+  List<dynamic>? _messageItems(dynamic data) {
+    if (data is List<dynamic>) return data;
+    if (data is Map<String, dynamic>) {
+      final envelopeData = data['data'];
+      if (envelopeData is Map<String, dynamic>) {
+        final items = envelopeData['items'];
+        if (items is List<dynamic>) return items;
+      }
+      if (envelopeData is List<dynamic>) return envelopeData;
+    }
+    return null;
+  }
+
+  void _addError(
+    StreamController<ChatEvent> controller,
+    String conversationId,
+    String code,
+    String message,
+  ) {
+    if (controller.isClosed) return;
+    controller.add(
+      ChatEvent(
+        type: 'error',
+        messageId: '',
+        conversationId: conversationId,
+        errorCode: code,
+        errorMessage: message,
+      ),
+    );
   }
 
   void _parseBuffer(StringBuffer buffer, StreamController<ChatEvent> sink) {

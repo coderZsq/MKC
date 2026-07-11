@@ -18,7 +18,8 @@ class ChatApi {
         final list = data as List<dynamic>? ?? <dynamic>[];
         return list
             .map(
-              (dynamic item) => ConversationModel.fromJson(item as Map<String, dynamic>),
+              (dynamic item) =>
+                  ConversationModel.fromJson(item as Map<String, dynamic>),
             )
             .toList();
       },
@@ -38,8 +39,9 @@ class ChatApi {
     }
     return _client.post<ConversationModel>(
       _path,
-      data: body.isEmpty ? null : body,
-      parser: (dynamic data) => ConversationModel.fromJson(data as Map<String, dynamic>),
+      data: body,
+      parser: (dynamic data) =>
+          ConversationModel.fromJson(data as Map<String, dynamic>),
     );
   }
 
@@ -55,11 +57,13 @@ class ChatApi {
       '$_path/$conversationId/messages',
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
       parser: (dynamic data) {
-        final envelope = data as Map<String, dynamic>? ?? const <String, dynamic>{};
+        final envelope =
+            data as Map<String, dynamic>? ?? const <String, dynamic>{};
         final list = envelope['items'] as List<dynamic>? ?? <dynamic>[];
         return list
             .map(
-              (dynamic item) => MessageModel.fromJson(item as Map<String, dynamic>),
+              (dynamic item) =>
+                  MessageModel.fromJson(item as Map<String, dynamic>),
             )
             .toList();
       },
