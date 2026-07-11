@@ -30,12 +30,14 @@ Message createMessage({
 Conversation makeConversation({
   String id = 'conv-1',
   String title = 'Test conversation',
+  List<String> resourceIds = const <String>[],
   DateTime? createdAt,
   DateTime? updatedAt,
 }) {
   return Conversation(
     id: id,
     title: title,
+    resourceIds: resourceIds,
     createdAt: createdAt ?? DateTime(2024, 1, 1, 12, 0),
     updatedAt: updatedAt ?? DateTime(2024, 1, 1, 12, 0),
   );
@@ -50,7 +52,11 @@ class FakeChatRepository implements ChatRepository {
   String? lastQuestion;
 
   @override
-  Future<Result<List<Message>>> loadMessages(String conversationId) async {
+  Future<Result<List<Message>>> loadMessages(
+    String conversationId, {
+    int? page,
+    int? limit,
+  }) async {
     lastConversationId = conversationId;
     return nextMessagesResult ?? const Result.success([]);
   }
@@ -80,6 +86,8 @@ class FakeConversationRepository implements ConversationRepository {
   Result<Conversation>? nextCreateResult;
   Result<void>? nextDeleteResult;
   String? lastDeletedId;
+  String? lastCreateTitle;
+  List<String>? lastCreateResourceIds;
   int createCalls = 0;
   int listCalls = 0;
   int deleteCalls = 0;
@@ -91,8 +99,13 @@ class FakeConversationRepository implements ConversationRepository {
   }
 
   @override
-  Future<Result<Conversation>> createConversation() async {
+  Future<Result<Conversation>> createConversation({
+    String? title,
+    List<String>? resourceIds,
+  }) async {
     createCalls++;
+    lastCreateTitle = title;
+    lastCreateResourceIds = resourceIds;
     return nextCreateResult ?? Result.success(makeConversation(id: 'new-conv'));
   }
 

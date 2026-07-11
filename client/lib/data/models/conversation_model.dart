@@ -5,19 +5,26 @@ class ConversationModel {
   const ConversationModel({
     required this.conversationId,
     required this.title,
+    this.resourceIds = const <String>[],
+    this.modelConfig,
     required this.createdAt,
     required this.updatedAt,
   });
 
   final String conversationId;
   final String title;
+  final List<String> resourceIds;
+  final Map<String, dynamic>? modelConfig;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
     return ConversationModel(
-      conversationId: json['conversation_id'] as String? ?? '',
+      conversationId: json['id'] as String? ??
+          (json['conversation_id'] as String? ?? ''),
       title: json['title'] as String? ?? '',
+      resourceIds: _parseStringList(json['resource_ids']),
+      modelConfig: json['model_config'] as Map<String, dynamic>?,
       createdAt: _parseTimestamp(json['created_at']),
       updatedAt: _parseTimestamp(json['updated_at']),
     );
@@ -27,9 +34,19 @@ class ConversationModel {
     return Conversation(
       id: conversationId,
       title: title,
+      resourceIds: resourceIds,
+      modelConfig: modelConfig,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
+  }
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value is! List<dynamic>) return const <String>[];
+    return value
+        .map((dynamic item) => item?.toString() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList();
   }
 
   static DateTime _parseTimestamp(dynamic value) {

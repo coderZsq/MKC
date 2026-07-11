@@ -13,6 +13,7 @@ import (
 type ResourceRepository interface {
 	Create(ctx context.Context, r *model.Resource) error
 	GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+	CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error)
 	UpdateStatus(ctx context.Context, id uint64, status uint8) error
 }
 
@@ -44,6 +45,15 @@ func (r *GORMResourceRepository) GetByUUIDAndUserID(ctx context.Context, uuid st
 		return nil, fmt.Errorf("failed to get resource by uuid and user: %w", err)
 	}
 	return &resource, nil
+}
+
+// CountByUUIDsAndUserID counts how many of the given UUIDs belong to the user.
+func (r *GORMResourceRepository) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&model.Resource{}).Where("uuid IN ? AND user_id = ?", uuids, userID).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("failed to count resources by uuids and user: %w", err)
+	}
+	return count, nil
 }
 
 // UpdateStatus updates the status of a resource by ID.

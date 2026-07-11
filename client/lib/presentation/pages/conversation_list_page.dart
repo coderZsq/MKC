@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../providers/conversation_list_provider.dart';
 import '../routes/app_routes.dart';
@@ -76,7 +77,7 @@ class ConversationListPage extends ConsumerWidget {
           title: Text(
             conversation.title.isEmpty ? 'Untitled conversation' : conversation.title,
           ),
-          subtitle: Text('Updated ${conversation.updatedAt}'),
+          subtitle: Text('Updated ${DateFormat.yMd().add_Hm().format(conversation.updatedAt)}'),
           leading: const Icon(Icons.chat_bubble_outline),
           trailing: IconButton(
             icon: const Icon(Icons.delete_outline),

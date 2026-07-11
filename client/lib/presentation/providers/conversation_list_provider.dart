@@ -56,9 +56,15 @@ class ConversationListNotifier
     );
   }
 
-  Future<Conversation?> createConversation() async {
+  Future<Conversation?> createConversation({
+    String? title,
+    List<String>? resourceIds,
+  }) async {
     state = state.copyWith(isLoading: true, error: null);
-    final result = await _repository.createConversation();
+    final result = await _repository.createConversation(
+      title: title,
+      resourceIds: resourceIds,
+    );
     return result.when(
       success: (conversation) {
         final updated = <Conversation>[conversation, ...state.conversations];

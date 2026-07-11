@@ -3,8 +3,6 @@ package model
 import (
 	"encoding/json"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // Conversation represents a chat session owned by a user.
@@ -17,7 +15,6 @@ type Conversation struct {
 	ModelConfig json.RawMessage `gorm:"column:model_config;type:json"`
 	CreatedAt   time.Time       `gorm:"column:created_at;type:datetime;autoCreateTime"`
 	UpdatedAt   time.Time       `gorm:"column:updated_at;type:datetime;autoUpdateTime"`
-	DeletedAt   gorm.DeletedAt  `gorm:"column:deleted_at;type:datetime;index"`
 
 	User User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }

@@ -93,6 +93,33 @@ func TestQAService_Ask_Success(t *testing.T) {
 	assert.Equal(t, "hello world", messages[1].Content)
 	assert.NotNil(t, messages[1].ParentMessageID)
 	assert.Equal(t, messages[0].ID, *messages[1].ParentMessageID)
+	assert.Greater(t, messages[1].TokenUsage, 0)
+}
+
+func TestQAService_Ask_GeneratesTitleFromFirstQuestion(t *testing.T) {
+	db := setupConversationTestDB(t)
+	ctx := context.Background()
+
+	user := &model.User{UUID: uuid.NewString(), Email: "qa@example.com", PasswordHash: "hash"}
+	require.NoError(t, db.WithContext(ctx).Create(user).Error)
+	conv := newTestConversation(user.ID, "", []string{"res-1"})
+	require.NoError(t, db.WithContext(ctx).Create(conv).Error)
+
+	aiclient := &mockAIClient{
+		events: []SSEEvent{
+			{Event: "done", Data: []byte(`{"finish_reason":"stop"}`), Raw: "event: done\ndata: {}\n\n"},
+		},
+	}
+
+	longQuestion := "这是一段超过二十个字的用户提问，用于测试标题自动截取"
+	svc := NewQAService(aiclient, repository.NewConversationRepository(db), repository.NewMessageRepository(db), nil)
+	_, err := svc.Ask(ctx, user.ID, user.UUID, conv.UUID, longQuestion)
+	require.NoError(t, err)
+
+	var updated model.Conversation
+	require.NoError(t, db.WithContext(ctx).First(&updated, conv.ID).Error)
+	expected := []rune(longQuestion)[:20]
+	assert.Equal(t, string(expected), updated.Title)
 }
 
 func TestQAService_Ask_ConversationNotFound(t *testing.T) {

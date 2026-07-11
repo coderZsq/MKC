@@ -62,9 +62,10 @@ func (s *stubObjectStorage) PresignedGetURL(ctx context.Context, key string, exp
 var _ storage.ObjectStorage = (*stubObjectStorage)(nil)
 
 type stubResourceRepository struct {
-	createFunc           func(ctx context.Context, r *model.Resource) error
-	updateStatusFunc     func(ctx context.Context, id uint64, status uint8) error
-	getByUUIDAndUserFunc func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+	createFunc              func(ctx context.Context, r *model.Resource) error
+	updateStatusFunc        func(ctx context.Context, id uint64, status uint8) error
+	getByUUIDAndUserFunc    func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+	countByUUIDsAndUserFunc func(ctx context.Context, uuids []string, userID uint64) (int64, error)
 }
 
 func (r *stubResourceRepository) Create(ctx context.Context, resource *model.Resource) error {
@@ -86,6 +87,13 @@ func (r *stubResourceRepository) GetByUUIDAndUserID(ctx context.Context, uuid st
 		return r.getByUUIDAndUserFunc(ctx, uuid, userID)
 	}
 	return nil, repository.ErrNotFound
+}
+
+func (r *stubResourceRepository) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
+	if r.countByUUIDsAndUserFunc != nil {
+		return r.countByUUIDsAndUserFunc(ctx, uuids, userID)
+	}
+	return int64(len(uuids)), nil
 }
 
 var _ repository.ResourceRepository = (*stubResourceRepository)(nil)
