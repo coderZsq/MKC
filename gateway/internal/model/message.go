@@ -15,7 +15,7 @@ type Message struct {
 	Content         string          `gorm:"column:content;type:text;not null"`
 	Citations       json.RawMessage `gorm:"column:citations;type:json"`
 	TokenUsage      json.RawMessage `gorm:"column:token_usage;type:json"`
-	CreatedAt       time.Time       `gorm:"column:created_at;type:datetime(3);autoCreateTime"`
+	CreatedAt       time.Time       `gorm:"column:created_at;type:datetime;autoCreateTime"`
 
 	Conversation Conversation `gorm:"foreignKey:ConversationID;references:ID;constraint:OnDelete:CASCADE"`
 }

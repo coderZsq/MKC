@@ -12,7 +12,7 @@ import (
 )
 
 // New creates and configures a Gin engine with middlewares and routes.
-func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, file *handler.FileHandler, task *handler.TaskHandler, internalTask *handler.InternalTaskHandler, taskSSE *handler.TaskSSEHandler, result *handler.ResultHandler, jwtMgr *jwt.Manager) *gin.Engine {
+func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, file *handler.FileHandler, task *handler.TaskHandler, internalTask *handler.InternalTaskHandler, taskSSE *handler.TaskSSEHandler, result *handler.ResultHandler, qaSSE *handler.QASSEHandler, jwtMgr *jwt.Manager) *gin.Engine {
 	mode := gin.ReleaseMode
 	if cfg.Server.Mode == "debug" || cfg.Server.Mode == "" && cfg.App.Env == "dev" {
 		mode = gin.DebugMode
@@ -67,6 +67,9 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 				}
 				if result != nil {
 					api.GET("/tasks/:task_id/result", middleware.JWTAuth(jwtMgr), result.Get)
+				}
+				if qaSSE != nil {
+					api.POST("/conversations/:id/ask", middleware.JWTAuth(jwtMgr), qaSSE.Ask)
 				}
 			}
 		}
