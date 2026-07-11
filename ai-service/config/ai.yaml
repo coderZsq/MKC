@@ -119,6 +119,19 @@ retrieval:
   max_context_tokens: 4096
   prompt_template: "prompts/rag.txt"
 
+llm:
+  provider: "${LLM_PROVIDER:-zhipuai}"          # zhipuai / kimi / mock
+  model: "${LLM_MODEL:-glm-4-flash}"
+  api_key: "${LLM_API_KEY:-}"
+  base_url: "${LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}"
+  fallback_model: "${LLM_FALLBACK_MODEL:-}"
+  temperature: "${LLM_TEMPERATURE:-0.7}"
+  max_tokens: "${LLM_MAX_TOKENS:-2048}"
+  timeout: "${LLM_TIMEOUT:-60}"
+  max_retries: "${LLM_MAX_RETRIES:-3}"
+  mock_response: "${LLM_MOCK_RESPONSE:-这是来自 mock provider 的固定回答。}"
+  mock_stream_chunks: "${LLM_MOCK_STREAM_CHUNKS:-mock, ,answer}"
+
 gateway:
   base_url: http://localhost:8080
   # Internal API key is read from the INTERNAL_API_KEY environment variable.
