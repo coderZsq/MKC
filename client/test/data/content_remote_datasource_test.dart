@@ -44,7 +44,8 @@ void main() {
     test('rejects non-HTTP schemes', () async {
       final dataSource = createDataSource();
 
-      final result = await dataSource.downloadText('ftp://example.com/file.srt');
+      final result =
+          await dataSource.downloadText('ftp://example.com/file.srt');
 
       expect(
         result.when(success: (_) => false, failure: (_) => true),
@@ -73,22 +74,33 @@ void main() {
       );
     });
 
-    test('rejects URLs when expected host is empty', () async {
+    test('allows HTTP URLs when expected host is empty', () async {
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                data: 'local content',
+                statusCode: 200,
+              ),
+            );
+          },
+        ),
+      );
       final dataSource = ContentRemoteDataSource(
+        dio: dio,
         expectedHost: '',
       );
 
       final result = await dataSource.downloadText(
-        'https://minio.example.com/file.srt',
+        'http://localhost:9000/file.srt',
       );
 
       expect(
-        result.when(success: (_) => false, failure: (_) => true),
-        isTrue,
-      );
-      expect(
-        result.when(success: (_) => null, failure: (e) => e),
-        isA<UnsafeUrlException>(),
+        result.when(success: (text) => text, failure: (_) => ''),
+        'local content',
       );
     });
 
