@@ -120,7 +120,10 @@ void main() {
           expect(options.method, equals('POST'));
           expect(
             options.data,
-            equals({'title': 'Project', 'resource_ids': ['res-1']}),
+            equals({
+              'title': 'Project',
+              'resource_ids': ['res-1']
+            }),
           );
           return _jsonBody(
             {
@@ -144,10 +147,11 @@ void main() {
       );
     });
 
-    test('createConversation omits empty optional fields', () async {
+    test('createConversation sends empty JSON when optional fields are empty',
+        () async {
       dio.httpClientAdapter = _MockAdapter(
         onFetch: (options) {
-          expect(options.data, isNull);
+          expect(options.data, equals(<String, dynamic>{}));
           return _jsonBody(
             {
               'success': true,
@@ -167,7 +171,8 @@ void main() {
       );
     });
 
-    test('loadMessages fetches paginated messages for a conversation', () async {
+    test('loadMessages fetches paginated messages for a conversation',
+        () async {
       dio.httpClientAdapter = _MockAdapter(
         onFetch: (options) {
           expect(options.path, equals('/conversations/conv-1/messages'));

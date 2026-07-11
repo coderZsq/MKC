@@ -25,9 +25,11 @@ func NewConversationHandler(svc service.ConversationService) *ConversationHandle
 func (h *ConversationHandler) CreateConversation(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	var req service.CreateConversationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, apperrors.CodeValidationError, "invalid request body")
-		return
+	if c.Request.ContentLength != 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.BadRequest(c, apperrors.CodeValidationError, "invalid request body")
+			return
+		}
 	}
 	conv, err := h.svc.Create(c.Request.Context(), userID, req)
 	if err != nil {

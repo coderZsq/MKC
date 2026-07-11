@@ -124,8 +124,9 @@ MINIO_BUCKET=mkc-resources
 MINIO_ENDPOINT=localhost:9000
 PORT=5001
 
-# Local development can use the mock embedding provider to avoid remote API calls.
+# Local development can use mock providers to avoid remote API calls.
 EMBEDDING_PROVIDER=mock
+LLM_PROVIDER=mock
 ```
 
 启动 HTTP 服务。本地验证使用 `5001` 端口；如果当前 shell 里存在 `DEBUG=release` 等非布尔值环境变量，需要显式覆盖为 `DEBUG=True`：

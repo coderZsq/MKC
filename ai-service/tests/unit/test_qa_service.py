@@ -103,6 +103,31 @@ def test_stream_answer_includes_history(qa_request: QARequest) -> None:
     assert passed_request.messages[2].role == "user"
 
 
+def test_stream_answer_without_resources_skips_retrieval() -> None:
+    request = QARequest(
+        question="Hello?",
+        conversation_id="conv-1",
+        message_id="msg-1",
+        user_id="user-1",
+        resource_ids=[],
+    )
+    retrieval_service = MagicMock(spec=RetrievalService)
+    llm_client = MagicMock(spec=LLMClient)
+
+    async def _fake_stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
+        yield LLMStreamChunk(delta="hello", finish_reason="stop")
+
+    llm_client.stream_complete.side_effect = _fake_stream
+
+    service = QAService(retrieval_service, llm_client)
+    events = _collect_events(service.stream_answer(request))
+
+    assert [e.event_type for e in events] == ["chunk", "done"]
+    retrieval_service.retrieve.assert_not_called()
+    passed_request = llm_client.stream_complete.call_args[0][0]
+    assert passed_request.messages[-1].content == "Hello?"
+
+
 def test_stream_answer_retrieval_error_yields_error_event(qa_request: QARequest) -> None:
     retrieval_service = MagicMock(spec=RetrievalService)
     retrieval_service.retrieve.side_effect = RetrievalUnavailableError()

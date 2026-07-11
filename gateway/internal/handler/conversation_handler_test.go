@@ -96,6 +96,22 @@ func TestConversationHandler_CreateConversation(t *testing.T) {
 	assert.Equal(t, "conv-1", data["id"])
 }
 
+func TestConversationHandler_CreateConversation_EmptyBody(t *testing.T) {
+	svc := &stubConversationService{
+		createFunc: func(ctx context.Context, userID uint64, req service.CreateConversationRequest) (*service.ConversationResponse, error) {
+			assert.Empty(t, req.Title)
+			assert.Empty(t, req.ResourceIDs)
+			return &service.ConversationResponse{ID: "conv-1", Title: "新会话"}, nil
+		},
+	}
+	h := NewConversationHandler(svc)
+
+	c, w := newConversationHandlerTestContext(http.MethodPost, "/api/v1/conversations", nil)
+	h.CreateConversation(c)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+}
+
 func TestConversationHandler_CreateConversation_ValidationError(t *testing.T) {
 	h := NewConversationHandler(&stubConversationService{})
 	c, w := newConversationHandlerTestContext(http.MethodPost, "/api/v1/conversations", []byte(`{`))

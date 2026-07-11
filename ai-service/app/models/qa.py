@@ -25,7 +25,7 @@ class QARequest(BaseModel):
     conversation_id: str = Field(..., min_length=1)
     message_id: str = Field(..., min_length=1)
     user_id: str = Field(..., min_length=1)
-    resource_ids: list[str] = Field(..., min_length=1, max_length=100)
+    resource_ids: list[str] = Field(default_factory=list, max_length=100)
     history: list[ChatMessage] = Field(default_factory=list)
     top_k: int | None = Field(default=None, ge=1, le=100)
     score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
