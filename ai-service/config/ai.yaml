@@ -120,7 +120,7 @@ retrieval:
   prompt_template: "prompts/rag.txt"
 
 llm:
-  provider: "${LLM_PROVIDER:-zhipuai}"          # zhipuai / kimi / mock
+  provider: "${LLM_PROVIDER:-zhipuai}"          # zhipuai / kimi / ollama / mock
   model: "${LLM_MODEL:-glm-4-flash}"
   api_key: "${LLM_API_KEY:-}"
   base_url: "${LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}"
@@ -137,4 +137,3 @@ gateway:
   # Internal API key is read from the INTERNAL_API_KEY environment variable.
   progress_path: /api/v1/internal/tasks/{task_id}/progress
   status_path: /api/v1/internal/tasks/{task_id}/status
-

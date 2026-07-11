@@ -22,6 +22,12 @@ class TestLLMConfig:
         assert cfg.model == "moonshot-v1-8k"
         assert cfg.base_url == "https://api.moonshot.cn/v1"
 
+    def test_ollama_defaults(self) -> None:
+        cfg = LLMConfig(provider="ollama")
+        assert cfg.provider == "ollama"
+        assert cfg.model == "deepseek-r1:8b"
+        assert cfg.base_url == "http://localhost:11434/v1"
+
     def test_validation_rejects_invalid_max_tokens(self) -> None:
         with pytest.raises(ValueError, match="max_tokens"):
             LLMConfig(max_tokens=0)

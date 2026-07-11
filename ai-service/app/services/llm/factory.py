@@ -8,6 +8,7 @@ from app.services.llm.config import LLMConfig, build_llm_config
 from app.services.llm.kimi_provider import KimiProvider
 from app.services.llm.llm_client import LLMClient
 from app.services.llm.mock_provider import MockProvider
+from app.services.llm.ollama_provider import OllamaProvider
 from app.services.llm.zhipu_provider import ZhipuProvider
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,8 @@ def build_llm_provider(config: LLMConfig) -> BaseLLMProvider:
         return ZhipuProvider(config)
     if config.provider == "kimi":
         return KimiProvider(config)
+    if config.provider == "ollama":
+        return OllamaProvider(config)
     if config.provider == "mock":
         return MockProvider(config)
     raise ValueError(f"不支持的 LLM provider: {config.provider}")

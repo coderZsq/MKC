@@ -13,6 +13,7 @@ from app.services.llm.config import LLMConfig
 from app.services.llm.kimi_provider import KimiProvider
 from app.services.llm.mock_provider import MockProvider
 from app.services.llm.models import LLMRequest, Usage
+from app.services.llm.ollama_provider import OllamaProvider
 from app.services.llm.zhipu_provider import ZhipuProvider
 
 
@@ -42,12 +43,41 @@ def _make_complete_response(content: str = "answer") -> MagicMock:
     return response
 
 
+def _make_reasoning_response(reasoning: str = "thinking") -> MagicMock:
+    response = MagicMock()
+    response.model_dump.return_value = {
+        "choices": [
+            {
+                "message": {"content": "", "reasoning": reasoning},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 2, "completion_tokens": 3, "total_tokens": 5},
+    }
+    return response
+
+
 def _make_stream_chunk(content: str, finish_reason: str | None = None) -> MagicMock:
     chunk = MagicMock()
     chunk.model_dump.return_value = {
         "choices": [
             {
                 "delta": {"content": content},
+                "finish_reason": finish_reason,
+            }
+        ]
+    }
+    return chunk
+
+
+def _make_reasoning_stream_chunk(
+    reasoning: str, finish_reason: str | None = None
+) -> MagicMock:
+    chunk = MagicMock()
+    chunk.model_dump.return_value = {
+        "choices": [
+            {
+                "delta": {"content": "", "reasoning": reasoning},
                 "finish_reason": finish_reason,
             }
         ]
@@ -150,7 +180,7 @@ class TestZhipuProvider:
 class TestKimiProvider:
     def test_complete_returns_response(self) -> None:
         cfg = LLMConfig(provider="kimi", api_key="dummy", model="moonshot-v1-8k")
-        with patch("app.services.llm.kimi_provider.OpenAI") as mock_client_cls:
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_complete_response(
                 "kimi answer"
@@ -166,7 +196,7 @@ class TestKimiProvider:
 
     def test_stream_complete_yields_chunks(self) -> None:
         cfg = LLMConfig(provider="kimi", api_key="dummy", model="moonshot-v1-8k")
-        with patch("app.services.llm.kimi_provider.OpenAI") as mock_client_cls:
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = [
                 _make_stream_chunk("kimi"),
@@ -181,7 +211,7 @@ class TestKimiProvider:
 
     def test_auth_error_maps_to_llm_auth_failed(self) -> None:
         cfg = LLMConfig(provider="kimi", api_key="dummy", model="moonshot-v1-8k")
-        with patch("app.services.llm.kimi_provider.OpenAI") as mock_client_cls:
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = AuthenticationError(
                 "auth failed", response=MagicMock(), body=None
@@ -195,7 +225,7 @@ class TestKimiProvider:
 
     def test_timeout_error_maps_to_llm_timeout(self) -> None:
         cfg = LLMConfig(provider="kimi", api_key="dummy", model="moonshot-v1-8k")
-        with patch("app.services.llm.kimi_provider.OpenAI") as mock_client_cls:
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = APITimeoutError(request=MagicMock())
             mock_client_cls.return_value = mock_client
@@ -207,7 +237,7 @@ class TestKimiProvider:
 
     def test_api_error_maps_to_llm_unavailable(self) -> None:
         cfg = LLMConfig(provider="kimi", api_key="dummy", model="moonshot-v1-8k")
-        with patch("app.services.llm.kimi_provider.OpenAI") as mock_client_cls:
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = APIError(
                 "api error", request=MagicMock(), body=None
@@ -218,6 +248,54 @@ class TestKimiProvider:
             with pytest.raises(LLMUnavailableError) as exc_info:
                 provider.complete(_make_request())
             assert exc_info.value.code == "LLM_UNAVAILABLE"
+
+
+class TestOllamaProvider:
+    def test_complete_returns_response(self) -> None:
+        cfg = LLMConfig(provider="ollama")
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _make_complete_response(
+                "ollama answer"
+            )
+            mock_client_cls.return_value = mock_client
+
+            provider = OllamaProvider(cfg)
+            response = provider.complete(_make_request())
+
+        assert response.content == "ollama answer"
+        assert response.model == "deepseek-r1:8b"
+        assert response.usage.total_tokens == 5
+
+    def test_complete_uses_reasoning_when_content_is_empty(self) -> None:
+        cfg = LLMConfig(provider="ollama")
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _make_reasoning_response(
+                "ollama reasoning"
+            )
+            mock_client_cls.return_value = mock_client
+
+            provider = OllamaProvider(cfg)
+            response = provider.complete(_make_request())
+
+        assert response.content == "ollama reasoning"
+
+    def test_stream_complete_yields_reasoning_chunks(self) -> None:
+        cfg = LLMConfig(provider="ollama")
+        with patch("app.services.llm.openai_compatible.OpenAI") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = [
+                _make_reasoning_stream_chunk("think"),
+                _make_stream_chunk(" answer", finish_reason="stop"),
+            ]
+            mock_client_cls.return_value = mock_client
+
+            provider = OllamaProvider(cfg)
+            chunks = asyncio.run(_collect_stream(provider.stream_complete(_make_request())))
+
+        assert [chunk.delta for chunk in chunks] == ["think", " answer"]
+        assert chunks[-1].finish_reason == "stop"
 
 
 class TestMockProvider:
