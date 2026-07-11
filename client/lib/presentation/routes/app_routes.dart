@@ -4,6 +4,7 @@ const String loginRoute = '/login';
 const String registerRoute = '/register';
 const String homeRoute = '/';
 const String resourcesRoute = '/resources';
+const String conversationListRoute = '/conversations';
 const String conversationRoute = '/conversation/:id';
 const String uploadRoute = '/upload';
 const String taskCenterRoute = '/tasks';

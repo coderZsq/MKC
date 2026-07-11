@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/content_type.dart';
+import '../pages/chat_page.dart';
 import '../pages/content_view_page.dart';
+import '../pages/conversation_list_page.dart';
 import '../pages/home_page.dart';
 import '../pages/login_page.dart';
 import '../pages/register_page.dart';
@@ -49,9 +51,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: homeRoute, builder: (_, __) => const HomePage()),
       GoRoute(path: uploadRoute, builder: (_, __) => const UploadPage()),
       GoRoute(path: taskCenterRoute, builder: (_, __) => const TaskCenterPage()),
+      GoRoute(path: conversationListRoute, builder: (_, __) => const ConversationListPage()),
       GoRoute(
         path: taskDetailRoute,
         builder: (_, state) => TaskDetailPage(taskId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: conversationRoute,
+        builder: (_, state) => ChatPage(
+          conversationId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: contentViewRoute,

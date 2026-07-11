@@ -13,12 +13,14 @@ class NetworkException extends AppException {
 }
 
 class ServerException extends AppException {
-  const ServerException({this.code});
+  const ServerException({this.code, String? message})
+      : _message = message;
 
   final String? code;
+  final String? _message;
 
   @override
-  String get message => '服务器内部错误';
+  String get message => _message ?? '服务器内部错误';
 }
 
 class UnauthorizedException extends AppException {
