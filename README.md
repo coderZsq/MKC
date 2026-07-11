@@ -66,7 +66,40 @@ cd /Users/zhushuangquan/Downloads/MKC
 | Jaeger UI | `localhost:16686` |
 | Milvus | `localhost:19530` |
 
-### 2. 启动 AI Service
+### 2. 一键启动应用服务
+
+完成基础设施和端口转发后，可以一键启动 `ai-service`、`gateway` 和 Flutter client：
+
+```bash
+cd /Users/zhushuangquan/Downloads/MKC
+./scripts/local-dev-up.sh
+```
+
+脚本默认配置：
+
+| 服务 | 默认值 |
+|---|---|
+| AI Service | `http://localhost:5001` |
+| Gateway | `http://localhost:8080` |
+| Flutter device | `chrome` |
+| Client API | `http://localhost:8080/api/v1` |
+| Storage host | `localhost` |
+
+停止脚本启动的应用进程：
+
+```bash
+./scripts/local-dev-down.sh
+```
+
+日志与 PID 文件保存在 `.mkc-dev/`，该目录不会提交到 Git。
+
+如需覆盖默认值：
+
+```bash
+CLIENT_DEVICE=macos AI_PORT=5001 GATEWAY_PORT=8080 ./scripts/local-dev-up.sh
+```
+
+### 3. 手动启动 AI Service
 
 ```bash
 cd /Users/zhushuangquan/Downloads/MKC/ai-service
@@ -128,7 +161,7 @@ source .venv/bin/activate
 make worker
 ```
 
-### 3. 启动 Gateway
+### 4. 手动启动 Gateway
 
 ```bash
 cd /Users/zhushuangquan/Downloads/MKC/gateway
@@ -164,7 +197,7 @@ curl http://localhost:8080/health
 curl http://localhost:8080/api/v1/health
 ```
 
-### 4. 启动 Flutter Client
+### 5. 手动启动 Flutter Client
 
 ```bash
 cd /Users/zhushuangquan/Downloads/MKC/client
