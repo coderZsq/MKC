@@ -69,16 +69,22 @@ type TaskConfig struct {
 	DispatchTimeout time.Duration   `mapstructure:"dispatch_timeout"`
 }
 
+// QAConfig holds Q&A SSE options.
+type QAConfig struct {
+	Timeout           time.Duration `mapstructure:"timeout"`
+	MaxSSEConnections int           `mapstructure:"max_sse_connections"`
+}
+
 // MinIOConfig holds object storage connection options.
 type MinIOConfig struct {
-	Endpoint       string        `mapstructure:"endpoint"`
-	AccessKey      string        `mapstructure:"access_key"`
-	SecretKey      string        `mapstructure:"secret_key"`
-	Bucket         string        `mapstructure:"bucket"`
-	ResultsBucket  string        `mapstructure:"results_bucket"`
+	Endpoint        string        `mapstructure:"endpoint"`
+	AccessKey       string        `mapstructure:"access_key"`
+	SecretKey       string        `mapstructure:"secret_key"`
+	Bucket          string        `mapstructure:"bucket"`
+	ResultsBucket   string        `mapstructure:"results_bucket"`
 	PresignedExpiry time.Duration `mapstructure:"presigned_expiry"`
-	UseSSL         bool          `mapstructure:"use_ssl"`
-	Region         string        `mapstructure:"region"`
+	UseSSL          bool          `mapstructure:"use_ssl"`
+	Region          string        `mapstructure:"region"`
 }
 
 // Config is the top-level configuration container.
@@ -91,6 +97,7 @@ type Config struct {
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	AIService AIServiceConfig `mapstructure:"ai_service"`
 	Task      TaskConfig      `mapstructure:"task"`
+	QA        QAConfig        `mapstructure:"qa"`
 	MinIO     MinIOConfig     `mapstructure:"minio"`
 }
 
@@ -164,6 +171,12 @@ func (c *Config) validate() error {
 	}
 	if c.Task.DispatchTimeout <= 0 {
 		c.Task.DispatchTimeout = 10 * time.Second
+	}
+	if c.QA.Timeout <= 0 {
+		c.QA.Timeout = 120 * time.Second
+	}
+	if c.QA.MaxSSEConnections <= 0 {
+		c.QA.MaxSSEConnections = 10
 	}
 	if c.MinIO.PresignedExpiry <= 0 {
 		c.MinIO.PresignedExpiry = time.Hour

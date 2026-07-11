@@ -7,6 +7,7 @@ from app.api.health import health_bp
 from app.api.internal import internal_bp
 from app.api.llm import llm_bp
 from app.api.pdf import pdf_bp
+from app.api.qa import qa_bp
 from app.api.retrieval import retrieval_bp
 from app.api.vectors import vectors_bp
 from app.core.config import settings
@@ -100,6 +101,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(vectors_bp, url_prefix="/ai/v1")
     app.register_blueprint(retrieval_bp, url_prefix="/ai/v1")
     app.register_blueprint(llm_bp, url_prefix="/ai/v1")
+    app.register_blueprint(qa_bp, url_prefix="/ai/v1")
 
 
 def register_error_handlers(app: Flask) -> None:

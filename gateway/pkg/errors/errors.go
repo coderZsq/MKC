@@ -34,6 +34,9 @@ const (
 	CodeRetryTooFrequent       = "RETRY_TOO_FREQUENT"
 	CodeDispatchFailed         = "DISPATCH_FAILED"
 	CodeWorkerUnavailable      = "WORKER_UNAVAILABLE"
+	CodeAIServiceUnavailable   = "AI_SERVICE_UNAVAILABLE"
+	CodeLLMTimeout             = "LLM_TIMEOUT"
+	CodeStreamError            = "STREAM_ERROR"
 	CodePresignedURLFailed     = "PRESIGNED_URL_FAILED"
 	CodeStorageError           = "STORAGE_ERROR"
 )
