@@ -43,18 +43,18 @@ start_ai_service() {
     return
   fi
 
-  if [[ ! -x "$REPO_ROOT/ai-service/.venv/bin/flask" ]]; then
+  if [[ ! -x "$REPO_ROOT/ai-service/.venv/bin/python" ]]; then
     echo "Error: ai-service virtualenv is missing. Run:"
     echo "  cd ai-service && python -m venv .venv && source .venv/bin/activate && make install"
     exit 1
   fi
 
-  echo "Starting AI Service on :$AI_PORT..."
+  echo "Starting AI Service on :$AI_PORT with LLM_PROVIDER=${LLM_PROVIDER:-mock}..."
   (
     cd "$REPO_ROOT/ai-service"
     set -a
     [[ -f .env ]] && source .env
-    DEBUG=True
+    DEBUG="${DEBUG:-false}"
     PORT="$AI_PORT"
     INTERNAL_API_KEY="${INTERNAL_API_KEY:-dev-internal-key}"
     GATEWAY_INTERNAL_KEY="${GATEWAY_INTERNAL_KEY:-dev-internal-key}"
@@ -67,8 +67,11 @@ start_ai_service() {
     MINIO_ENDPOINT="${MINIO_ENDPOINT:-localhost:9000}"
     EMBEDDING_PROVIDER="${EMBEDDING_PROVIDER:-mock}"
     LLM_PROVIDER="${LLM_PROVIDER:-mock}"
+    LLM_MODEL="${LLM_MODEL:-deepseek-r1:8b}"
+    LLM_BASE_URL="${LLM_BASE_URL:-http://localhost:11434/v1}"
+    LLM_API_KEY="${LLM_API_KEY:-ollama}"
     set +a
-    exec .venv/bin/flask --app app.main:create_app run \
+    exec .venv/bin/python -m flask --app app.main:create_app run \
       --host=0.0.0.0 \
       --port="$AI_PORT" \
       --no-debugger \
