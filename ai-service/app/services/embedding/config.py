@@ -19,6 +19,12 @@ DEFAULT_TIMEOUT: int = 30
 DEFAULT_DIMENSIONS: int = 2048
 DEFAULT_MAX_TEXT_CHARS: int = 8000
 
+# Ollama runs locally and exposes an OpenAI-compatible /v1/embeddings endpoint.
+# bge-m3 outputs 1024-dim vectors and is a strong multilingual (incl. Chinese) model.
+DEFAULT_OLLAMA_MODEL: str = "bge-m3"
+DEFAULT_OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
+DEFAULT_OLLAMA_DIMENSIONS: int = 1024
+
 _ENV_PLACEHOLDER = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-(.*?))?\}")
 
 
@@ -50,6 +56,14 @@ class EmbeddingConfig:
     max_text_chars: int = DEFAULT_MAX_TEXT_CHARS
 
     def __post_init__(self) -> None:
+        if self.provider == "ollama":
+            # Apply Ollama defaults when the caller reused the ZhipuAI defaults.
+            if self.base_url == DEFAULT_BASE_URL:
+                self.base_url = DEFAULT_OLLAMA_BASE_URL
+            if self.model == DEFAULT_MODEL:
+                self.model = DEFAULT_OLLAMA_MODEL
+            if self.dimensions == DEFAULT_DIMENSIONS:
+                self.dimensions = DEFAULT_OLLAMA_DIMENSIONS
         if self.batch_size <= 0:
             raise ValueError("batch_size 必须大于 0")
         if self.max_retries < 0:
@@ -121,6 +135,11 @@ def _provider_specific_api_key(provider: str, resolved_api_key: str) -> str:
         return env.get("ZHIPU_API_KEY") or generic
     if provider == "openai":
         return env.get("OPENAI_API_KEY") or env.get("KIMI_API_KEY") or generic
+    if provider == "ollama":
+        # Ollama runs locally and does not require an API key. An optional
+        # ``OLLAMA_API_KEY`` is honored for authenticated proxies; otherwise the
+        # provider injects a placeholder.
+        return env.get("OLLAMA_API_KEY") or ""
     return generic
 
 

@@ -14,6 +14,7 @@ from app.models.embedding import ChunkInput, Embedding
 from app.services.embedding.config import EmbeddingConfig, build_embedding_config
 from app.services.embedding.factory import build_embedding_provider
 from app.services.embedding.mock import MockEmbeddingProvider
+from app.services.embedding.ollama import OllamaEmbeddingProvider
 from app.services.embedding.service import EmbeddingService
 
 DIMENSIONS = 8
@@ -236,10 +237,15 @@ class TestEmbeddingFactory:
         assert exc_info.value.code == "EMBEDDING_AUTH_FAILED"
 
     def test_local_providers_do_not_require_api_key(self) -> None:
-        for provider in ("mock", "opensource"):
+        for provider in ("mock", "opensource", "ollama"):
             cfg = EmbeddingConfig(provider=provider, api_key="")
             provider_instance = build_embedding_provider(cfg)
             assert provider_instance is not None
+
+    def test_ollama_provider_built_without_api_key(self) -> None:
+        cfg = EmbeddingConfig(provider="ollama", api_key="")
+        provider_instance = build_embedding_provider(cfg)
+        assert isinstance(provider_instance, OllamaEmbeddingProvider)
 
     def test_unknown_provider_raises(self) -> None:
         cfg = EmbeddingConfig(provider="unknown", api_key="key")
@@ -276,3 +282,30 @@ class TestEmbeddingConfig:
         assert build_embedding_config({"normalize": "true"}).normalize is True
         assert build_embedding_config({"normalize": False}).normalize is False
         assert build_embedding_config({"normalize": True}).normalize is True
+
+    def test_ollama_defaults_applied_when_zhipu_defaults_reused(self) -> None:
+        cfg = EmbeddingConfig(provider="ollama")
+        assert cfg.model == "bge-m3"
+        assert cfg.base_url == "http://localhost:11434/v1"
+        assert cfg.dimensions == 1024
+
+    def test_ollama_explicit_values_are_preserved(self) -> None:
+        cfg = EmbeddingConfig(
+            provider="ollama",
+            model="nomic-embed-text",
+            base_url="http://host:11434/v1",
+            dimensions=768,
+        )
+        assert cfg.model == "nomic-embed-text"
+        assert cfg.base_url == "http://host:11434/v1"
+        assert cfg.dimensions == 768
+
+    def test_ollama_api_key_is_optional(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
+        cfg = build_embedding_config({"provider": "ollama"})
+        assert cfg.api_key == ""
+
+    def test_ollama_api_key_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OLLAMA_API_KEY", "ollama-proxy-key")
+        cfg = build_embedding_config({"provider": "ollama"})
+        assert cfg.api_key == "ollama-proxy-key"

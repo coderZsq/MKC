@@ -57,6 +57,15 @@ curl http://localhost:5000/api/v1/health
 | `CELERY_RESULT_BACKEND` | Celery 结果后端 | `redis://redis:6379/1` |
 | `LOG_LEVEL` | 日志级别 | `INFO` |
 | `PORT` | 服务端口 | `5000` |
+| `EMBEDDING_PROVIDER` | Embedding 提供方（ollama/zhipuai/openai/opensource/mock） | `ollama` |
+| `EMBEDDING_MODEL` | Embedding 模型 | `bge-m3` |
+| `EMBEDDING_BASE_URL` | Embedding 服务地址（ollama/openai 兼容端点） | `http://localhost:11434/v1` |
+| `EMBEDDING_DIMENSIONS` | Embedding 向量维度 | `1024` |
+| `VECTOR_STORE_DIMENSIONS` | 向量库集合维度（**必须与 `EMBEDDING_DIMENSIONS` 一致**） | `1024` |
+| `LLM_PROVIDER` | LLM 提供方（ollama/zhipuai/openai/mock） | `ollama` |
+| `ZHIPU_API_KEY` | ZhipuAI 密钥（`zhipuai` 时必填） | `change-me` |
+
+> 切换 embedding 模型或维度后，`VECTOR_STORE_DIMENSIONS` 必须同步修改，并删除本地 `ai-service/milvus.db`（或 drop 向量集合）后重建，否则向量写入会因维度不匹配失败。
 
 ## 常用命令
 

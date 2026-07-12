@@ -49,7 +49,7 @@ start_ai_service() {
     exit 1
   fi
 
-  echo "Starting AI Service on :$AI_PORT with LLM_PROVIDER=${LLM_PROVIDER:-mock}..."
+  echo "Starting AI Service on :$AI_PORT with LLM_PROVIDER=${LLM_PROVIDER:-mock}, EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-mock}..."
   (
     cd "$REPO_ROOT/ai-service"
     set -a
@@ -66,6 +66,10 @@ start_ai_service() {
     MINIO_BUCKET="${MINIO_BUCKET:-mkc-resources}"
     MINIO_ENDPOINT="${MINIO_ENDPOINT:-localhost:9000}"
     EMBEDDING_PROVIDER="${EMBEDDING_PROVIDER:-mock}"
+    EMBEDDING_MODEL="${EMBEDDING_MODEL:-bge-m3}"
+    EMBEDDING_BASE_URL="${EMBEDDING_BASE_URL:-http://localhost:11434/v1}"
+    EMBEDDING_DIMENSIONS="${EMBEDDING_DIMENSIONS:-1024}"
+    VECTOR_STORE_DIMENSIONS="${VECTOR_STORE_DIMENSIONS:-1024}"
     LLM_PROVIDER="${LLM_PROVIDER:-mock}"
     LLM_MODEL="${LLM_MODEL:-deepseek-r1:8b}"
     LLM_BASE_URL="${LLM_BASE_URL:-http://localhost:11434/v1}"
@@ -112,6 +116,10 @@ start_ai_worker() {
     MINIO_BUCKET="${MINIO_BUCKET:-mkc-resources}"
     MINIO_ENDPOINT="${MINIO_ENDPOINT:-localhost:9000}"
     EMBEDDING_PROVIDER="${EMBEDDING_PROVIDER:-mock}"
+    EMBEDDING_MODEL="${EMBEDDING_MODEL:-bge-m3}"
+    EMBEDDING_BASE_URL="${EMBEDDING_BASE_URL:-http://localhost:11434/v1}"
+    EMBEDDING_DIMENSIONS="${EMBEDDING_DIMENSIONS:-1024}"
+    VECTOR_STORE_DIMENSIONS="${VECTOR_STORE_DIMENSIONS:-1024}"
     LLM_PROVIDER="${LLM_PROVIDER:-mock}"
     LLM_MODEL="${LLM_MODEL:-deepseek-r1:8b}"
     LLM_BASE_URL="${LLM_BASE_URL:-http://localhost:11434/v1}"
