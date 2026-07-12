@@ -13,8 +13,10 @@ from app.core.config import settings
 DEFAULT_PROVIDER: str = "zhipuai"
 DEFAULT_ZHIPUAI_MODEL: str = "glm-4-flash"
 DEFAULT_KIMI_MODEL: str = "moonshot-v1-8k"
+DEFAULT_OLLAMA_MODEL: str = "deepseek-r1:8b"
 DEFAULT_ZHIPUAI_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
 DEFAULT_KIMI_BASE_URL: str = "https://api.moonshot.cn/v1"
+DEFAULT_OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
 DEFAULT_TEMPERATURE: float = 0.7
 DEFAULT_MAX_TOKENS: int = 2048
 DEFAULT_TIMEOUT: int = 60
@@ -56,6 +58,10 @@ class LLMConfig:
             self.base_url = DEFAULT_KIMI_BASE_URL
         if self.provider == "kimi" and self.model == DEFAULT_ZHIPUAI_MODEL:
             self.model = DEFAULT_KIMI_MODEL
+        if self.provider == "ollama" and self.base_url == DEFAULT_ZHIPUAI_BASE_URL:
+            self.base_url = DEFAULT_OLLAMA_BASE_URL
+        if self.provider == "ollama" and self.model == DEFAULT_ZHIPUAI_MODEL:
+            self.model = DEFAULT_OLLAMA_MODEL
         if self.max_tokens <= 0:
             raise ValueError("max_tokens 必须大于 0")
         if self.timeout <= 0:
