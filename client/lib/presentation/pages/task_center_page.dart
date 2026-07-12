@@ -97,6 +97,8 @@ class _TaskCenterPageState extends ConsumerState<TaskCenterPage> {
         final task = state.tasks[index];
         return TaskListItem(
           task: task,
+          onTaskEvent:
+              ref.read(taskCenterNotifierProvider.notifier).applyTaskEvent,
           onTap: () => context.go('$taskCenterRoute/${task.id}'),
           onViewContent: task.status == TaskStatus.completed
               ? () => context.go(

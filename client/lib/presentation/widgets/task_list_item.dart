@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/task.dart';
+import '../../../domain/entities/task_event.dart';
 import '../providers/task_sse_provider.dart';
 import 'task_status_chip.dart';
 
@@ -9,20 +10,34 @@ import 'task_status_chip.dart';
 class TaskListItem extends ConsumerWidget {
   const TaskListItem({
     required this.task,
+    this.onTaskEvent,
     this.onTap,
     this.onViewContent,
     super.key,
   });
 
   final Task task;
+  final ValueChanged<TaskEvent>? onTaskEvent;
   final VoidCallback? onTap;
   final VoidCallback? onViewContent;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final displayTask = task.status == TaskStatus.running
-        ? taskWithEvent(task, ref.watch(taskEventStreamProvider(task.id)))
-        : task;
+    final shouldSubscribe =
+        task.status == TaskStatus.running || task.status == TaskStatus.pending;
+    final eventProvider = taskEventStreamProvider(task.id);
+
+    if (shouldSubscribe && onTaskEvent != null) {
+      ref.listen(eventProvider, (_, next) {
+        final event = next.valueOrNull;
+        if (event != null) {
+          onTaskEvent!(event);
+        }
+      });
+    }
+
+    final displayTask =
+        shouldSubscribe ? taskWithEvent(task, ref.watch(eventProvider)) : task;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -66,7 +81,8 @@ class TaskListItem extends ConsumerWidget {
                 const SizedBox(height: 12),
                 LinearProgressIndicator(value: displayTask.progress / 100),
                 const SizedBox(height: 4),
-                Text('${displayTask.progress}%', style: Theme.of(context).textTheme.bodySmall),
+                Text('${displayTask.progress}%',
+                    style: Theme.of(context).textTheme.bodySmall),
               ],
               if (onViewContent != null) ...[
                 const SizedBox(height: 8),

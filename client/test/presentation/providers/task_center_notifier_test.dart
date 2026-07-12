@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mkc_client/domain/entities/task_event.dart';
 import 'package:mkc_client/presentation/providers/task_center_provider.dart';
 import 'package:mkc_client/shared/errors/app_exception.dart';
 import 'package:mkc_client/shared/result.dart';
@@ -80,6 +81,27 @@ void main() {
 
       expect(notifier.state.tasks, hasLength(1));
       expect(notifier.state.tasks.first.id, 'new');
+    });
+  });
+
+  group('applyTaskEvent', () {
+    test('updates a pending task from SSE event', () async {
+      repository.nextTasksResult = Result.success([createTask(id: 't1')]);
+      await notifier.loadInitial();
+
+      notifier.applyTaskEvent(
+        TaskEvent(
+          taskId: 't1',
+          eventType: 'status',
+          status: 'completed',
+          progress: 100,
+          timestamp: DateTime(2026),
+        ),
+      );
+
+      expect(notifier.state.tasks.single.status.name, 'completed');
+      expect(notifier.state.tasks.single.progress, 100);
+      expect(notifier.state.tasks.single.updatedAt, DateTime(2026));
     });
   });
 }
