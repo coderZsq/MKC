@@ -6,7 +6,6 @@ from celery import Task
 
 from app.core.config import settings
 from app.models.summary import SummarizeRequest
-from app.services.gateway_reporter import GatewayProgressReporter
 from app.services.llm import build_llm_client
 from app.services.summary import (
     MapReduceSummarizer,
@@ -35,8 +34,6 @@ def build_summary_service() -> SummaryService:
 def run_summarize(
     self: Task, task_id: str, resource_id: str, payload: dict[str, Any]
 ) -> dict[str, Any]:
-    reporter = GatewayProgressReporter()
-    reporter.mark_status(task_id, "running", attempt_count=self._attempt_count())
     try:
         result = build_summary_service().generate(
             resource_id, SummarizeRequest.model_validate(payload)
@@ -46,12 +43,5 @@ def run_summarize(
             raise self.retry(
                 kwargs={"task_id": task_id, "resource_id": resource_id, "payload": payload}
             ) from exc
-        reporter.mark_status(
-            task_id,
-            "failed",
-            error_message=str(exc),
-            attempt_count=self._attempt_count(),
-        )
-        self._failure_reported = True
         raise
     return result.model_dump(mode="json")

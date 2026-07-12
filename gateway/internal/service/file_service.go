@@ -169,6 +169,12 @@ func (s *fileService) Upload(ctx context.Context, req UploadRequest) (*UploadRes
 				zap.String("resource_id", resource.UUID),
 				zap.Error(dispatchErr),
 			)
+			if err := s.taskRepo.UpdateStatus(ctx, task.ID, model.TaskStatusFailed, 0, nil, dispatchErr.Error()); err != nil {
+				s.logger.Warn("failed to mark dispatch failure",
+					zap.String("task_id", task.UUID),
+					zap.Error(err),
+				)
+			}
 		}
 	}
 

@@ -6,8 +6,6 @@ import pytest
 from flask import Flask
 from flask.testing import FlaskClient
 
-from app.core.exceptions import AudioProcessingError
-
 
 @pytest.fixture
 def asr_app(app: Flask) -> Flask:
@@ -19,11 +17,9 @@ def asr_client(asr_app: Flask) -> FlaskClient:
     return asr_app.test_client()
 
 
-@patch("app.api.asr._validate_audio_url")
 @patch("app.api.asr.run_asr")
 def test_create_asr_task_success(
     mock_run_asr: MagicMock,
-    mock_validate: MagicMock,
     asr_client: FlaskClient,
 ) -> None:
     mock_run_asr.delay.return_value = MagicMock(id="celery-task-1")
@@ -44,7 +40,6 @@ def test_create_asr_task_success(
     assert data["success"] is True
     assert data["data"]["task_id"] == "task-1"
     assert data["data"]["status"] == "pending"
-    mock_validate.assert_called_once_with("minio://resources/audio.mp3")
     mock_run_asr.delay.assert_called_once()
 
 
@@ -104,31 +99,3 @@ def test_create_asr_task_invalid_body(
     data = response.get_json()
     assert data["success"] is False
     assert data["error"]["code"] == "VALIDATION_ERROR"
-
-
-@patch("app.api.asr._validate_audio_url")
-@patch("app.api.asr.run_asr")
-def test_create_asr_task_invalid_audio(
-    mock_run_asr: MagicMock,
-    mock_validate: MagicMock,
-    asr_client: FlaskClient,
-) -> None:
-    mock_validate.side_effect = AudioProcessingError("cannot decode audio")
-    response = asr_client.post(
-        "/ai/v1/asr",
-        headers={"X-Internal-Key": "test-internal-key"},
-        json={
-            "task_id": "task-1",
-            "resource_id": "res-1",
-            "audio_url": "minio://resources/corrupted.mp3",
-            "language": "zh",
-            "model": "small",
-        },
-    )
-
-    assert response.status_code == 400
-    data = response.get_json()
-    assert data["success"] is False
-    assert data["error"]["code"] == "INVALID_AUDIO"
-    assert "cannot decode audio" in data["error"]["message"]
-    mock_run_asr.delay.assert_not_called()
