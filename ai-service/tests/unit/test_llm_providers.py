@@ -70,9 +70,7 @@ def _make_stream_chunk(content: str, finish_reason: str | None = None) -> MagicM
     return chunk
 
 
-def _make_reasoning_stream_chunk(
-    reasoning: str, finish_reason: str | None = None
-) -> MagicMock:
+def _make_reasoning_stream_chunk(reasoning: str, finish_reason: str | None = None) -> MagicMock:
     chunk = MagicMock()
     chunk.model_dump.return_value = {
         "choices": [
