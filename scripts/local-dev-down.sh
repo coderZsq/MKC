@@ -42,6 +42,7 @@ stop_process() {
 
 stop_process "Flutter client" "client"
 stop_process "Gateway" "gateway"
+stop_process "AI Celery worker" "ai-worker"
 stop_process "AI Service" "ai-service"
 
 echo "Local app processes stopped."

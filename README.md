@@ -68,7 +68,7 @@ cd /Users/zhushuangquan/Downloads/MKC
 
 ### 2. 一键启动应用服务
 
-完成基础设施和端口转发后，可以一键启动 `ai-service`、`gateway` 和 Flutter client：
+完成基础设施和端口转发后，可以一键启动 AI HTTP 服务、AI Celery worker、Gateway 和 Flutter client：
 
 ```bash
 cd /Users/zhushuangquan/Downloads/MKC
@@ -80,6 +80,7 @@ cd /Users/zhushuangquan/Downloads/MKC
 | 服务 | 默认值 |
 |---|---|
 | AI Service | `http://localhost:5001` |
+| AI Celery worker | `default,transcribe,parse_pdf,embed,rag` queues |
 | Gateway | `http://localhost:8080` |
 | Flutter device | `chrome` |
 | Client API | `http://localhost:8080/api/v1` |
@@ -91,7 +92,7 @@ cd /Users/zhushuangquan/Downloads/MKC
 ./scripts/local-dev-down.sh
 ```
 
-日志与 PID 文件保存在 `.mkc-dev/`，该目录不会提交到 Git。
+日志与 PID 文件保存在 `.mkc-dev/`，该目录不会提交到 Git。解析 MP3/PDF、进度更新和自动摘要都依赖 AI Celery worker；如果没有 worker，任务会停在“等待中 0%”。
 
 如需覆盖默认值：
 
@@ -175,12 +176,21 @@ python -m flask --app app.main:create_app run \
 curl http://localhost:5001/api/v1/health
 ```
 
-如需处理异步任务，另开终端启动 Celery worker：
+解析 MP3/PDF、进度更新和自动摘要都依赖 Celery worker。另开终端启动 worker，并保持运行：
 
 ```bash
 cd /Users/zhushuangquan/Downloads/MKC/ai-service
 source .venv/bin/activate
+set -a
+source .env
+set +a
 make worker
+```
+
+`make worker` 会显式使用 `DEBUG=false` 和 `celery_workers.celery_app`，避免当前 shell 中 `DEBUG=release` 等非布尔值导致 Celery 无法加载。可用下面命令确认 worker 在线且任务注册完整：
+
+```bash
+DEBUG=false celery -A celery_workers.celery_app inspect registered
 ```
 
 ### 4. 手动启动 Gateway
@@ -243,8 +253,8 @@ flutter run -d chrome \
 ```text
 1. ./infra/scripts/local-up.sh
 2. ./infra/scripts/port-forward.sh
-3. ai-service: flask --app app.main:create_app run --host=0.0.0.0 --port=5001 --no-debugger --no-reload
-4. ai-service worker: make worker
+3. ai-service HTTP: python -m flask --app app.main:create_app run --host=0.0.0.0 --port=5001 --no-debugger --no-reload
+4. ai-service Celery worker: make worker
 5. gateway: go run ./cmd/server
 6. client: flutter run --dart-define=BASE_URL=http://localhost:8080/api/v1 --dart-define=STORAGE_HOST=localhost
 ```

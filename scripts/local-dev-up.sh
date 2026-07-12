@@ -83,6 +83,50 @@ start_ai_service() {
   echo "AI Service ready: http://localhost:${AI_PORT}/api/v1/health"
 }
 
+start_ai_worker() {
+  local pid_file="$PID_DIR/ai-worker.pid"
+  if is_running "$pid_file"; then
+    echo "AI Celery worker already running (PID $(cat "$pid_file"))."
+    return
+  fi
+
+  if [[ ! -x "$REPO_ROOT/ai-service/.venv/bin/celery" ]]; then
+    echo "Error: ai-service Celery executable is missing. Run:"
+    echo "  cd ai-service && python -m venv .venv && source .venv/bin/activate && make install"
+    exit 1
+  fi
+
+  echo "Starting AI Celery worker..."
+  (
+    cd "$REPO_ROOT/ai-service"
+    set -a
+    [[ -f .env ]] && source .env
+    DEBUG=false
+    INTERNAL_API_KEY="${INTERNAL_API_KEY:-dev-internal-key}"
+    GATEWAY_INTERNAL_KEY="${GATEWAY_INTERNAL_KEY:-dev-internal-key}"
+    REDIS_URL="${REDIS_URL:-redis://:dev-redis@localhost:6379/0}"
+    CELERY_BROKER_URL="${CELERY_BROKER_URL:-redis://:dev-redis@localhost:6379/1}"
+    CELERY_RESULT_BACKEND="${CELERY_RESULT_BACKEND:-redis://:dev-redis@localhost:6379/1}"
+    MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-mkc}"
+    MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-dev-minio}"
+    MINIO_BUCKET="${MINIO_BUCKET:-mkc-resources}"
+    MINIO_ENDPOINT="${MINIO_ENDPOINT:-localhost:9000}"
+    EMBEDDING_PROVIDER="${EMBEDDING_PROVIDER:-mock}"
+    LLM_PROVIDER="${LLM_PROVIDER:-mock}"
+    LLM_MODEL="${LLM_MODEL:-deepseek-r1:8b}"
+    LLM_BASE_URL="${LLM_BASE_URL:-http://localhost:11434/v1}"
+    LLM_API_KEY="${LLM_API_KEY:-ollama}"
+    set +a
+    exec .venv/bin/celery -A celery_workers.celery_app worker \
+      -l info \
+      -Q default,transcribe,parse_pdf,embed,rag
+  ) >"$LOG_DIR/ai-worker.log" 2>&1 &
+
+  echo $! > "$pid_file"
+  echo "AI Celery worker starting. Watch logs with:"
+  echo "  tail -f $LOG_DIR/ai-worker.log"
+}
+
 start_gateway() {
   local pid_file="$PID_DIR/gateway.pid"
   if is_running "$pid_file"; then
@@ -145,6 +189,7 @@ Logs: $LOG_DIR
 EOF
 
 start_ai_service
+start_ai_worker
 start_gateway
 start_client
 
