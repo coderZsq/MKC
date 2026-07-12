@@ -5,6 +5,7 @@ import logging
 from app.core.exceptions import EmbeddingAuthenticationError, EmbeddingProviderError
 from app.services.embedding.config import EmbeddingConfig, build_embedding_config
 from app.services.embedding.mock import MockEmbeddingProvider
+from app.services.embedding.ollama import OllamaEmbeddingProvider
 from app.services.embedding.openai import OpenAiEmbeddingProvider
 from app.services.embedding.opensource import OpenSourceEmbeddingProvider
 from app.services.embedding.provider import EmbeddingProvider
@@ -24,6 +25,8 @@ def build_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
     if config.provider == "openai":
         _require_api_key(config, "OpenAI")
         return OpenAiEmbeddingProvider(config)
+    if config.provider == "ollama":
+        return OllamaEmbeddingProvider(config)
     if config.provider == "opensource":
         return OpenSourceEmbeddingProvider(config)
     if config.provider == "mock":

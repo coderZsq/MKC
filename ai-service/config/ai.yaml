@@ -77,7 +77,7 @@ chunking:
   preserve_metadata: true
 
 embedding:
-  provider: "${EMBEDDING_PROVIDER:-zhipuai}"  # zhipuai / openai / opensource / mock
+  provider: "${EMBEDDING_PROVIDER:-zhipuai}"  # zhipuai / openai / ollama / opensource / mock
   model: "${EMBEDDING_MODEL:-embedding-3}"
   api_key: "${EMBEDDING_API_KEY:-}"
   base_url: "${EMBEDDING_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}"

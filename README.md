@@ -112,6 +112,8 @@ LLM_API_KEY=ollama \
 ./scripts/local-dev-up.sh
 ```
 
+本地 embedding 默认走 Ollama 的 `bge-m3`（1024 维）：`config/.env.example` 已默认开启，`cp config/.env.example .env` 即可启用，首次使用前先 `ollama pull bge-m3`。注意 `EMBEDDING_DIMENSIONS` 必须与 `VECTOR_STORE_DIMENSIONS` 一致（bge-m3 均为 `1024`）；切换 embedding 模型或维度后需删除本地 `ai-service/milvus.db`（或 drop 向量集合）再重建，否则会因维度不匹配报错。
+
 ### 3. 手动启动 AI Service
 
 ```bash
@@ -137,8 +139,15 @@ MINIO_BUCKET=mkc-resources
 MINIO_ENDPOINT=localhost:9000
 PORT=5001
 
-# Local development can use mock providers to avoid remote API calls.
-EMBEDDING_PROVIDER=mock
+# Local embedding uses Ollama bge-m3 (1024-dim). Pull first: `ollama pull bge-m3`
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_BASE_URL=http://localhost:11434/v1
+EMBEDDING_DIMENSIONS=1024
+# Vector store collection dimension MUST match EMBEDDING_DIMENSIONS.
+VECTOR_STORE_DIMENSIONS=1024
+
+# LLM defaults to mock; see below for local Ollama DeepSeek.
 LLM_PROVIDER=mock
 ```
 
@@ -150,6 +159,8 @@ LLM_MODEL=deepseek-r1:8b
 LLM_BASE_URL=http://localhost:11434/v1
 LLM_API_KEY=ollama
 ```
+
+> 维度对齐：`EMBEDDING_DIMENSIONS` 必须与 `VECTOR_STORE_DIMENSIONS` 一致（bge-m3 均为 `1024`）。切换 embedding 模型或维度后，需删除本地 `ai-service/milvus.db`（或 drop `mkc_vectors` 集合）再重启服务重建集合，并对已有资源重新生成 embedding，否则写入会因维度不匹配失败。
 
 启动 HTTP 服务。本地验证使用 `5001` 端口；如果当前 shell 里存在 `DEBUG=release` 等非布尔值环境变量，需要显式覆盖为 `DEBUG=false`。推荐用 `python -m flask`，避免虚拟环境中 `flask` 命令入口指向旧 Python 解释器：
 
