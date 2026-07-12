@@ -99,6 +99,18 @@ cd /Users/zhushuangquan/Downloads/MKC
 CLIENT_DEVICE=macos AI_PORT=5001 GATEWAY_PORT=8080 ./scripts/local-dev-up.sh
 ```
 
+如需让聊天走本地 Ollama 的 `deepseek-r1:8b`，先确认 Ollama 已启动并拉取模型：
+
+```bash
+ollama pull deepseek-r1:8b
+
+LLM_PROVIDER=ollama \
+LLM_MODEL=deepseek-r1:8b \
+LLM_BASE_URL=http://localhost:11434/v1 \
+LLM_API_KEY=ollama \
+./scripts/local-dev-up.sh
+```
+
 ### 3. 手动启动 AI Service
 
 ```bash
@@ -129,7 +141,16 @@ EMBEDDING_PROVIDER=mock
 LLM_PROVIDER=mock
 ```
 
-启动 HTTP 服务。本地验证使用 `5001` 端口；如果当前 shell 里存在 `DEBUG=release` 等非布尔值环境变量，需要显式覆盖为 `DEBUG=True`：
+如果要使用本地 Ollama 的 DeepSeek R1，把 LLM 配置改成：
+
+```env
+LLM_PROVIDER=ollama
+LLM_MODEL=deepseek-r1:8b
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_API_KEY=ollama
+```
+
+启动 HTTP 服务。本地验证使用 `5001` 端口；如果当前 shell 里存在 `DEBUG=release` 等非布尔值环境变量，需要显式覆盖为 `DEBUG=false`。推荐用 `python -m flask`，避免虚拟环境中 `flask` 命令入口指向旧 Python 解释器：
 
 ```bash
 cd /Users/zhushuangquan/Downloads/MKC/ai-service
@@ -137,11 +158,11 @@ source .venv/bin/activate
 
 set -a
 source .env
-DEBUG=True
+DEBUG=false
 PORT=5001
 set +a
 
-flask --app app.main:create_app run \
+python -m flask --app app.main:create_app run \
   --host=0.0.0.0 \
   --port=5001 \
   --no-debugger \
