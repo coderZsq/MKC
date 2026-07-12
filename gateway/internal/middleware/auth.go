@@ -11,9 +11,14 @@ import (
 )
 
 // JWTAuth validates access tokens from the Authorization header.
+// Browser EventSource cannot set custom headers, so authenticated SSE
+// endpoints may also pass the access token with the "token" query parameter.
 func JWTAuth(jwtMgr *jwt.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := extractBearerToken(c.GetHeader("Authorization"))
+		if token == "" {
+			token = c.Query("token")
+		}
 		if token == "" {
 			response.Unauthorized(c, "AUTH_INVALID_TOKEN", "missing authorization header")
 			c.Abort()

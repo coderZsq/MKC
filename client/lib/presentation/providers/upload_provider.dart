@@ -33,6 +33,7 @@ class UploadState {
     this.progress = 0,
     this.response,
     this.error,
+    this.autoSummary = true,
   });
 
   final UploadStatus status;
@@ -40,6 +41,7 @@ class UploadState {
   final int progress;
   final UploadResponseModel? response;
   final AppException? error;
+  final bool autoSummary;
 
   bool get isPicking => status == UploadStatus.picking;
   bool get isUploading => status == UploadStatus.uploading;
@@ -48,7 +50,8 @@ class UploadState {
   bool get isSuccess => status == UploadStatus.success;
   bool get isCancelled => status == UploadStatus.cancelled;
 
-  String? get errorMessage => error == null ? null : mapUploadErrorToMessage(error);
+  String? get errorMessage =>
+      error == null ? null : mapUploadErrorToMessage(error);
 
   UploadState copyWith({
     UploadStatus? status,
@@ -56,6 +59,7 @@ class UploadState {
     int? progress,
     UploadResponseModel? response,
     AppException? error,
+    bool? autoSummary,
   }) {
     return UploadState(
       status: status ?? this.status,
@@ -63,6 +67,7 @@ class UploadState {
       progress: progress ?? this.progress,
       response: response ?? this.response,
       error: error,
+      autoSummary: autoSummary ?? this.autoSummary,
     );
   }
 }
@@ -81,14 +86,16 @@ class UploadNotifier extends StateNotifier<UploadState> {
   CancelToken? _cancelToken;
 
   Future<void> pickFile() async {
-    state = state.copyWith(status: UploadStatus.picking, error: null, response: null);
+    state = state.copyWith(
+        status: UploadStatus.picking, error: null, response: null);
     final pickedFile = await _picker.pickSingleFile();
     if (pickedFile == null) {
       state = state.copyWith(status: UploadStatus.initial);
       return;
     }
 
-    state = state.copyWith(status: UploadStatus.validating, selectedFile: pickedFile);
+    state = state.copyWith(
+        status: UploadStatus.validating, selectedFile: pickedFile);
     final validationError = validatePickedFile(
       size: pickedFile.size,
       extension: pickedFile.extension,
@@ -96,7 +103,8 @@ class UploadNotifier extends StateNotifier<UploadState> {
     );
 
     if (validationError != null) {
-      state = state.copyWith(status: UploadStatus.failure, error: validationError);
+      state =
+          state.copyWith(status: UploadStatus.failure, error: validationError);
       return;
     }
 
@@ -110,10 +118,12 @@ class UploadNotifier extends StateNotifier<UploadState> {
     _cancelToken?.cancel();
     _cancelToken = CancelToken();
 
-    state = state.copyWith(status: UploadStatus.uploading, progress: 0, error: null);
+    state = state.copyWith(
+        status: UploadStatus.uploading, progress: 0, error: null);
 
     final Result<UploadResponseModel> result = await _repository.uploadFile(
       file: file,
+      autoSummary: state.autoSummary,
       cancelToken: _cancelToken!,
       onProgress: (sent, total) {
         if (total <= 0) return;
@@ -138,6 +148,10 @@ class UploadNotifier extends StateNotifier<UploadState> {
 
   void cancel() {
     _cancelToken?.cancel();
+  }
+
+  void setAutoSummary(bool value) {
+    state = state.copyWith(autoSummary: value);
   }
 
   void clear() {
@@ -169,4 +183,3 @@ final uploadNotifierProvider =
     repository: ref.watch(fileRepositoryProvider),
   );
 });
-

@@ -326,6 +326,9 @@ func (s *taskService) ProcessInternalStatusUpdate(ctx context.Context, taskUUID 
 		}
 	}
 	s.publishEvent(ctx, taskUUID, eventType, update.Status, progress, message)
+	if update.Status == model.TaskStatusCompleted {
+		s.dispatchAutoSummary(ctx, task, update.Result)
+	}
 	return nil
 }
 
@@ -346,6 +349,93 @@ func (s *taskService) MarkFailed(ctx context.Context, taskUUID string, errMsg st
 
 func (s *taskService) shouldAutoDispatch(taskType string) bool {
 	return taskType == model.TaskTypeMediaParse || taskType == model.TaskTypePdfParse
+}
+
+func (s *taskService) dispatchAutoSummary(ctx context.Context, task *model.Task, result json.RawMessage) {
+	if s.dispatcher == nil || !isSummarySourceTask(task.Type) || !resourceAutoSummaryEnabled(task.Resource.Metadata) {
+		return
+	}
+	payload, ok := buildSummaryPayload(task, result, true)
+	if !ok {
+		return
+	}
+	if err := s.dispatcher.DispatchSummary(ctx, &task.Resource, payload); err != nil {
+		s.logger.Warn("failed to auto dispatch summary",
+			zap.String("task_id", task.UUID),
+			zap.String("resource_id", task.Resource.UUID),
+			zap.Error(err),
+		)
+	}
+}
+
+func isSummarySourceTask(taskType string) bool {
+	return taskType == model.TaskTypeMediaParse || taskType == model.TaskTypePdfParse
+}
+
+func resourceAutoSummaryEnabled(metadata json.RawMessage) bool {
+	if len(metadata) == 0 {
+		return true
+	}
+	var payload struct {
+		AutoSummary *bool `json:"auto_summary"`
+	}
+	if err := json.Unmarshal(metadata, &payload); err != nil || payload.AutoSummary == nil {
+		return true
+	}
+	return *payload.AutoSummary
+}
+
+func buildSummaryPayload(task *model.Task, result json.RawMessage, automatic bool) (SummaryDispatchPayload, bool) {
+	if len(result) == 0 {
+		return SummaryDispatchPayload{}, false
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(result, &payload); err != nil {
+		return SummaryDispatchPayload{}, false
+	}
+	taskID := fmt.Sprintf("sum-%s", task.Resource.UUID)
+	if automatic {
+		taskID = fmt.Sprintf("sum-%s-auto", task.Resource.UUID)
+	}
+	switch task.Type {
+	case model.TaskTypePdfParse:
+		return SummaryDispatchPayload{
+			Types:      []string{"full", "section"},
+			SourceType: "pdf",
+			Parsed:     payload,
+			TaskID:     taskID,
+		}, true
+	case model.TaskTypeMediaParse:
+		return SummaryDispatchPayload{
+			Types:       []string{"full", "section"},
+			SourceType:  "audio",
+			Content:     stringFromAny(payload["text"]),
+			SRTSegments: mapsFromAny(payload["segments"]),
+			TaskID:      taskID,
+		}, true
+	}
+	return SummaryDispatchPayload{}, false
+}
+
+func stringFromAny(value any) string {
+	if text, ok := value.(string); ok {
+		return text
+	}
+	return ""
+}
+
+func mapsFromAny(value any) []map[string]any {
+	items, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		if asMap, ok := item.(map[string]any); ok {
+			result = append(result, asMap)
+		}
+	}
+	return result
 }
 
 func canTransition(from, to string) bool {

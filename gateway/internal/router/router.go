@@ -12,7 +12,7 @@ import (
 )
 
 // New creates and configures a Gin engine with middlewares and routes.
-func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, file *handler.FileHandler, task *handler.TaskHandler, internalTask *handler.InternalTaskHandler, taskSSE *handler.TaskSSEHandler, result *handler.ResultHandler, qaSSE *handler.QASSEHandler, conv *handler.ConversationHandler, jwtMgr *jwt.Manager) *gin.Engine {
+func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, auth *handler.AuthHandler, file *handler.FileHandler, task *handler.TaskHandler, internalTask *handler.InternalTaskHandler, taskSSE *handler.TaskSSEHandler, result *handler.ResultHandler, qaSSE *handler.QASSEHandler, conv *handler.ConversationHandler, summary *handler.SummaryHandler, jwtMgr *jwt.Manager) *gin.Engine {
 	mode := gin.ReleaseMode
 	if cfg.Server.Mode == "debug" || cfg.Server.Mode == "" && cfg.App.Env == "dev" {
 		mode = gin.DebugMode
@@ -61,6 +61,9 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 					internal.Use(middleware.InternalAuth(cfg))
 					internal.PATCH("/tasks/:task_id/progress", internalTask.UpdateProgress)
 					internal.POST("/tasks/:task_id/status", internalTask.UpdateStatus)
+					if summary != nil {
+						internal.POST("/resources/:id/summaries", summary.SaveInternal)
+					}
 				}
 				if taskSSE != nil {
 					api.GET("/tasks/:task_id/events", middleware.JWTAuth(jwtMgr), taskSSE.Stream)
@@ -83,6 +86,10 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 						convGroup.GET("/:id/messages", conv.ListMessages)
 						convGroup.POST("/:id/messages", conv.CreateMessage)
 					}
+				}
+				if summary != nil {
+					api.GET("/resources/:id/summary", middleware.JWTAuth(jwtMgr), summary.Get)
+					api.POST("/resources/:id/summary", middleware.JWTAuth(jwtMgr), summary.Trigger)
 				}
 			}
 		}

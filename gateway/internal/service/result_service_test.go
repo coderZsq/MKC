@@ -21,11 +21,16 @@ type stubTaskRepo struct {
 }
 
 func (r *stubTaskRepo) Create(ctx context.Context, t *model.Task) error { return nil }
-func (r *stubTaskRepo) GetByUUID(ctx context.Context, uuid string) (*model.Task, error) { return nil, nil }
+func (r *stubTaskRepo) GetByUUID(ctx context.Context, uuid string) (*model.Task, error) {
+	return nil, nil
+}
 func (r *stubTaskRepo) GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Task, error) {
 	if r.getByUUIDAndUserIDFunc != nil {
 		return r.getByUUIDAndUserIDFunc(ctx, uuid, userID)
 	}
+	return nil, repository.ErrNotFound
+}
+func (r *stubTaskRepo) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
 	return nil, repository.ErrNotFound
 }
 func (r *stubTaskRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
@@ -34,7 +39,9 @@ func (r *stubTaskRepo) ListByUserID(ctx context.Context, userID uint64, page, li
 func (r *stubTaskRepo) UpdateStatus(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error {
 	return nil
 }
-func (r *stubTaskRepo) UpdateProgress(ctx context.Context, id uint64, progress uint8) error { return nil }
+func (r *stubTaskRepo) UpdateProgress(ctx context.Context, id uint64, progress uint8) error {
+	return nil
+}
 func (r *stubTaskRepo) UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error {
 	return nil
 }

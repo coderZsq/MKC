@@ -6,7 +6,12 @@ celery_app = Celery(
     "ai-service",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks", "celery_workers.tasks"],
+    include=[
+        "app.tasks",
+        "celery_workers.tasks.asr_task",
+        "celery_workers.tasks.pdf_parse_task",
+        "celery_workers.tasks.summarize_task",
+    ],
 )
 
 celery_app.conf.update(
@@ -27,5 +32,6 @@ celery_app.conf.update(
         "app.tasks.rag.*": {"queue": "rag"},
         "celery_workers.tasks.asr_task.*": {"queue": "transcribe"},
         "celery_workers.tasks.pdf_parse_task.*": {"queue": "parse_pdf"},
+        "celery_workers.tasks.summarize_task.*": {"queue": "rag"},
     },
 )

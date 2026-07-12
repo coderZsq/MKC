@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/task.dart';
+import '../../domain/entities/task_event.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../shared/errors/app_exception.dart';
 import 'task_center_provider.dart';
@@ -48,6 +49,20 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     state = result.when(
       success: (task) => state.copyWith(isLoading: false, task: task),
       failure: (error) => state.copyWith(isLoading: false, error: error),
+    );
+  }
+
+  void applyTaskEvent(TaskEvent event) {
+    final current = state.task;
+    if (current == null || current.id != event.taskId) return;
+
+    state = state.copyWith(
+      task: current.copyWith(
+        status: parseTaskStatus(event.status),
+        progress: event.progress.clamp(0, 100),
+        errorMessage: event.message,
+        updatedAt: event.timestamp,
+      ),
     );
   }
 }

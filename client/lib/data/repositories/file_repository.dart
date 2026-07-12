@@ -13,11 +13,13 @@ class FileRepository {
 
   Future<Result<UploadResponseModel>> uploadFile({
     required PickedFile file,
+    required bool autoSummary,
     required CancelToken cancelToken,
     required void Function(int sent, int total) onProgress,
   }) {
     return _api.upload(
       file: file,
+      autoSummary: autoSummary,
       cancelToken: cancelToken,
       onProgress: onProgress,
     );

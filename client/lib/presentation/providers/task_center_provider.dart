@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/remote/task_api.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/entities/task_event.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../shared/errors/app_exception.dart';
 import 'app_provider.dart';
@@ -55,7 +56,8 @@ class TaskCenterNotifier extends StateNotifier<TaskCenterState> {
   final TaskRepository _repository;
 
   Future<void> loadInitial() async {
-    state = state.copyWith(isLoading: true, error: null, currentPage: 1, hasMore: true);
+    state = state.copyWith(
+        isLoading: true, error: null, currentPage: 1, hasMore: true);
     final result = await _repository.getTasks(page: 1, limit: _defaultPageSize);
     state = result.when(
       success: (tasks) => state.copyWith(
@@ -73,7 +75,8 @@ class TaskCenterNotifier extends StateNotifier<TaskCenterState> {
 
     final nextPage = state.currentPage + 1;
     state = state.copyWith(isLoadingMore: true, error: null);
-    final result = await _repository.getTasks(page: nextPage, limit: _defaultPageSize);
+    final result =
+        await _repository.getTasks(page: nextPage, limit: _defaultPageSize);
     state = result.when(
       success: (tasks) => state.copyWith(
         isLoadingMore: false,
@@ -88,6 +91,21 @@ class TaskCenterNotifier extends StateNotifier<TaskCenterState> {
   Future<void> refresh() async {
     await loadInitial();
   }
+
+  void applyTaskEvent(TaskEvent event) {
+    final index = state.tasks.indexWhere((task) => task.id == event.taskId);
+    if (index < 0) return;
+
+    final updatedTasks = [...state.tasks];
+    final current = updatedTasks[index];
+    updatedTasks[index] = current.copyWith(
+      status: parseTaskStatus(event.status),
+      progress: event.progress.clamp(0, 100),
+      errorMessage: event.message,
+      updatedAt: event.timestamp,
+    );
+    state = state.copyWith(tasks: updatedTasks);
+  }
 }
 
 final taskApiProvider = Provider<TaskApi>((ref) {
@@ -99,6 +117,7 @@ final taskRepositoryProvider = Provider<TaskRepository>((ref) {
 });
 
 final taskCenterNotifierProvider =
-    StateNotifierProvider.autoDispose<TaskCenterNotifier, TaskCenterState>((ref) {
+    StateNotifierProvider.autoDispose<TaskCenterNotifier, TaskCenterState>(
+        (ref) {
   return TaskCenterNotifier(repository: ref.watch(taskRepositoryProvider));
 });

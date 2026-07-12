@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -29,36 +30,38 @@ func MaxFileSize() int64 {
 }
 
 var allowedMimeTypes = map[string]bool{
-	"audio/mpeg":  true,
-	"audio/mp3":   true,
-	"audio/wav":   true,
-	"audio/mp4":   true,
-	"video/mp4":   true,
-	"video/webm":  true,
-	"application/pdf": true,
-	"text/plain":  true,
+	"audio/mpeg":         true,
+	"audio/mp3":          true,
+	"audio/wav":          true,
+	"audio/mp4":          true,
+	"video/mp4":          true,
+	"video/webm":         true,
+	"application/pdf":    true,
+	"text/plain":         true,
 	"application/msword": true,
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
 }
 
 // UploadRequest carries a multipart file and its owner.
 type UploadRequest struct {
-	File     multipart.File
-	Header   *multipart.FileHeader
-	UserID   uint64
-	UserUUID string
+	File        multipart.File
+	Header      *multipart.FileHeader
+	UserID      uint64
+	UserUUID    string
+	AutoSummary bool
 }
 
 // UploadResult is returned after a successful upload.
 type UploadResult struct {
-	ResourceID string    `json:"resource_id"`
-	TaskID     string    `json:"task_id"`
-	Name       string    `json:"name"`
-	Type       string    `json:"type"`
-	Status     string    `json:"status"`
-	SizeBytes  int64     `json:"size_bytes"`
-	MimeType   string    `json:"mime_type"`
-	CreatedAt  int64     `json:"created_at"`
+	ResourceID  string `json:"resource_id"`
+	TaskID      string `json:"task_id"`
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Status      string `json:"status"`
+	SizeBytes   int64  `json:"size_bytes"`
+	MimeType    string `json:"mime_type"`
+	CreatedAt   int64  `json:"created_at"`
+	AutoSummary bool   `json:"auto_summary"`
 }
 
 // FileService defines file upload operations.
@@ -135,6 +138,11 @@ func (s *fileService) Upload(ctx context.Context, req UploadRequest) (*UploadRes
 		SizeBytes:  req.Header.Size,
 		MimeType:   declaredMime,
 	}
+	metadata, err := json.Marshal(map[string]bool{"auto_summary": req.AutoSummary})
+	if err != nil {
+		return nil, apperrors.Internal("failed to encode resource metadata")
+	}
+	resource.Metadata = metadata
 
 	if err := s.resourceRepo.Create(ctx, resource); err != nil {
 		_ = s.storage.RemoveObject(ctx, key)
@@ -161,18 +169,25 @@ func (s *fileService) Upload(ctx context.Context, req UploadRequest) (*UploadRes
 				zap.String("resource_id", resource.UUID),
 				zap.Error(dispatchErr),
 			)
+			if err := s.taskRepo.UpdateStatus(ctx, task.ID, model.TaskStatusFailed, 0, nil, dispatchErr.Error()); err != nil {
+				s.logger.Warn("failed to mark dispatch failure",
+					zap.String("task_id", task.UUID),
+					zap.Error(err),
+				)
+			}
 		}
 	}
 
 	return &UploadResult{
-		ResourceID: resource.UUID,
-		TaskID:     task.UUID,
-		Name:       resource.Name,
-		Type:       resource.Type,
-		Status:     "uploading",
-		SizeBytes:  resource.SizeBytes,
-		MimeType:   resource.MimeType,
-		CreatedAt:  resource.CreatedAt.Unix(),
+		ResourceID:  resource.UUID,
+		TaskID:      task.UUID,
+		Name:        resource.Name,
+		Type:        resource.Type,
+		Status:      "uploading",
+		SizeBytes:   resource.SizeBytes,
+		MimeType:    resource.MimeType,
+		CreatedAt:   resource.CreatedAt.Unix(),
+		AutoSummary: req.AutoSummary,
 	}, nil
 }
 

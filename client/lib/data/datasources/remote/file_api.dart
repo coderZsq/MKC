@@ -15,11 +15,15 @@ class FileApi {
 
   Future<Result<UploadResponseModel>> upload({
     required PickedFile file,
+    required bool autoSummary,
     required CancelToken cancelToken,
     required void Function(int sent, int total) onProgress,
   }) async {
     final multipartFile = await _toMultipartFile(file);
-    final formData = FormData.fromMap({'file': multipartFile});
+    final formData = FormData.fromMap({
+      'file': multipartFile,
+      'auto_summary': autoSummary.toString(),
+    });
 
     return _client.upload<UploadResponseModel>(
       '/files/upload',

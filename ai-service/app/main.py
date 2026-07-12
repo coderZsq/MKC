@@ -9,6 +9,7 @@ from app.api.llm import llm_bp
 from app.api.pdf import pdf_bp
 from app.api.qa import qa_bp
 from app.api.retrieval import retrieval_bp
+from app.api.summary import summary_bp
 from app.api.vectors import vectors_bp
 from app.core.config import settings
 from app.core.exceptions import APIException
@@ -22,6 +23,13 @@ from app.services.embedding.factory import (
 from app.services.embedding.service import EmbeddingService
 from app.services.llm import LLMClient, build_llm_client, validate_llm_config
 from app.services.retrieval import RetrievalService, build_retrieval_service
+from app.services.summary import (
+    MapReduceSummarizer,
+    SectionSplitter,
+    SummaryLLMProvider,
+    SummaryRepository,
+    SummaryService,
+)
 from app.vector_store.factory import build_vector_store
 from app.vector_store.vector_store import VectorStore
 from celery_workers.celery_app import celery_app
@@ -83,6 +91,16 @@ def init_extensions(
         validate_llm_config()
         app.extensions["llm"] = build_llm_client()
 
+    summary_cfg = (settings.ai_config or {}).get("summary", {})
+    summary_llm_provider = SummaryLLMProvider(app.extensions["llm"], summary_cfg)
+    app.extensions["summary_service"] = SummaryService(
+        llm_provider=summary_llm_provider,
+        summarizer=MapReduceSummarizer(summary_llm_provider, summary_cfg),
+        splitter=SectionSplitter(),
+        repository=SummaryRepository(),
+        config=summary_cfg,
+    )
+
     celery_app.conf.update(
         broker_url=settings.celery_broker_url,
         result_backend=settings.celery_result_backend,
@@ -100,6 +118,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(embedding_bp, url_prefix="/ai/v1")
     app.register_blueprint(vectors_bp, url_prefix="/ai/v1")
     app.register_blueprint(retrieval_bp, url_prefix="/ai/v1")
+    app.register_blueprint(summary_bp, url_prefix="/ai/v1")
     app.register_blueprint(llm_bp, url_prefix="/ai/v1")
     app.register_blueprint(qa_bp, url_prefix="/ai/v1")
 

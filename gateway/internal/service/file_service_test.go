@@ -75,6 +75,13 @@ func (r *stubResourceRepository) Create(ctx context.Context, resource *model.Res
 	return nil
 }
 
+func (r *stubResourceRepository) GetByUUID(ctx context.Context, uuid string) (*model.Resource, error) {
+	if r.getByUUIDAndUserFunc != nil {
+		return r.getByUUIDAndUserFunc(ctx, uuid, 0)
+	}
+	return nil, repository.ErrNotFound
+}
+
 func (r *stubResourceRepository) UpdateStatus(ctx context.Context, id uint64, status uint8) error {
 	if r.updateStatusFunc != nil {
 		return r.updateStatusFunc(ctx, id, status)
@@ -130,6 +137,10 @@ func (r *stubTaskRepository) GetByUUIDAndUserID(ctx context.Context, uuid string
 	return nil, repository.ErrNotFound
 }
 
+func (r *stubTaskRepository) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
+	return nil, repository.ErrNotFound
+}
+
 func (r *stubTaskRepository) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 	if r.listByUserIDFunc != nil {
 		return r.listByUserIDFunc(ctx, userID, page, limit)
@@ -173,6 +184,10 @@ type fakeFileDispatcher struct {
 
 func (d *fakeFileDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
 	d.calls = append(d.calls, dispatchCall{Task: task, Resource: resource})
+	return nil
+}
+
+func (d *fakeFileDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
 	return nil
 }
 
@@ -418,10 +433,21 @@ func TestFileService_Upload_DispatchesAutoTasks(t *testing.T) {
 	assert.Equal(t, model.TaskTypeMediaParse, dispatcher.calls[0].Task.Type)
 }
 
-func TestFileService_Upload_DispatchFailureDoesNotFailUpload(t *testing.T) {
-	svc, _, resourceRepo, _, _ := newTestFileService(t)
+func TestFileService_Upload_DispatchFailureMarksTaskFailed(t *testing.T) {
+	svc, _, resourceRepo, taskRepo, _ := newTestFileService(t)
 	resourceRepo.createFunc = func(ctx context.Context, r *model.Resource) error {
 		r.ID = 1
+		return nil
+	}
+	taskRepo.createFunc = func(ctx context.Context, t *model.Task) error {
+		t.ID = 2
+		return nil
+	}
+	var status string
+	var errMsg string
+	taskRepo.updateStatusFunc = func(ctx context.Context, id uint64, s string, progress uint8, result json.RawMessage, msg string) error {
+		status = s
+		errMsg = msg
 		return nil
 	}
 	svc.dispatcher = &alwaysFailingDispatcher{}
@@ -436,10 +462,16 @@ func TestFileService_Upload_DispatchFailureDoesNotFailUpload(t *testing.T) {
 	_, err := svc.Upload(context.Background(), req)
 
 	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusFailed, status)
+	assert.Contains(t, errMsg, "dispatch failed")
 }
 
 type alwaysFailingDispatcher struct{}
 
 func (d *alwaysFailingDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
+	return errors.New("dispatch failed")
+}
+
+func (d *alwaysFailingDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
 	return errors.New("dispatch failed")
 }

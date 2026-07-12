@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/task.dart';
 import '../providers/task_detail_provider.dart';
+import '../providers/task_sse_provider.dart';
 import '../widgets/task_center_skeleton.dart';
 import '../widgets/task_status_chip.dart';
 
@@ -28,6 +29,19 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(taskDetailNotifierProvider(widget.taskId));
+    final task = state.task;
+    if (task != null &&
+        (task.status == TaskStatus.pending ||
+            task.status == TaskStatus.running)) {
+      ref.listen(taskEventStreamProvider(task.id), (_, next) {
+        final event = next.valueOrNull;
+        if (event != null) {
+          ref
+              .read(taskDetailNotifierProvider(widget.taskId).notifier)
+              .applyTaskEvent(event);
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('任务详情')),
@@ -49,7 +63,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             Text(error.message),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref.read(taskDetailNotifierProvider(widget.taskId).notifier).load(),
+              onPressed: () => ref
+                  .read(taskDetailNotifierProvider(widget.taskId).notifier)
+                  .load(),
               child: const Text('重试'),
             ),
           ],
@@ -67,7 +83,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(task.resourceName, style: Theme.of(context).textTheme.headlineSmall),
+          Text(task.resourceName,
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -80,7 +97,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           _InfoRow(label: '任务 ID', value: task.id),
           _InfoRow(label: '资源 ID', value: task.resourceId),
           _InfoRow(label: '更新时间', value: formatTaskUpdatedAt(task.updatedAt)),
-          if (task.status == TaskStatus.running || task.status == TaskStatus.pending) ...[
+          if (task.status == TaskStatus.running ||
+              task.status == TaskStatus.pending) ...[
             const SizedBox(height: 24),
             LinearProgressIndicator(value: task.progress / 100),
             const SizedBox(height: 8),
@@ -111,7 +129,9 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 80, child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
+          SizedBox(
+              width: 80,
+              child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
           Expanded(child: Text(value)),
         ],
       ),

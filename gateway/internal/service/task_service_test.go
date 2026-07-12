@@ -31,6 +31,13 @@ func (r *stubResourceRepositoryForTask) Create(ctx context.Context, resource *mo
 	return nil
 }
 
+func (r *stubResourceRepositoryForTask) GetByUUID(ctx context.Context, uuid string) (*model.Resource, error) {
+	if r.getByUUIDAndUserFunc != nil {
+		return r.getByUUIDAndUserFunc(ctx, uuid, 0)
+	}
+	return nil, repository.ErrNotFound
+}
+
 func (r *stubResourceRepositoryForTask) UpdateStatus(ctx context.Context, id uint64, status uint8) error {
 	if r.updateStatusFunc != nil {
 		return r.updateStatusFunc(ctx, id, status)
@@ -86,6 +93,10 @@ func (r *stubTaskRepositoryForTask) GetByUUIDAndUserID(ctx context.Context, uuid
 	return nil, repository.ErrNotFound
 }
 
+func (r *stubTaskRepositoryForTask) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
+	return nil, repository.ErrNotFound
+}
+
 func (r *stubTaskRepositoryForTask) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 	if r.listByUserIDFunc != nil {
 		return r.listByUserIDFunc(ctx, userID, page, limit)
@@ -124,7 +135,8 @@ func (r *stubTaskRepositoryForTask) ResetForRetry(ctx context.Context, id uint64
 var _ repository.TaskRepository = (*stubTaskRepositoryForTask)(nil)
 
 type fakeTaskDispatcher struct {
-	calls []dispatchCall
+	calls        []dispatchCall
+	summaryCalls []summaryDispatchCall
 }
 
 type dispatchCall struct {
@@ -132,8 +144,18 @@ type dispatchCall struct {
 	Resource *model.Resource
 }
 
+type summaryDispatchCall struct {
+	Resource *model.Resource
+	Payload  SummaryDispatchPayload
+}
+
 func (d *fakeTaskDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
 	d.calls = append(d.calls, dispatchCall{Task: task, Resource: resource})
+	return nil
+}
+
+func (d *fakeTaskDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
+	d.summaryCalls = append(d.summaryCalls, summaryDispatchCall{Resource: resource, Payload: payload})
 	return nil
 }
 
@@ -390,6 +412,51 @@ func TestTaskService_MarkCompleted_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, called)
+}
+
+func TestTaskService_CompletedAutoDispatchesSummary(t *testing.T) {
+	svc, _, taskRepo := newTestTaskService(t)
+	dispatcher := &fakeTaskDispatcher{}
+	svc.dispatcher = dispatcher
+	resource := model.Resource{ID: 7, UUID: "res-1", Metadata: json.RawMessage(`{"auto_summary":true}`)}
+	taskRepo.getByUUIDFunc = func(ctx context.Context, uuid string) (*model.Task, error) {
+		return &model.Task{
+			ID:       1,
+			UUID:     uuid,
+			Type:     model.TaskTypePdfParse,
+			Status:   model.TaskStatusRunning,
+			Resource: resource,
+		}, nil
+	}
+
+	err := svc.MarkCompleted(context.Background(), "task-uuid", json.RawMessage(`{"pages":[{"text":"正文"}],"toc":[]}`))
+
+	require.NoError(t, err)
+	require.Len(t, dispatcher.summaryCalls, 1)
+	assert.Equal(t, "res-1", dispatcher.summaryCalls[0].Resource.UUID)
+	assert.Equal(t, "pdf", dispatcher.summaryCalls[0].Payload.SourceType)
+	assert.Equal(t, "sum-res-1-auto", dispatcher.summaryCalls[0].Payload.TaskID)
+}
+
+func TestTaskService_CompletedSkipsSummaryWhenDisabled(t *testing.T) {
+	svc, _, taskRepo := newTestTaskService(t)
+	dispatcher := &fakeTaskDispatcher{}
+	svc.dispatcher = dispatcher
+	resource := model.Resource{ID: 7, UUID: "res-1", Metadata: json.RawMessage(`{"auto_summary":false}`)}
+	taskRepo.getByUUIDFunc = func(ctx context.Context, uuid string) (*model.Task, error) {
+		return &model.Task{
+			ID:       1,
+			UUID:     uuid,
+			Type:     model.TaskTypePdfParse,
+			Status:   model.TaskStatusRunning,
+			Resource: resource,
+		}, nil
+	}
+
+	err := svc.MarkCompleted(context.Background(), "task-uuid", json.RawMessage(`{"pages":[{"text":"正文"}],"toc":[]}`))
+
+	require.NoError(t, err)
+	assert.Empty(t, dispatcher.summaryCalls)
 }
 
 func TestTaskService_MarkFailed_Success(t *testing.T) {

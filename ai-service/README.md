@@ -80,6 +80,26 @@ make flower
 make build
 ```
 
+MP3 转写、PDF 解析、进度回调和自动摘要都由 Celery worker 异步执行。只启动 Flask HTTP 服务只能接收任务，不能消费队列；任务会一直停在 `pending / 0%`。
+
+本地启动 worker 时建议先加载 `.env`：
+
+```bash
+source .venv/bin/activate
+set -a
+source .env
+set +a
+make worker
+```
+
+`make worker` 会显式设置 `DEBUG=false` 并使用 `celery_workers.celery_app`。如果当前 shell 中存在 `DEBUG=release` 等非布尔值，直接运行 `celery ...` 会导致配置解析失败；请通过 `make worker` 启动。
+
+确认 worker 在线和任务注册：
+
+```bash
+DEBUG=false celery -A celery_workers.celery_app inspect registered
+```
+
 ## 健康检查
 
 `GET /api/v1/health` 返回统一响应信封：

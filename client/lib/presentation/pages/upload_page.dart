@@ -23,11 +23,18 @@ class UploadPage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildFileSelector(context, state, notifier),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('生成摘要'),
+              value: state.autoSummary,
+              onChanged: state.isUploading ? null : notifier.setAutoSummary,
+            ),
             const SizedBox(height: 24),
             if (state.isUploading || state.progress > 0 && !state.isSuccess)
               UploadProgressBar(progress: state.progress),
             if (state.hasError) _buildError(context, state.errorMessage!),
-            if (state.isSuccess) _buildSuccess(context, state.response!.taskId, notifier),
+            if (state.isSuccess)
+              _buildSuccess(context, state.response!.taskId, notifier),
             if (state.isCancelled) _buildCancelled(context, notifier),
           ],
         ),
@@ -54,7 +61,8 @@ class UploadPage extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(selected.name, style: Theme.of(context).textTheme.titleMedium),
+                  Text(selected.name,
+                      style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text('大小: ${_formatBytes(selected.size)}'),
                   if (selected.extension != null)
@@ -104,7 +112,8 @@ class UploadPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSuccess(BuildContext context, String taskId, UploadNotifier notifier) {
+  Widget _buildSuccess(
+      BuildContext context, String taskId, UploadNotifier notifier) {
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Column(

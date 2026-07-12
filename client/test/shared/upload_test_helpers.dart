@@ -21,16 +21,19 @@ class FakeFilePickerService implements FilePickerService {
 class FakeFileRepository implements FileRepository {
   Result<UploadResponseModel>? nextResult;
   PickedFile? lastFile;
+  bool? lastAutoSummary;
   CancelToken? lastCancelToken;
   void Function(int sent, int total)? lastOnProgress;
 
   @override
   Future<Result<UploadResponseModel>> uploadFile({
     required PickedFile file,
+    required bool autoSummary,
     required CancelToken cancelToken,
     required void Function(int sent, int total) onProgress,
   }) async {
     lastFile = file;
+    lastAutoSummary = autoSummary;
     lastCancelToken = cancelToken;
     lastOnProgress = onProgress;
 

@@ -45,6 +45,7 @@ task:
     - 5m
   retry_cooldown: 5s
   dispatch_timeout: 30s
+  auto_summary: true
 
 conversation:
   default_title: 新会话
