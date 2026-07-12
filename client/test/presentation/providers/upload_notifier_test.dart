@@ -105,6 +105,16 @@ void main() {
       expect(notifier.state.progress, greaterThanOrEqualTo(50));
     });
 
+    test('passes auto summary preference to repository', () async {
+      picker.nextFile = fakeFile(size: 1024, extension: 'mp3');
+      await notifier.pickFile();
+      notifier.setAutoSummary(false);
+
+      await notifier.upload();
+
+      expect(repository.lastAutoSummary, isFalse);
+    });
+
     test('sets failure with NetworkException', () async {
       picker.nextFile = fakeFile(size: 1024, extension: 'mp3');
       await notifier.pickFile();

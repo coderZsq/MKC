@@ -43,10 +43,11 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	defer func() { _ = file.Close() }()
 
 	result, err := h.svc.Upload(c.Request.Context(), service.UploadRequest{
-		File:     file,
-		Header:   header,
-		UserID:   userID,
-		UserUUID: userUUID,
+		File:        file,
+		Header:      header,
+		UserID:      userID,
+		UserUUID:    userUUID,
+		AutoSummary: parseAutoSummary(c.PostForm("auto_summary")),
 	})
 	if err != nil {
 		mapFileError(c, err)
@@ -54,6 +55,13 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	}
 
 	response.OK(c, result)
+}
+
+func parseAutoSummary(raw string) bool {
+	if raw == "" {
+		return true
+	}
+	return raw == "true" || raw == "1" || strings.EqualFold(raw, "yes")
 }
 
 func mapFileError(c *gin.Context, err error) {

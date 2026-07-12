@@ -12,6 +12,7 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&model.User{},
 		&model.Resource{},
+		&model.Summary{},
 		&model.Task{},
 		&model.Conversation{},
 		&model.Message{},
@@ -27,6 +28,7 @@ func DropAll(db *gorm.DB) error {
 		&model.Message{},
 		&model.Conversation{},
 		&model.Task{},
+		&model.Summary{},
 		&model.Resource{},
 		&model.User{},
 	); err != nil {

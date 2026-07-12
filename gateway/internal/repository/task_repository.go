@@ -16,11 +16,28 @@ type TaskRepository interface {
 	Create(ctx context.Context, t *model.Task) error
 	GetByUUID(ctx context.Context, uuid string) (*model.Task, error)
 	GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error)
 	ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
 	UpdateStatus(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
 	UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error
 	UpdateProgress(ctx context.Context, id uint64, progress uint8) error
 	ResetForRetry(ctx context.Context, id uint64) error
+}
+
+// GetLatestCompletedByResourceID returns the latest completed processing task for a resource.
+func (r *GORMTaskRepository) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
+	var task model.Task
+	if err := r.db.WithContext(ctx).
+		Preload("Resource").
+		Where("resource_id = ? AND status = ?", resourceID, model.TaskStatusCompleted).
+		Order("completed_at DESC, id DESC").
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get latest completed task by resource: %w", err)
+	}
+	return &task, nil
 }
 
 // GORMTaskRepository is a GORM-backed TaskRepository.
@@ -118,10 +135,10 @@ func (r *GORMTaskRepository) UpdateStatus(ctx context.Context, id uint64, status
 // UpdateStatusWithAttempt updates the task status and records the current attempt count.
 func (r *GORMTaskRepository) UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error {
 	updates := map[string]any{
-		"status":       status,
-		"progress":     progress,
-		"result":       result,
-		"retry_count":  attemptCount,
+		"status":      status,
+		"progress":    progress,
+		"result":      result,
+		"retry_count": attemptCount,
 	}
 	if errMsg != "" {
 		updates["error_message"] = errMsg

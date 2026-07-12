@@ -67,6 +67,7 @@ type TaskConfig struct {
 	RetryDelays     []time.Duration `mapstructure:"retry_delays"`
 	RetryCooldown   time.Duration   `mapstructure:"retry_cooldown"`
 	DispatchTimeout time.Duration   `mapstructure:"dispatch_timeout"`
+	AutoSummary     bool            `mapstructure:"auto_summary"`
 }
 
 // QAConfig holds Q&A SSE options.

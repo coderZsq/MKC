@@ -9,6 +9,7 @@ class UploadResponseModel {
     required this.sizeBytes,
     this.mimeType,
     required this.createdAt,
+    this.autoSummary = true,
   });
 
   factory UploadResponseModel.fromJson(Map<String, dynamic> json) {
@@ -21,6 +22,7 @@ class UploadResponseModel {
       sizeBytes: json['size_bytes'] as int,
       mimeType: json['mime_type'] as String?,
       createdAt: json['created_at'] as int,
+      autoSummary: json['auto_summary'] as bool? ?? true,
     );
   }
 
@@ -32,15 +34,17 @@ class UploadResponseModel {
   final int sizeBytes;
   final String? mimeType;
   final int createdAt;
+  final bool autoSummary;
 
   Map<String, dynamic> toJson() => {
-    'resource_id': resourceId,
-    'task_id': taskId,
-    'name': name,
-    'type': type,
-    'status': status,
-    'size_bytes': sizeBytes,
-    'mime_type': mimeType,
-    'created_at': createdAt,
-  };
+        'resource_id': resourceId,
+        'task_id': taskId,
+        'name': name,
+        'type': type,
+        'status': status,
+        'size_bytes': sizeBytes,
+        'mime_type': mimeType,
+        'created_at': createdAt,
+        'auto_summary': autoSummary,
+      };
 }

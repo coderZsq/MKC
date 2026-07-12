@@ -111,7 +111,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> navigateToUploadPage(WidgetTester tester, {required Widget app}) async {
+  Future<void> navigateToUploadPage(WidgetTester tester,
+      {required Widget app}) async {
     await tester.pumpWidget(app);
     await pumpUntilPage(tester, '首页占位 — 功能开发中');
     await tester.tap(find.text('上传文件'));
@@ -119,7 +120,8 @@ void main() {
   }
 
   setUpAll(() async {
-    testUser = await registerUser(uniqueEmail('shared'), 'Password123!', storeToken: true);
+    testUser = await registerUser(uniqueEmail('shared'), 'Password123!',
+        storeToken: true);
   });
 
   group('S1-3 upload API direct assertions', () {
@@ -209,23 +211,27 @@ void main() {
 
     testWidgets('redirects unauthenticated user to login', (tester) async {
       await storage.clearTokens();
-      await tester.pumpWidget(ProviderScope(key: UniqueKey(), child: const MKCApp()));
+      await tester
+          .pumpWidget(ProviderScope(key: UniqueKey(), child: const MKCApp()));
       await pumpUntilPage(tester, '登录 MKC');
       expect(find.widgetWithText(ElevatedButton, '登录'), findsOneWidget);
     });
 
-    testWidgets('shows local size limit error for oversized file', (tester) async {
+    testWidgets('shows local size limit error for oversized file',
+        (tester) async {
       await restoreAuth();
 
       final app = ProviderScope(
         key: UniqueKey(),
-        overrides: [filePickerServiceProvider.overrideWithValue(FakeFilePickerService()
-          ..nextFile = PickedFile(
-            bytes: Uint8List(0),
-            name: 'big.mp3',
-            size: 150 * 1024 * 1024, // exceeds Web 100 MB limit
-            extension: 'mp3',
-          ))],
+        overrides: [
+          filePickerServiceProvider.overrideWithValue(FakeFilePickerService()
+            ..nextFile = PickedFile(
+              bytes: Uint8List(0),
+              name: 'big.mp3',
+              size: 150 * 1024 * 1024, // exceeds Web 100 MB limit
+              extension: 'mp3',
+            ))
+        ],
         child: const MKCApp(),
       );
 
@@ -237,18 +243,21 @@ void main() {
       expect(find.text('文件超过当前平台大小限制'), findsOneWidget);
     });
 
-    testWidgets('shows unsupported type error for bad extension', (tester) async {
+    testWidgets('shows unsupported type error for bad extension',
+        (tester) async {
       await restoreAuth();
 
       final app = ProviderScope(
         key: UniqueKey(),
-        overrides: [filePickerServiceProvider.overrideWithValue(FakeFilePickerService()
-          ..nextFile = PickedFile(
-            bytes: Uint8List(4),
-            name: 'malware.exe',
-            size: 1024,
-            extension: 'exe',
-          ))],
+        overrides: [
+          filePickerServiceProvider.overrideWithValue(FakeFilePickerService()
+            ..nextFile = PickedFile(
+              bytes: Uint8List(4),
+              name: 'malware.exe',
+              size: 1024,
+              extension: 'exe',
+            ))
+        ],
         child: const MKCApp(),
       );
 
@@ -260,18 +269,21 @@ void main() {
       expect(find.text('不支持的文件类型'), findsOneWidget);
     });
 
-    testWidgets('uploads a valid MP3 and navigates to task center', (tester) async {
+    testWidgets('uploads a valid MP3 and navigates to task center',
+        (tester) async {
       await restoreAuth();
 
       final app = ProviderScope(
         key: UniqueKey(),
-        overrides: [filePickerServiceProvider.overrideWithValue(FakeFilePickerService()
-          ..nextFile = PickedFile(
-            bytes: makeMp3Bytes(1024),
-            name: 'sample.mp3',
-            size: 1024,
-            extension: 'mp3',
-          ))],
+        overrides: [
+          filePickerServiceProvider.overrideWithValue(FakeFilePickerService()
+            ..nextFile = PickedFile(
+              bytes: makeMp3Bytes(1024),
+              name: 'sample.mp3',
+              size: 1024,
+              extension: 'mp3',
+            ))
+        ],
         child: const MKCApp(),
       );
 
@@ -373,6 +385,7 @@ class FakeFileRepository implements FileRepository {
   @override
   Future<Result<UploadResponseModel>> uploadFile({
     required PickedFile file,
+    required bool autoSummary,
     required CancelToken cancelToken,
     required void Function(int sent, int total) onProgress,
   }) async {

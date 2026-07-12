@@ -12,6 +12,7 @@ import (
 // ResourceRepository defines data access operations for resources.
 type ResourceRepository interface {
 	Create(ctx context.Context, r *model.Resource) error
+	GetByUUID(ctx context.Context, uuid string) (*model.Resource, error)
 	GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
 	CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error)
 	UpdateStatus(ctx context.Context, id uint64, status uint8) error
@@ -33,6 +34,18 @@ func (r *GORMResourceRepository) Create(ctx context.Context, resource *model.Res
 		return fmt.Errorf("failed to create resource: %w", err)
 	}
 	return nil
+}
+
+// GetByUUID fetches a resource by UUID.
+func (r *GORMResourceRepository) GetByUUID(ctx context.Context, uuid string) (*model.Resource, error) {
+	var resource model.Resource
+	if err := r.db.WithContext(ctx).Where("uuid = ?", uuid).First(&resource).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get resource by uuid: %w", err)
+	}
+	return &resource, nil
 }
 
 // GetByUUIDAndUserID fetches a resource by UUID and ensures it belongs to the user.

@@ -75,6 +75,13 @@ func (r *stubResourceRepository) Create(ctx context.Context, resource *model.Res
 	return nil
 }
 
+func (r *stubResourceRepository) GetByUUID(ctx context.Context, uuid string) (*model.Resource, error) {
+	if r.getByUUIDAndUserFunc != nil {
+		return r.getByUUIDAndUserFunc(ctx, uuid, 0)
+	}
+	return nil, repository.ErrNotFound
+}
+
 func (r *stubResourceRepository) UpdateStatus(ctx context.Context, id uint64, status uint8) error {
 	if r.updateStatusFunc != nil {
 		return r.updateStatusFunc(ctx, id, status)
@@ -130,6 +137,10 @@ func (r *stubTaskRepository) GetByUUIDAndUserID(ctx context.Context, uuid string
 	return nil, repository.ErrNotFound
 }
 
+func (r *stubTaskRepository) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
+	return nil, repository.ErrNotFound
+}
+
 func (r *stubTaskRepository) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 	if r.listByUserIDFunc != nil {
 		return r.listByUserIDFunc(ctx, userID, page, limit)
@@ -173,6 +184,10 @@ type fakeFileDispatcher struct {
 
 func (d *fakeFileDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
 	d.calls = append(d.calls, dispatchCall{Task: task, Resource: resource})
+	return nil
+}
+
+func (d *fakeFileDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
 	return nil
 }
 
@@ -441,5 +456,9 @@ func TestFileService_Upload_DispatchFailureDoesNotFailUpload(t *testing.T) {
 type alwaysFailingDispatcher struct{}
 
 func (d *alwaysFailingDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
+	return errors.New("dispatch failed")
+}
+
+func (d *alwaysFailingDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
 	return errors.New("dispatch failed")
 }
