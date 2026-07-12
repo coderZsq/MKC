@@ -7,6 +7,7 @@ from typing import Any, cast
 
 import httpx
 from openai import APIError, APITimeoutError, AuthenticationError, OpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from app.core.exceptions import (
     LLMAuthFailedError,
@@ -40,7 +41,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         try:
             response = self._client.chat.completions.create(
                 model=self._config.model,
-                messages=[message.model_dump() for message in request.messages],
+                messages=_message_params(request),
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
                 stream=False,
@@ -65,9 +66,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             stream = cast(
                 Iterator[object],
                 await asyncio.to_thread(
-                    self._client.chat.completions.create,  # type: ignore[arg-type]
+                    self._client.chat.completions.create,
                     model=self._config.model,
-                    messages=[message.model_dump() for message in request.messages],
+                    messages=_message_params(request),
                     temperature=request.temperature,
                     max_tokens=request.max_tokens,
                     stream=True,
@@ -138,6 +139,13 @@ def _message_text(message: dict[str, Any]) -> str:
     reasoning = str(message.get("reasoning") or message.get("reasoning_content") or "")
     content = str(message.get("content") or "")
     return reasoning + content
+
+
+def _message_params(request: LLMRequest) -> list[ChatCompletionMessageParam]:
+    return cast(
+        list[ChatCompletionMessageParam],
+        [message.model_dump() for message in request.messages],
+    )
 
 
 def _build_http_client(base_url: str) -> httpx.Client | None:
