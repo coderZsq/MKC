@@ -54,7 +54,7 @@ start_ai_service() {
     cd "$REPO_ROOT/ai-service"
     set -a
     [[ -f .env ]] && source .env
-    DEBUG="${DEBUG:-false}"
+    DEBUG=false
     PORT="$AI_PORT"
     INTERNAL_API_KEY="${INTERNAL_API_KEY:-dev-internal-key}"
     GATEWAY_INTERNAL_KEY="${GATEWAY_INTERNAL_KEY:-dev-internal-key}"
