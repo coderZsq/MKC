@@ -76,7 +76,7 @@ func main() {
 		taskHandler = handler.NewTaskHandler(taskSvc)
 		internalTaskHandler = handler.NewInternalTaskHandler(taskSvc)
 		taskSSEHandler = handler.NewTaskSSEHandler(taskSvc, taskBroadcaster)
-		resourceSvc := service.NewResourceService(appLogger, resourceRepo, summaryRepo, extractionRepo)
+		resourceSvc := service.NewResourceService(appLogger, resourceRepo, taskRepo, summaryRepo, extractionRepo)
 		resourceHandler = handler.NewResourceHandler(resourceSvc)
 
 		aiClient := service.NewAIClient(cfg)

@@ -40,6 +40,7 @@ type ListResourcesResult struct {
 // ResourceListItem is returned to Web clients.
 type ResourceListItem struct {
 	ResourceID       string    `json:"resource_id"`
+	TaskID           string    `json:"task_id,omitempty"`
 	Name             string    `json:"name"`
 	Type             string    `json:"type"`
 	Status           string    `json:"status"`
@@ -52,16 +53,17 @@ type ResourceListItem struct {
 type resourceService struct {
 	logger         *zap.Logger
 	resourceRepo   ResourceListRepository
+	taskRepo       repository.TaskRepository
 	summaryRepo    repository.SummaryRepository
 	extractionRepo repository.ExtractionRepository
 }
 
 // NewResourceService creates a ResourceService.
-func NewResourceService(logger *zap.Logger, resourceRepo ResourceListRepository, summaryRepo repository.SummaryRepository, extractionRepo repository.ExtractionRepository) ResourceService {
+func NewResourceService(logger *zap.Logger, resourceRepo ResourceListRepository, taskRepo repository.TaskRepository, summaryRepo repository.SummaryRepository, extractionRepo repository.ExtractionRepository) ResourceService {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	return &resourceService{logger: logger, resourceRepo: resourceRepo, summaryRepo: summaryRepo, extractionRepo: extractionRepo}
+	return &resourceService{logger: logger, resourceRepo: resourceRepo, taskRepo: taskRepo, summaryRepo: summaryRepo, extractionRepo: extractionRepo}
 }
 
 // List returns resources with latest full summary and tags.
@@ -96,10 +98,17 @@ func (s *resourceService) List(ctx context.Context, userID uint64, req ListResou
 		return nil, apperrors.Internal("internal server error")
 	}
 
+	latestTasks, err := s.taskRepo.ListLatestByResourceIDs(ctx, resourceIDs)
+	if err != nil {
+		s.logger.Error("failed to list latest tasks for resources", zap.Error(err))
+		return nil, apperrors.Internal("internal server error")
+	}
+
 	items := make([]ResourceListItem, 0, len(resources))
 	for _, resource := range resources {
 		items = append(items, ResourceListItem{
 			ResourceID:       resource.UUID,
+			TaskID:           latestTasks[resource.ID].UUID,
 			Name:             resource.Name,
 			Type:             resource.Type,
 			Status:           resourceStatusLabel(resource.Status),
@@ -125,4 +134,18 @@ func resourceStatusLabel(status uint8) string {
 	default:
 		return "unknown"
 	}
+}
+
+// taskStatusToResourceStatus maps a task status to the corresponding resource
+// status. Returns 0 when the task status should not trigger a resource update.
+func taskStatusToResourceStatus(taskStatus string) uint8 {
+	switch taskStatus {
+	case model.TaskStatusRunning:
+		return 2
+	case model.TaskStatusCompleted:
+		return 3
+	case model.TaskStatusFailed:
+		return 4
+	}
+	return 0
 }

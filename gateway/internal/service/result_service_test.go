@@ -33,6 +33,9 @@ func (r *stubTaskRepo) GetByUUIDAndUserID(ctx context.Context, uuid string, user
 func (r *stubTaskRepo) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
 	return nil, repository.ErrNotFound
 }
+func (r *stubTaskRepo) ListLatestByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]model.Task, error) {
+	return map[uint64]model.Task{}, nil
+}
 func (r *stubTaskRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 	return nil, 0, nil
 }

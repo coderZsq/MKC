@@ -82,6 +82,9 @@ func (s *stubSummaryTaskRepo) GetLatestCompletedByResourceID(ctx context.Context
 	}
 	return s.task, nil
 }
+func (s *stubSummaryTaskRepo) ListLatestByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]model.Task, error) {
+	return map[uint64]model.Task{}, nil
+}
 func (s *stubSummaryTaskRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 	return nil, 0, nil
 }
