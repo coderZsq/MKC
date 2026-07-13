@@ -315,6 +315,15 @@ func (s *taskService) ProcessInternalStatusUpdate(ctx context.Context, taskUUID 
 		}
 	}
 
+	if resourceStatus := taskStatusToResourceStatus(update.Status); resourceStatus != 0 {
+		if err := s.resourceRepo.UpdateStatus(ctx, task.ResourceID, resourceStatus); err != nil {
+			s.logger.Warn("failed to update resource status after task transition",
+				zap.Uint64("resource_id", task.ResourceID),
+				zap.String("task_id", taskUUID),
+				zap.Error(err))
+		}
+	}
+
 	eventType := "status"
 	var message *string
 	switch update.Status {
