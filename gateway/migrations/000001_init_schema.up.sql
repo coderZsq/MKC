@@ -73,6 +73,42 @@ CREATE TABLE IF NOT EXISTS tasks (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS resource_tags (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    resource_id BIGINT UNSIGNED NOT NULL,
+    tag         VARCHAR(100)    NOT NULL,
+    source      VARCHAR(20)     NOT NULL DEFAULT 'llm',
+    created_at  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+
+    UNIQUE KEY uk_resource_tags_resource_tag (resource_id, tag),
+    KEY idx_resource_tags_resource_id (resource_id),
+    KEY idx_resource_tags_tag (tag),
+
+    CONSTRAINT fk_resource_tags_resource_id
+        FOREIGN KEY (resource_id) REFERENCES resources(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS resource_entities (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    resource_id BIGINT UNSIGNED NOT NULL,
+    entity      VARCHAR(255)    NOT NULL,
+    type        VARCHAR(20)     NOT NULL,
+    mention     VARCHAR(255)    NOT NULL,
+    source      VARCHAR(20)     NOT NULL DEFAULT 'llm',
+    created_at  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+
+    UNIQUE KEY uk_resource_entities_unique (resource_id, entity, type, mention),
+    KEY idx_resource_entities_resource_id (resource_id),
+    KEY idx_resource_entities_type (type),
+
+    CONSTRAINT fk_resource_entities_resource_id
+        FOREIGN KEY (resource_id) REFERENCES resources(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS conversations (
     id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     uuid         CHAR(36)        NOT NULL,

@@ -20,6 +20,7 @@ import (
 type TaskDispatcher interface {
 	Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error
 	DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error
+	DispatchExtraction(ctx context.Context, resource *model.Resource, payload ExtractionDispatchPayload) error
 }
 
 // HTTPTaskDispatcher dispatches tasks by calling the AI Service HTTP endpoints.
@@ -152,6 +153,52 @@ func (d *HTTPTaskDispatcher) DispatchSummary(ctx context.Context, resource *mode
 	return apperrors.DispatchFailed("AI service rejected the summary task")
 }
 
+// DispatchExtraction sends a tag/entity extraction request to the AI Service.
+func (d *HTTPTaskDispatcher) DispatchExtraction(ctx context.Context, resource *model.Resource, payload ExtractionDispatchPayload) error {
+	if resource == nil || resource.UUID == "" {
+		return fmt.Errorf("extraction resource is missing")
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal extraction payload: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, d.dispatchTimeout)
+	defer cancel()
+
+	endpoint := fmt.Sprintf("%s/ai/v1/resources/%s/extract-tags", d.baseURL, resource.UUID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create extraction dispatch request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Internal-Key", d.internalKey)
+
+	resp, err := d.client.Do(req)
+	if err != nil {
+		d.logger.Warn("extraction dispatch request failed", zap.String("resource_id", resource.UUID), zap.Error(err))
+		return apperrors.WorkerUnavailable("AI service is unavailable")
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode == http.StatusAccepted {
+		return nil
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	d.logger.Warn("extraction dispatch returned non-accepted status",
+		zap.String("resource_id", resource.UUID),
+		zap.Int("status", resp.StatusCode),
+		zap.ByteString("response", respBody),
+	)
+
+	if resp.StatusCode >= 500 {
+		return apperrors.WorkerUnavailable("AI service is unavailable")
+	}
+	return apperrors.DispatchFailed("AI service rejected the extraction task")
+}
+
 func (d *HTTPTaskDispatcher) buildDispatchRequest(task *model.Task, resource *model.Resource) (string, any, error) {
 	storageURL := fmt.Sprintf("minio://%s/%s", d.bucket, resource.StorageKey)
 
@@ -201,4 +248,11 @@ type SummaryDispatchPayload struct {
 	Parsed      map[string]any   `json:"parsed,omitempty"`
 	SRTSegments []map[string]any `json:"srt_segments,omitempty"`
 	TaskID      string           `json:"task_id,omitempty"`
+}
+
+// ExtractionDispatchPayload is sent to AI Service for tag/entity extraction.
+type ExtractionDispatchPayload struct {
+	SourceType string `json:"source_type"`
+	Content    string `json:"content,omitempty"`
+	TaskID     string `json:"task_id,omitempty"`
 }

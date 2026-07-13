@@ -98,6 +98,10 @@ func (s *stubSummaryDispatcher) DispatchSummary(ctx context.Context, resource *m
 	return s.err
 }
 
+func (s *stubSummaryDispatcher) DispatchExtraction(ctx context.Context, resource *model.Resource, payload ExtractionDispatchPayload) error {
+	return nil
+}
+
 func TestSummaryService_SaveInternal(t *testing.T) {
 	resourceRepo := &stubSummaryResourceRepo{resource: &model.Resource{ID: 7, UUID: "res-1"}}
 	summaryRepo := &stubSummaryRepo{}

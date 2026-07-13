@@ -191,6 +191,10 @@ func (d *fakeFileDispatcher) DispatchSummary(ctx context.Context, resource *mode
 	return nil
 }
 
+func (d *fakeFileDispatcher) DispatchExtraction(ctx context.Context, resource *model.Resource, payload ExtractionDispatchPayload) error {
+	return nil
+}
+
 func newTestFileService(t *testing.T) (*fileService, *stubObjectStorage, *stubResourceRepository, *stubTaskRepository, *fakeFileDispatcher) {
 	storageStub := &stubObjectStorage{}
 	resourceRepo := &stubResourceRepository{}
@@ -473,5 +477,9 @@ func (d *alwaysFailingDispatcher) Dispatch(ctx context.Context, task *model.Task
 }
 
 func (d *alwaysFailingDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
+	return errors.New("dispatch failed")
+}
+
+func (d *alwaysFailingDispatcher) DispatchExtraction(ctx context.Context, resource *model.Resource, payload ExtractionDispatchPayload) error {
 	return errors.New("dispatch failed")
 }

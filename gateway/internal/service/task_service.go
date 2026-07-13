@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -328,6 +329,7 @@ func (s *taskService) ProcessInternalStatusUpdate(ctx context.Context, taskUUID 
 	s.publishEvent(ctx, taskUUID, eventType, update.Status, progress, message)
 	if update.Status == model.TaskStatusCompleted {
 		s.dispatchAutoSummary(ctx, task, update.Result)
+		s.dispatchAutoExtraction(ctx, task, update.Result)
 	}
 	return nil
 }
@@ -361,6 +363,23 @@ func (s *taskService) dispatchAutoSummary(ctx context.Context, task *model.Task,
 	}
 	if err := s.dispatcher.DispatchSummary(ctx, &task.Resource, payload); err != nil {
 		s.logger.Warn("failed to auto dispatch summary",
+			zap.String("task_id", task.UUID),
+			zap.String("resource_id", task.Resource.UUID),
+			zap.Error(err),
+		)
+	}
+}
+
+func (s *taskService) dispatchAutoExtraction(ctx context.Context, task *model.Task, result json.RawMessage) {
+	if s.dispatcher == nil || !isSummarySourceTask(task.Type) {
+		return
+	}
+	payload, ok := buildExtractionPayload(task, result, true)
+	if !ok {
+		return
+	}
+	if err := s.dispatcher.DispatchExtraction(ctx, &task.Resource, payload); err != nil {
+		s.logger.Warn("failed to auto dispatch tag extraction",
 			zap.String("task_id", task.UUID),
 			zap.String("resource_id", task.Resource.UUID),
 			zap.Error(err),
@@ -415,6 +434,56 @@ func buildSummaryPayload(task *model.Task, result json.RawMessage, automatic boo
 		}, true
 	}
 	return SummaryDispatchPayload{}, false
+}
+
+func buildExtractionPayload(task *model.Task, result json.RawMessage, automatic bool) (ExtractionDispatchPayload, bool) {
+	if len(result) == 0 {
+		return ExtractionDispatchPayload{}, false
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(result, &payload); err != nil {
+		return ExtractionDispatchPayload{}, false
+	}
+	taskID := fmt.Sprintf("tag-%s", task.Resource.UUID)
+	if automatic {
+		taskID = fmt.Sprintf("tag-%s-auto", task.Resource.UUID)
+	}
+	switch task.Type {
+	case model.TaskTypePdfParse:
+		return ExtractionDispatchPayload{
+			SourceType: "pdf",
+			Content:    pdfTextFromParsed(payload),
+			TaskID:     taskID,
+		}, true
+	case model.TaskTypeMediaParse:
+		return ExtractionDispatchPayload{
+			SourceType: "audio",
+			Content:    stringFromAny(payload["text"]),
+			TaskID:     taskID,
+		}, true
+	}
+	return ExtractionDispatchPayload{}, false
+}
+
+func pdfTextFromParsed(payload map[string]any) string {
+	if text := stringFromAny(payload["text"]); text != "" {
+		return text
+	}
+	pages, ok := payload["pages"].([]any)
+	if !ok {
+		return ""
+	}
+	parts := make([]string, 0, len(pages))
+	for _, page := range pages {
+		pageMap, ok := page.(map[string]any)
+		if !ok {
+			continue
+		}
+		if text := stringFromAny(pageMap["text"]); text != "" {
+			parts = append(parts, text)
+		}
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 func stringFromAny(value any) string {

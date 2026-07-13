@@ -119,6 +119,21 @@ retrieval:
   max_context_tokens: 4096
   prompt_template: "prompts/rag.txt"
 
+extraction:
+  enabled: true
+  llm:
+    temperature: 0.1
+    max_tokens: 1024
+  tags:
+    min_count: 5
+    max_count: 10
+    normalize_lowercase: false
+    synonym_merge: true
+  batch:
+    max_chars: 4000
+  fallback:
+    enabled: true
+
 llm:
   provider: "${LLM_PROVIDER:-zhipuai}"          # zhipuai / kimi / ollama / mock
   model: "${LLM_MODEL:-glm-4-flash}"
