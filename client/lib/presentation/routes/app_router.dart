@@ -9,6 +9,7 @@ import '../pages/conversation_list_page.dart';
 import '../pages/home_page.dart';
 import '../pages/login_page.dart';
 import '../pages/register_page.dart';
+import '../pages/resource_list_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/task_center_page.dart';
 import '../pages/task_detail_page.dart';
@@ -50,11 +51,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: registerRoute, builder: (_, __) => const RegisterPage()),
       GoRoute(path: homeRoute, builder: (_, __) => const HomePage()),
       GoRoute(path: uploadRoute, builder: (_, __) => const UploadPage()),
-      GoRoute(path: taskCenterRoute, builder: (_, __) => const TaskCenterPage()),
-      GoRoute(path: conversationListRoute, builder: (_, __) => const ConversationListPage()),
+      GoRoute(
+          path: resourcesRoute, builder: (_, __) => const ResourceListPage()),
+      GoRoute(
+          path: taskCenterRoute, builder: (_, __) => const TaskCenterPage()),
+      GoRoute(
+          path: conversationListRoute,
+          builder: (_, __) => const ConversationListPage()),
       GoRoute(
         path: taskDetailRoute,
-        builder: (_, state) => TaskDetailPage(taskId: state.pathParameters['id']!),
+        builder: (_, state) =>
+            TaskDetailPage(taskId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: conversationRoute,

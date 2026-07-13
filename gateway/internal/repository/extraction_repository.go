@@ -13,6 +13,7 @@ type ExtractionRepository interface {
 	UpsertTags(ctx context.Context, resourceID uint64, tags []model.ResourceTag) error
 	UpsertEntities(ctx context.Context, resourceID uint64, entities []model.ResourceEntity) error
 	ListTagsByResourceID(ctx context.Context, resourceID uint64) ([]model.ResourceTag, error)
+	ListTagsByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64][]string, error)
 	ListEntitiesByResourceID(ctx context.Context, resourceID uint64) ([]model.ResourceEntity, error)
 }
 
@@ -68,6 +69,25 @@ func (r *GORMExtractionRepository) ListTagsByResourceID(ctx context.Context, res
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}
 	return tags, nil
+}
+
+// ListTagsByResourceIDs returns tags keyed by resource ID.
+func (r *GORMExtractionRepository) ListTagsByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64][]string, error) {
+	result := make(map[uint64][]string, len(resourceIDs))
+	if len(resourceIDs) == 0 {
+		return result, nil
+	}
+	var tags []model.ResourceTag
+	if err := r.db.WithContext(ctx).
+		Where("resource_id IN ?", resourceIDs).
+		Order("resource_id ASC, id ASC").
+		Find(&tags).Error; err != nil {
+		return nil, fmt.Errorf("failed to list tags: %w", err)
+	}
+	for _, tag := range tags {
+		result[tag.ResourceID] = append(result[tag.ResourceID], tag.Tag)
+	}
+	return result, nil
 }
 
 // ListEntitiesByResourceID returns entities for a resource.

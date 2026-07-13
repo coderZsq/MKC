@@ -30,6 +30,9 @@ func (s *stubSummaryResourceRepo) GetByUUIDAndUserID(ctx context.Context, uuid s
 	}
 	return s.resource, nil
 }
+func (s *stubSummaryResourceRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int, tag string) ([]model.Resource, int64, error) {
+	return nil, 0, nil
+}
 func (s *stubSummaryResourceRepo) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
 	return 0, nil
 }
@@ -49,6 +52,16 @@ func (s *stubSummaryRepo) UpsertMany(ctx context.Context, summaries []model.Summ
 }
 func (s *stubSummaryRepo) ListByResourceID(ctx context.Context, resourceID uint64) ([]model.Summary, error) {
 	return s.list, s.err
+}
+func (s *stubSummaryRepo) ListFullByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]*string, error) {
+	result := make(map[uint64]*string, len(resourceIDs))
+	for _, summary := range s.list {
+		if summary.Type == "full" {
+			content := summary.Content
+			result[summary.ResourceID] = &content
+		}
+	}
+	return result, s.err
 }
 
 type stubSummaryTaskRepo struct {

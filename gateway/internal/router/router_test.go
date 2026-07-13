@@ -119,6 +119,17 @@ func (s *stubExtractionServiceForRouter) GetByResource(ctx context.Context, user
 
 var _ service.ExtractionService = (*stubExtractionServiceForRouter)(nil)
 
+type stubResourceServiceForRouter struct{}
+
+func (s *stubResourceServiceForRouter) List(ctx context.Context, userID uint64, req service.ListResourcesRequest) (*service.ListResourcesResult, error) {
+	return &service.ListResourcesResult{
+		Items: []service.ResourceListItem{{ResourceID: "res-1", Name: "report.pdf", Type: "pdf_parse", Status: "completed", Tags: []string{"机器学习"}}},
+		Total: 1,
+	}, nil
+}
+
+var _ service.ResourceService = (*stubResourceServiceForRouter)(nil)
+
 func TestHealthRoute(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -130,7 +141,7 @@ func TestHealthRoute(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
@@ -150,7 +161,7 @@ func TestDebugMode(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	assert.NotNil(t, r)
 }
 
@@ -167,7 +178,7 @@ func TestAuthRoutes_Registered(t *testing.T) {
 	authH := handler.NewAuthHandler(&stubAuthService{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, nil, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString("{invalid"))
@@ -191,7 +202,7 @@ func TestFileUploadRoute_Registered(t *testing.T) {
 	fileH := handler.NewFileHandler(&stubFileServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, fileH, nil, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, fileH, nil, nil, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -230,7 +241,7 @@ func TestTaskRoutes_Registered(t *testing.T) {
 	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
 
 	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
@@ -262,7 +273,7 @@ func TestInternalRoutes_RegisteredAndProtected(t *testing.T) {
 	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
 	internalTaskH := handler.NewInternalTaskHandler(&stubTaskServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
-	r := New(cfg, logger, nil, authH, nil, taskH, internalTaskH, nil, nil, nil, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, nil, authH, nil, taskH, internalTaskH, nil, nil, nil, nil, nil, nil, nil, jwtMgr)
 
 	// Missing key returns 401.
 	w := httptest.NewRecorder()
@@ -303,7 +314,7 @@ func TestResultRoute_Registered(t *testing.T) {
 	resultH := handler.NewResultHandler(&stubResultServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, resultH, nil, nil, nil, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, resultH, nil, nil, nil, nil, nil, jwtMgr)
 
 	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
 	require.NoError(t, err)
@@ -314,6 +325,41 @@ func TestResultRoute_Registered(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestResourceRoutes_Registered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{
+		App:    config.AppConfig{Env: "test"},
+		Server: config.ServerConfig{Port: 8080, Mode: "test"},
+	}
+	logger := zap.NewNop()
+	healthSvc := service.NewHealthService("0.1.0")
+	healthH := handler.NewHealthHandler(healthSvc)
+	authH := handler.NewAuthHandler(&stubAuthService{})
+	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
+	resourceH := handler.NewResourceHandler(&stubResourceServiceForRouter{})
+	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
+
+	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, nil, resourceH, nil, nil, nil, nil, jwtMgr)
+
+	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/resources?tag=机器学习", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.True(t, resp["success"].(bool))
+	data, ok := resp["data"].([]any)
+	require.True(t, ok)
+	require.Len(t, data, 1)
+	assert.Equal(t, "report.pdf", data[0].(map[string]any)["name"])
 }
 
 func TestSummaryRoutes_Registered(t *testing.T) {
@@ -333,7 +379,7 @@ func TestSummaryRoutes_Registered(t *testing.T) {
 	summaryH := handler.NewSummaryHandler(&stubSummaryServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, taskH, internalTaskH, nil, nil, nil, nil, summaryH, nil, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, taskH, internalTaskH, nil, nil, nil, nil, nil, summaryH, nil, jwtMgr)
 
 	w := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{"full_summary":"摘要","model":"mock"}`)
@@ -375,7 +421,7 @@ func TestExtractionRoutes_Registered(t *testing.T) {
 	extractionH := handler.NewExtractionHandler(&stubExtractionServiceForRouter{})
 	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
 
-	r := New(cfg, logger, healthH, authH, nil, taskH, internalTaskH, nil, nil, nil, nil, nil, extractionH, jwtMgr)
+	r := New(cfg, logger, healthH, authH, nil, taskH, internalTaskH, nil, nil, nil, nil, nil, nil, extractionH, jwtMgr)
 
 	w := httptest.NewRecorder()
 	body := bytes.NewBufferString(`{"tags":[{"tag":"机器学习","source":"llm"}],"entities":[{"entity":"OpenAI","type":"ORG","mention":"OpenAI"}],"source":"llm"}`)
@@ -405,7 +451,7 @@ func TestNoRoute_ReturnsNotFoundEnvelope(t *testing.T) {
 	svc := service.NewHealthService("0.1.0")
 	h := handler.NewHealthHandler(svc)
 
-	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	r := New(cfg, logger, h, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/not-a-real-path", nil)

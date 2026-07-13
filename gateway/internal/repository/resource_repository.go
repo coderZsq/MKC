@@ -14,6 +14,7 @@ type ResourceRepository interface {
 	Create(ctx context.Context, r *model.Resource) error
 	GetByUUID(ctx context.Context, uuid string) (*model.Resource, error)
 	GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+	ListByUserID(ctx context.Context, userID uint64, page, limit int, tag string) ([]model.Resource, int64, error)
 	CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error)
 	UpdateStatus(ctx context.Context, id uint64, status uint8) error
 }
@@ -58,6 +59,31 @@ func (r *GORMResourceRepository) GetByUUIDAndUserID(ctx context.Context, uuid st
 		return nil, fmt.Errorf("failed to get resource by uuid and user: %w", err)
 	}
 	return &resource, nil
+}
+
+// ListByUserID returns paginated resources for a user, optionally filtered by tag.
+func (r *GORMResourceRepository) ListByUserID(ctx context.Context, userID uint64, page, limit int, tag string) ([]model.Resource, int64, error) {
+	var resources []model.Resource
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&model.Resource{}).Where("resources.user_id = ?", userID)
+	if tag != "" {
+		query = query.Joins("JOIN resource_tags ON resource_tags.resource_id = resources.id").
+			Where("resource_tags.tag = ?", tag)
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count resources: %w", err)
+	}
+
+	offset := (page - 1) * limit
+	if err := query.
+		Order("resources.updated_at DESC, resources.id DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&resources).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to list resources: %w", err)
+	}
+	return resources, total, nil
 }
 
 // CountByUUIDsAndUserID counts how many of the given UUIDs belong to the user.
