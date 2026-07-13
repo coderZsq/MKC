@@ -131,7 +131,11 @@ class AgentRunner:
                 answer_parts.append(chunk.delta)
                 yield AgentStreamEvent(
                     event_type="chunk",
-                    data={"message_id": request.message_id, "delta": chunk.delta, "index": chunk_index},
+                    data={
+                        "message_id": request.message_id,
+                        "delta": chunk.delta,
+                        "index": chunk_index,
+                    },
                 )
                 chunk_index += 1
             if chunk.reasoning_delta:

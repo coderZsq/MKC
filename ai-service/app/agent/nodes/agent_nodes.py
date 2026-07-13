@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 _CITATION_RULES = (
-    "引用上下文片段时，请在句末使用 [^n] 标记，n 必须对应上下文片段序号；"
-    "不得引用未提供的片段。"
+    "引用上下文片段时，请在句末使用 [^n] 标记，n 必须对应上下文片段序号；" "不得引用未提供的片段。"
 )
 
 
@@ -117,7 +116,9 @@ class AgentNodes:
             "final_answer": state.get("draft_answer", ""),
         }
 
-    async def stream_generation(self, state: AgentState, node: str) -> AsyncIterator[LLMStreamChunk]:
+    async def stream_generation(
+        self, state: AgentState, node: str
+    ) -> AsyncIterator[LLMStreamChunk]:
         messages = await self._build_llm_messages(state, node)
         request = LLMRequest(
             messages=messages,
@@ -210,11 +211,7 @@ class AgentNodes:
         )
         if not context:
             context = "无相关知识库上下文。"
-        return (
-            f"{instruction}\n\n"
-            f"上下文：\n{context}\n\n"
-            f"用户问题：{state['question']}"
-        )
+        return f"{instruction}\n\n" f"上下文：\n{context}\n\n" f"用户问题：{state['question']}"
 
     def _citations_traceable(
         self, citations: list[dict[str, Any]], chunks: list[RetrievalChunk]

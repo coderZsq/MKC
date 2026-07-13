@@ -46,7 +46,9 @@ def test_history_messages_are_included(node_name: str) -> None:
     roles = [m.role for m in passed_request.messages]
     assert "user" in roles
     assert "assistant" in roles
-    history_user = next(m for m in passed_request.messages if m.role == "user" and m.content == " earlier ")
+    history_user = next(
+        m for m in passed_request.messages if m.role == "user" and m.content == " earlier "
+    )
     assert history_user is not None
 
 
@@ -66,9 +68,7 @@ def test_memory_context_appears_as_system_message() -> None:
 
 def test_citation_rules_not_in_user_prompt() -> None:
     nodes = _nodes()
-    chunk = RetrievalChunk(
-        chunk_id="c-1", resource_id="res-1", text="text", score=0.9, metadata={}
-    )
+    chunk = RetrievalChunk(chunk_id="c-1", resource_id="res-1", text="text", score=0.9, metadata={})
     state = {"question": "q", "retrieved_chunks": [chunk], "memory_context": ""}
     _run(nodes.qa_node(state))
     passed_request = nodes._llm.stream_complete.call_args.args[0]

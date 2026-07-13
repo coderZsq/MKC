@@ -16,9 +16,7 @@ def _make_service(
 ) -> tuple[MemoryService, MagicMock, MagicMock]:
     embedding = MagicMock()
     embedding.embed_query.return_value = [1.0, 0.0]
-    embedding.embed.side_effect = lambda chunks: [
-        MagicMock(vector=[0.0, 1.0]) for _ in chunks
-    ]
+    embedding.embed.side_effect = lambda chunks: [MagicMock(vector=[0.0, 1.0]) for _ in chunks]
     vector_store = MagicMock()
     config = MemoryConfig(
         enabled=True,
