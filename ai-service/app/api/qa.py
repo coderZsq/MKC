@@ -33,7 +33,10 @@ def stream_qa() -> Response:
     citation_service = current_app.extensions.get("citation_service")
     memory_service = current_app.extensions.get("memory_service")
     service = QAService(
-        retrieval_service, llm_client, citation_service=citation_service, memory_service=memory_service
+        retrieval_service,
+        llm_client,
+        citation_service=citation_service,
+        memory_service=memory_service,
     )
 
     async def _generate() -> AsyncIterator[str]:
