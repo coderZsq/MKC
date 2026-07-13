@@ -96,6 +96,41 @@ func TestQAService_Ask_Success(t *testing.T) {
 	assert.Greater(t, messages[1].TokenUsage, 0)
 }
 
+func TestQAService_Ask_PersistsReasoning(t *testing.T) {
+	db := setupConversationTestDB(t)
+	ctx := context.Background()
+
+	user := &model.User{UUID: uuid.NewString(), Email: "qa@example.com", PasswordHash: "hash"}
+	require.NoError(t, db.WithContext(ctx).Create(user).Error)
+
+	conv := newTestConversation(user.ID, "", []string{"res-1"})
+	require.NoError(t, db.WithContext(ctx).Create(conv).Error)
+
+	aiclient := &mockAIClient{
+		events: []SSEEvent{
+			{Event: "reasoning", Data: []byte(`{"delta":"thinking "}`), Raw: "event: reasoning\ndata: {\"delta\":\"thinking \"}\n\n"},
+			{Event: "reasoning", Data: []byte(`{"delta":"step"}`), Raw: "event: reasoning\ndata: {\"delta\":\"step\"}\n\n"},
+			{Event: "chunk", Data: []byte(`{"delta":"answer"}`), Raw: "event: chunk\ndata: {\"delta\":\"answer\"}\n\n"},
+			{Event: "done", Data: []byte(`{"finish_reason":"stop"}`), Raw: "event: done\ndata: {}\n\n"},
+		},
+	}
+
+	convRepo := repository.NewConversationRepository(db)
+	msgRepo := repository.NewMessageRepository(db)
+	svc := NewQAService(aiclient, convRepo, msgRepo, nil)
+
+	events, err := svc.Ask(ctx, user.ID, user.UUID, conv.UUID, "hi")
+	require.NoError(t, err)
+	for range events {
+	}
+
+	var messages []model.Message
+	require.NoError(t, db.WithContext(ctx).Where("conversation_id = ? AND role = ?", conv.ID, "assistant").Find(&messages).Error)
+	require.Len(t, messages, 1)
+	assert.Equal(t, "answer", messages[0].Content)
+	assert.Equal(t, "thinking step", messages[0].Reasoning)
+}
+
 func TestQAService_Ask_GeneratesTitleFromFirstQuestion(t *testing.T) {
 	db := setupConversationTestDB(t)
 	ctx := context.Background()

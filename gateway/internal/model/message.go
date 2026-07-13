@@ -13,6 +13,7 @@ type Message struct {
 	ParentMessageID *uint64         `gorm:"column:parent_message_id;type:bigint unsigned"`
 	Role            string          `gorm:"column:role;type:varchar(20);not null"`
 	Content         string          `gorm:"column:content;type:text;not null"`
+	Reasoning       string          `gorm:"column:reasoning;type:text"`
 	Citations       json.RawMessage `gorm:"column:citations;type:json"`
 	TokenUsage      int             `gorm:"column:token_usage;type:int"`
 	Model           string          `gorm:"column:model;type:varchar(100)"`

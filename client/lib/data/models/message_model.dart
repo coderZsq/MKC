@@ -8,6 +8,7 @@ class MessageModel {
     required this.conversationId,
     required this.role,
     required this.content,
+    required this.reasoning,
     required this.citations,
     required this.createdAt,
   });
@@ -16,6 +17,7 @@ class MessageModel {
   final String conversationId;
   final String role;
   final String content;
+  final String reasoning;
   final List<CitationModel> citations;
   final DateTime createdAt;
 
@@ -25,6 +27,7 @@ class MessageModel {
       conversationId: json['conversation_id'] as String? ?? '',
       role: json['role'] as String? ?? 'user',
       content: json['content'] as String? ?? '',
+      reasoning: json['reasoning'] as String? ?? '',
       citations: _parseCitations(json['citations'] as List<dynamic>?),
       createdAt: _parseTimestamp(json['created_at']),
     );
@@ -36,6 +39,7 @@ class MessageModel {
       conversationId: conversationId,
       role: MessageRole.fromString(role),
       content: content,
+      reasoning: reasoning,
       citations: citations.map((c) => c.toDomain()).toList(),
       createdAt: createdAt,
     );

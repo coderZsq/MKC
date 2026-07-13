@@ -17,14 +17,34 @@ class MarkdownMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        if (message.reasoning.isNotEmpty) ...<Widget>[
+          ExpansionTile(
+            title: Text(
+              '思考过程',
+              style: theme.textTheme.titleSmall,
+            ),
+            childrenPadding: const EdgeInsets.symmetric(horizontal: 16),
+            children: <Widget>[
+              SelectableText(
+                message.reasoning,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         MarkdownBody(
           data: message.content.isEmpty ? ' ' : message.content,
           selectable: true,
-          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-            p: Theme.of(context).textTheme.bodyMedium,
+          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+            p: theme.textTheme.bodyMedium,
           ),
           onTapLink: (_, String? href, __) => _openLink(context, href),
         ),

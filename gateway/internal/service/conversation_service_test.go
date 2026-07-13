@@ -222,6 +222,26 @@ func TestConversationService_ListMessages(t *testing.T) {
 	assert.Contains(t, err.Error(), "FORBIDDEN")
 }
 
+func TestConversationService_ListMessages_IncludesReasoning(t *testing.T) {
+	db := setupConversationServiceTestDB(t)
+	ctx := context.Background()
+	user := newConversationServiceTestUser(t, db)
+
+	convRepo := repository.NewConversationRepository(db)
+	conv := &model.Conversation{UUID: uuid.NewString(), UserID: user.ID, Title: "messages"}
+	require.NoError(t, convRepo.Create(ctx, conv))
+
+	msgRepo := repository.NewMessageRepository(db)
+	require.NoError(t, msgRepo.Create(ctx, &model.Message{UUID: uuid.NewString(), ConversationID: conv.ID, Role: "assistant", Content: "answer", Reasoning: "hidden thought"}))
+
+	svc := NewConversationService(convRepo, msgRepo, nil, repository.NewUnitOfWork(db), "", zap.NewNop())
+	res, err := svc.ListMessages(ctx, user.ID, conv.UUID, 1, 10)
+	require.NoError(t, err)
+	require.Len(t, res.Items, 1)
+	assert.Equal(t, "answer", res.Items[0].Content)
+	assert.Equal(t, "hidden thought", res.Items[0].Reasoning)
+}
+
 func TestConversationService_CreateMessage(t *testing.T) {
 	db := setupConversationServiceTestDB(t)
 	ctx := context.Background()

@@ -277,7 +277,8 @@ class TestOllamaProvider:
             provider = OllamaProvider(cfg)
             response = provider.complete(_make_request())
 
-        assert response.content == "ollama reasoning"
+        assert response.content == ""
+        assert response.reasoning == "ollama reasoning"
 
     def test_stream_complete_yields_reasoning_chunks(self) -> None:
         cfg = LLMConfig(provider="ollama")
@@ -292,7 +293,8 @@ class TestOllamaProvider:
             provider = OllamaProvider(cfg)
             chunks = asyncio.run(_collect_stream(provider.stream_complete(_make_request())))
 
-        assert [chunk.delta for chunk in chunks] == ["think", " answer"]
+        assert [chunk.delta for chunk in chunks] == ["", " answer"]
+        assert [chunk.reasoning_delta for chunk in chunks] == ["think", None]
         assert chunks[-1].finish_reason == "stop"
 
 

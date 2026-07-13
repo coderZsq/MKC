@@ -5,6 +5,7 @@ class ChatEvent {
     required this.messageId,
     this.conversationId,
     this.delta,
+    this.reasoningDelta,
     this.citation,
     this.finishReason,
     this.errorCode,
@@ -15,6 +16,7 @@ class ChatEvent {
   final String messageId;
   final String? conversationId;
   final String? delta;
+  final String? reasoningDelta;
   final CitationData? citation;
   final String? finishReason;
   final String? errorCode;

@@ -73,6 +73,7 @@ class Message {
     required this.conversationId,
     required this.role,
     this.content = '',
+    this.reasoning = '',
     this.citations = const <Citation>[],
     required this.createdAt,
     this.isStreaming = false,
@@ -82,6 +83,7 @@ class Message {
   final String conversationId;
   final MessageRole role;
   final String content;
+  final String reasoning;
   final List<Citation> citations;
   final DateTime createdAt;
   final bool isStreaming;
@@ -105,6 +107,7 @@ class Message {
     String? id,
     required String conversationId,
     String content = '',
+    String reasoning = '',
     List<Citation> citations = const <Citation>[],
     DateTime? createdAt,
     bool isStreaming = false,
@@ -114,6 +117,7 @@ class Message {
       conversationId: conversationId,
       role: MessageRole.assistant,
       content: content,
+      reasoning: reasoning,
       citations: citations,
       createdAt: createdAt ?? DateTime.now(),
       isStreaming: isStreaming,
@@ -125,6 +129,7 @@ class Message {
     String? conversationId,
     MessageRole? role,
     String? content,
+    String? reasoning,
     List<Citation>? citations,
     DateTime? createdAt,
     bool? isStreaming,
@@ -134,6 +139,7 @@ class Message {
       conversationId: conversationId ?? this.conversationId,
       role: role ?? this.role,
       content: content ?? this.content,
+      reasoning: reasoning ?? this.reasoning,
       citations: citations ?? this.citations,
       createdAt: createdAt ?? this.createdAt,
       isStreaming: isStreaming ?? this.isStreaming,

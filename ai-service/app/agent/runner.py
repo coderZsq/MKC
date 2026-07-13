@@ -12,6 +12,7 @@ from app.agent.state import AgentState
 from app.core.exceptions import APIException, RetrievalForbiddenError
 from app.models.agent import AgentRunRequest, AgentStreamEvent
 from app.services.citation_service import CitationService, citation_to_event_data
+from app.services.llm.models import LLMStreamChunk
 
 logger = logging.getLogger(__name__)
 
@@ -115,14 +116,31 @@ class AgentRunner:
 
         yield self._node_start(branch, request)
         answer_parts: list[str] = []
-        index = 0
-        async for delta in self._nodes.stream_generation(state, branch):
-            answer_parts.append(delta)
-            yield AgentStreamEvent(
-                event_type="chunk",
-                data={"message_id": request.message_id, "delta": delta, "index": index},
-            )
-            index += 1
+        reasoning_parts: list[str] = []
+        chunk_index = 0
+        reasoning_index = 0
+        async for chunk in self._nodes.stream_generation(state, branch):
+            if chunk.delta:
+                answer_parts.append(chunk.delta)
+                yield AgentStreamEvent(
+                    event_type="chunk",
+                    data={"message_id": request.message_id, "delta": chunk.delta, "index": chunk_index},
+                )
+                chunk_index += 1
+            if chunk.reasoning_delta:
+                reasoning_parts.append(chunk.reasoning_delta)
+                yield AgentStreamEvent(
+                    event_type="reasoning",
+                    data={
+                        "message_id": request.message_id,
+                        "delta": chunk.reasoning_delta,
+                        "index": reasoning_index,
+                    },
+                )
+                reasoning_index += 1
+            if chunk.finish_reason == "error":
+                yield self._error(request, "AGENT_LLM_ERROR", "生成失败")
+                return
         state["draft_answer"] = "".join(answer_parts) or self._config.fallback_message
         yield self._node_end(branch, request, {"draft_length": len(state["draft_answer"])})
 

@@ -81,6 +81,29 @@ void main() {
       expect(notifier.state.messages[1].isStreaming, isFalse);
     });
 
+    test('appends reasoning to the streaming assistant message', () async {
+      repository.events = const [
+        ChatEvent(
+          type: 'reasoning',
+          messageId: 'a1',
+          reasoningDelta: 'thinking ',
+        ),
+        ChatEvent(
+          type: 'reasoning',
+          messageId: 'a1',
+          reasoningDelta: 'step',
+        ),
+        ChatEvent(type: 'chunk', messageId: 'a1', delta: 'answer'),
+      ];
+
+      await notifier.send('Question');
+      await Future.delayed(Duration.zero);
+
+      expect(notifier.state.messages, hasLength(2));
+      expect(notifier.state.messages[1].reasoning, 'thinking step');
+      expect(notifier.state.messages[1].content, 'answer');
+    });
+
     test('appends citation to assistant message', () async {
       repository.events = const [
         ChatEvent(
