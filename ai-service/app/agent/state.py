@@ -31,6 +31,7 @@ class AgentState(TypedDict, total=False):
     temperature: float | None
     max_tokens: int | None
     enable_web_search: bool
+    memory_context: str
 
 
 REQUIRED_AGENT_STATE_FIELDS = {

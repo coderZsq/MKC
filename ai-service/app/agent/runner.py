@@ -12,7 +12,7 @@ from app.agent.state import AgentState
 from app.core.exceptions import APIException, RetrievalForbiddenError
 from app.models.agent import AgentRunRequest, AgentStreamEvent
 from app.services.citation_service import CitationService, citation_to_event_data
-from app.services.llm.models import LLMStreamChunk
+from app.services.memory import MemoryService
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +57,14 @@ class AgentRunner:
         config: AgentConfig,
         checkpointer: AgentCheckpointer | None = None,
         citation_service: CitationService | None = None,
+        memory_service: MemoryService | None = None,
     ) -> None:
         self._graph = graph
         self._nodes = graph.nodes
         self._config = config
         self._checkpointer = checkpointer
         self._citation = citation_service
+        self._memory = memory_service
 
     async def run_stream(self, request: AgentRunRequest) -> AsyncIterator[AgentStreamEvent]:
         state = self._initial_state(request)
@@ -88,6 +90,11 @@ class AgentRunner:
     async def _run_nodes(
         self, state: AgentState, request: AgentRunRequest
     ) -> AsyncIterator[AgentStreamEvent]:
+        if self._memory is not None:
+            state["memory_context"] = await self._memory.load_context(
+                request.user_id, request.conversation_id, request.question
+            )
+
         yield self._node_start("intent", request)
         await self._run_node("intent", state, self._nodes.intent_node)
         yield self._node_end("intent", request, {"intent": state.get("intent")})
@@ -124,7 +131,11 @@ class AgentRunner:
                 answer_parts.append(chunk.delta)
                 yield AgentStreamEvent(
                     event_type="chunk",
-                    data={"message_id": request.message_id, "delta": chunk.delta, "index": chunk_index},
+                    data={
+                        "message_id": request.message_id,
+                        "delta": chunk.delta,
+                        "index": chunk_index,
+                    },
                 )
                 chunk_index += 1
             if chunk.reasoning_delta:
@@ -177,6 +188,15 @@ class AgentRunner:
 
         if self._checkpointer is not None:
             self._checkpointer.save(request.conversation_id, dict(state))
+
+        if self._memory is not None:
+            await self._memory.save_turn(
+                request.user_id,
+                request.conversation_id,
+                request.question,
+                state.get("draft_answer", ""),
+                reasoning="",
+            )
 
         yield AgentStreamEvent(
             event_type="done",

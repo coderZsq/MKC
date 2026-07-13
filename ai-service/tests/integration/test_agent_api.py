@@ -6,12 +6,16 @@ from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import MagicMock
 
+import chromadb
 import pytest
 from flask.testing import FlaskClient
 
 from app.core.exceptions import RetrievalForbiddenError
 from app.models.retrieval import RetrievalChunk, RetrievalResult
 from app.services.llm.models import LLMStreamChunk
+from app.services.memory import MemoryConfig, build_memory_service
+from app.vector_store import ChromaStore
+from app.vector_store.config import build_vector_store_config
 
 INTERNAL_API_KEY = os.environ["INTERNAL_API_KEY"]
 
@@ -89,6 +93,70 @@ def test_agent_run_returns_sse_stream(client: FlaskClient) -> None:
     assert citation["data"]["snippet"] == "topic"
     assert event_types[-1] == "done"
     assert events[-1]["data"]["citation_count"] == 1
+
+
+@pytest.mark.integration
+def test_agent_run_recalls_long_term_memory(client: FlaskClient) -> None:
+    """A second request with no history still sees a fact saved in a previous turn."""
+    captured_requests: list[object] = []
+    llm = client.application.extensions["llm"]
+
+    async def _capture_stream(request: object) -> AsyncIterator[LLMStreamChunk]:
+        captured_requests.append(request)
+        yield LLMStreamChunk(delta="ok")
+        yield LLMStreamChunk(delta="", finish_reason="stop")
+
+    llm.stream_complete = MagicMock(side_effect=_capture_stream)
+
+    # Use an isolated in-memory collection for long-term memory so this test
+    # does not pollute the shared vector store collection used by other tests.
+    embedding = client.application.extensions["embedding"]
+    store_config = build_vector_store_config()
+    store_config.provider = "chroma"
+    store_config.collection_name = "mkc_memory_test"
+    store_config.chroma_path = ":memory:"
+    memory_store = ChromaStore(store_config, client=chromadb.Client())
+    client.application.extensions["memory_service"] = build_memory_service(
+        embedding,
+        memory_store,
+        config=MemoryConfig(
+            enabled=True,
+            top_k=5,
+            score_threshold=0.0,
+            max_context_tokens=2048,
+        ),
+    )
+
+    response = _post(
+        client,
+        {
+            "question": "我叫 Alice",
+            "conversation_id": "conv-memory",
+            "message_id": "msg-1",
+            "user_id": "user-memory",
+            "resource_ids": [],
+        },
+    )
+    assert response.status_code == 200
+    _ = response.get_data()
+
+    response = _post(
+        client,
+        {
+            "question": "我叫什么",
+            "conversation_id": "conv-memory",
+            "message_id": "msg-2",
+            "user_id": "user-memory",
+            "resource_ids": [],
+        },
+    )
+    assert response.status_code == 200
+    _ = response.get_data()
+
+    # The second LLM request should include the long-term memory context.
+    second_request = captured_requests[-1]
+    assert second_request.messages[0].role == "system"
+    assert "Alice" in second_request.messages[0].content
 
 
 @pytest.mark.integration

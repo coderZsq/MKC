@@ -16,6 +16,11 @@ from app.services.retrieval.retrieval_service import RetrievalService
 logger = logging.getLogger(__name__)
 
 
+_CITATION_RULES = (
+    "引用上下文片段时，请在句末使用 [^n] 标记，n 必须对应上下文片段序号；" "不得引用未提供的片段。"
+)
+
+
 class AgentNodes:
     """Pure-ish Agent workflow nodes with injected retrieval and LLM dependencies."""
 
@@ -79,6 +84,7 @@ class AgentNodes:
                 chunks=chunks,
                 temperature=state.get("temperature") or 0.3,
                 max_tokens=state.get("max_tokens") or 1024,
+                memory_context=state.get("memory_context", ""),
             )
         except Exception:
             logger.exception("summarize failed")
@@ -86,26 +92,15 @@ class AgentNodes:
         return {**retrieval_update, "draft_answer": answer}
 
     async def qa_node(self, state: AgentState) -> dict[str, Any]:
-        answer = await self._collect_llm_answer(
-            self._build_context_prompt(state, "请基于资料回答问题。")
-        )
+        answer = await self._collect_llm_answer(state, "qa")
         return {"draft_answer": answer}
 
     async def compare_node(self, state: AgentState) -> dict[str, Any]:
-        prompt = self._build_context_prompt(state, "请横向对比多个资源的核心结论。")
-        answer = await self._collect_llm_answer(prompt)
+        answer = await self._collect_llm_answer(state, "compare")
         return {"draft_answer": answer}
 
     async def generate_node(self, state: AgentState) -> dict[str, Any]:
-        prompt = state["question"]
-        if state.get("enable_web_search") and getattr(self._config, "enable_web_search", False):
-            try:
-                results = await self._web_search.invoke(state["question"])
-                if results:
-                    prompt = f"{prompt}\n\n可选网络资料：{results}"
-            except Exception:
-                logger.warning("web search skipped after failure", exc_info=True)
-        answer = await self._collect_llm_answer(prompt)
+        answer = await self._collect_llm_answer(state, "generate")
         return {"draft_answer": answer}
 
     async def validate_node(self, state: AgentState) -> dict[str, Any]:
@@ -121,18 +116,12 @@ class AgentNodes:
             "final_answer": state.get("draft_answer", ""),
         }
 
-    async def stream_generation(self, state: AgentState, node: str) -> AsyncIterator[LLMStreamChunk]:
-        prompt = state["question"]
-        if node == "qa":
-            prompt = self._build_context_prompt(state, "请基于资料回答问题。")
-        elif node == "compare":
-            prompt = self._build_context_prompt(state, "请横向对比多个资源的核心结论。")
-        elif node == "generate":
-            prompt = state["question"]
-        elif node == "summarize":
-            prompt = self._build_context_prompt(state, "请基于资料总结核心内容。")
+    async def stream_generation(
+        self, state: AgentState, node: str
+    ) -> AsyncIterator[LLMStreamChunk]:
+        messages = await self._build_llm_messages(state, node)
         request = LLMRequest(
-            messages=[Message(role="user", content=prompt)],
+            messages=messages,
             temperature=state.get("temperature") or 0.7,
             max_tokens=state.get("max_tokens") or 2048,
         )
@@ -153,12 +142,12 @@ class AgentNodes:
         )
         return response.content.strip().lower()
 
-    async def _collect_llm_answer(self, prompt: str) -> str:
+    async def _collect_llm_answer(self, state: AgentState, node: str) -> str:
         parts: list[str] = []
         try:
             async for chunk in self._llm.stream_complete(
                 LLMRequest(
-                    messages=[Message(role="user", content=prompt)],
+                    messages=await self._build_llm_messages(state, node),
                     temperature=0.7,
                     max_tokens=2048,
                 )
@@ -176,6 +165,44 @@ class AgentNodes:
             return getattr(self._config, "fallback_message", "抱歉，暂无法生成答案，请稍后重试")
         return "".join(parts)
 
+    async def _build_llm_messages(self, state: AgentState, node: str) -> list[Message]:
+        system_parts: list[str] = []
+        memory_context = state.get("memory_context", "")
+        if memory_context:
+            system_parts.append(memory_context)
+        if node in {"qa", "compare", "summarize"}:
+            system_parts.append(_CITATION_RULES)
+
+        messages: list[Message] = []
+        if system_parts:
+            messages.append(Message(role="system", content="\n\n".join(system_parts)))
+
+        for msg in state.get("messages", []):
+            messages.append(Message(role=msg.role, content=msg.content))
+
+        user_content = await self._build_user_content(state, node)
+        messages.append(Message(role="user", content=user_content))
+        return messages
+
+    async def _build_user_content(self, state: AgentState, node: str) -> str:
+        if node == "qa":
+            return self._build_context_prompt(state, "请基于资料回答问题。")
+        if node == "compare":
+            return self._build_context_prompt(state, "请横向对比多个资源的核心结论。")
+        if node == "summarize":
+            return self._build_context_prompt(state, "请基于资料总结核心内容。")
+
+        # generate
+        prompt = state["question"]
+        if state.get("enable_web_search") and getattr(self._config, "enable_web_search", False):
+            try:
+                results = await self._web_search.invoke(state["question"])
+                if results:
+                    prompt = f"{prompt}\n\n可选网络资料：{results}"
+            except Exception:
+                logger.warning("web search skipped after failure", exc_info=True)
+        return prompt
+
     def _build_context_prompt(self, state: AgentState, instruction: str) -> str:
         chunks = state.get("retrieved_chunks", [])
         context = "\n\n".join(
@@ -184,14 +211,7 @@ class AgentNodes:
         )
         if not context:
             context = "无相关知识库上下文。"
-        citation_rules = (
-            "引用上下文片段时，请在句末使用 [^n] 标记，n 必须对应上下文片段序号；"
-            "不得引用未提供的片段。"
-        )
-        return (
-            f"{instruction}\n{citation_rules}\n\n"
-            f"上下文：\n{context}\n\n用户问题：{state['question']}"
-        )
+        return f"{instruction}\n\n" f"上下文：\n{context}\n\n" f"用户问题：{state['question']}"
 
     def _citations_traceable(
         self, citations: list[dict[str, Any]], chunks: list[RetrievalChunk]

@@ -14,6 +14,7 @@ from app.models.retrieval import RetrievalChunk, RetrievalRequest
 from app.services.citation_service import CitationService, citation_to_event_data
 from app.services.llm.llm_client import LLMClient
 from app.services.llm.models import LLMRequest, Message
+from app.services.memory import MemoryService
 from app.services.retrieval.retrieval_service import RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -27,10 +28,12 @@ class QAService:
         retrieval_service: RetrievalService,
         llm_client: LLMClient,
         citation_service: CitationService | None = None,
+        memory_service: MemoryService | None = None,
     ) -> None:
         self._retrieval = retrieval_service
         self._llm = llm_client
         self._citation = citation_service
+        self._memory = memory_service
 
     async def stream_answer(self, request: QARequest) -> AsyncIterator[QAStreamEvent]:
         """Yield SSE events for a single question.
@@ -40,6 +43,12 @@ class QAService:
         LLM), ``citation`` events for retrieved sources, and finally ``done`` or
         ``error``.
         """
+        memory_context = ""
+        if self._memory is not None:
+            memory_context = await self._memory.load_context(
+                request.user_id, request.conversation_id, request.question
+            )
+
         retrieval_result: Any | None = None
         prompt = request.question
         if request.resource_ids:
@@ -64,7 +73,7 @@ class QAService:
                 yield self._error_event(request, "RETRIEVAL_UNAVAILABLE", "检索不可用")
                 return
 
-        messages = self._build_messages(request, prompt)
+        messages = self._build_messages(request, prompt, memory_context=memory_context)
         llm_request = LLMRequest(
             messages=[Message(role=m["role"], content=m["content"]) for m in messages],
             temperature=request.temperature or 0.7,
@@ -98,6 +107,14 @@ class QAService:
             for citation in citations:
                 yield self._citation_event(request, citation)
             yield self._done_event(request, len(citations))
+            if self._memory is not None:
+                await self._memory.save_turn(
+                    request.user_id,
+                    request.conversation_id,
+                    request.question,
+                    "".join(answer_parts),
+                    reasoning="",
+                )
         except (LLMUnavailableError, LLMTimeoutError) as exc:
             logger.warning("LLM stream failed: %s", exc.code)
             yield self._error_event(request, exc.code, exc.message)
@@ -105,9 +122,13 @@ class QAService:
             logger.exception("LLM streaming failed for question %s", request.question)
             yield self._error_event(request, "LLM_STREAM_ERROR", "流式生成失败")
 
-    def _build_messages(self, request: QARequest, prompt: str) -> list[dict[str, str]]:
-        """Assemble the message list from history and the retrieved prompt."""
+    def _build_messages(
+        self, request: QARequest, prompt: str, *, memory_context: str = ""
+    ) -> list[dict[str, str]]:
+        """Assemble the message list from memory context, history, and the retrieved prompt."""
         messages: list[dict[str, str]] = []
+        if memory_context:
+            messages.append({"role": "system", "content": memory_context})
         for msg in request.history:
             messages.append({"role": msg.role, "content": msg.content})
         messages.append({"role": "user", "content": prompt})

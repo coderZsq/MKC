@@ -131,7 +131,9 @@ def parse_openai_compatible_stream_chunk(chunk: object) -> LLMStreamChunk:
     if not isinstance(choice, dict):
         return LLMStreamChunk(delta="")
     delta = choice.get("delta", {}) or {}
-    content, reasoning = _message_content(delta) if isinstance(delta, dict) else (str(delta or ""), None)
+    content, reasoning = (
+        _message_content(delta) if isinstance(delta, dict) else (str(delta or ""), None)
+    )
     finish_reason = choice.get("finish_reason")
     return LLMStreamChunk(
         delta=content,
