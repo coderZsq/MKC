@@ -14,7 +14,7 @@ import (
 
 func TestAIClient_StreamQA_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/ai/v1/qa/stream", r.URL.Path)
+		assert.Equal(t, "/ai/v1/agent/run", r.URL.Path)
 		assert.Equal(t, "secret", r.Header.Get("X-Internal-Key"))
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
