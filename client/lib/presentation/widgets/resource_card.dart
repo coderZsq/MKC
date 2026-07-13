@@ -86,8 +86,8 @@ class _ResourceStatusChip extends StatelessWidget {
     return Chip(
       label: Text(label),
       visualDensity: VisualDensity.compact,
-      side: BorderSide(color: color.withValues(alpha: 0.4)),
-      backgroundColor: color.withValues(alpha: 0.1),
+      side: BorderSide(color: color.withAlpha(102)),
+      backgroundColor: color.withAlpha(26),
       labelStyle: theme.textTheme.labelSmall?.copyWith(color: color),
     );
   }

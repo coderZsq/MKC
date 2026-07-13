@@ -129,7 +129,7 @@ class _ActiveTagFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+      color: theme.colorScheme.secondaryContainer.withAlpha(128),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
