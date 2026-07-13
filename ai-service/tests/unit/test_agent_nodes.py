@@ -126,7 +126,8 @@ def test_qa_generate_and_validate_nodes() -> None:
     assert update["draft_answer"] == "hello world"
     assert llm.stream_complete.called
     passed_request = llm.stream_complete.call_args.args[0]
-    assert "[^1] resource=res-1" in passed_request.messages[0].content
+    assert passed_request.messages[-1].role == "user"
+    assert "[^1] resource=res-1" in passed_request.messages[-1].content
 
     state.update(update)
     validate = _run(nodes.validate_node(state))
@@ -162,4 +163,4 @@ def test_stream_generation_for_branches(node_name: str) -> None:
             )
         ]
 
-    assert asyncio.run(collect()) == ["hello", " world"]
+    assert asyncio.run(collect()) == [LLMStreamChunk(delta="hello"), LLMStreamChunk(delta=" world")]
