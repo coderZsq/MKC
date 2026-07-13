@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zhushuangquan/mkc/gateway/internal/model"
 	"github.com/zhushuangquan/mkc/gateway/internal/repository"
-	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 	apperrors "github.com/zhushuangquan/mkc/gateway/pkg/errors"
+	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 )
 
 type stubUserRepository struct {
@@ -43,9 +43,9 @@ func (s *stubUserRepository) GetByUUID(ctx context.Context, uuid string) (*model
 }
 
 type stubTokenStore struct {
-	saveFunc           func(ctx context.Context, userUUID, tokenUUID string, session []byte, ttl time.Duration) error
-	getFunc            func(ctx context.Context, userUUID, tokenUUID string) ([]byte, error)
-	deleteFunc         func(ctx context.Context, userUUID, tokenUUID string) error
+	saveFunc            func(ctx context.Context, userUUID, tokenUUID string, session []byte, ttl time.Duration) error
+	getFunc             func(ctx context.Context, userUUID, tokenUUID string) ([]byte, error)
+	deleteFunc          func(ctx context.Context, userUUID, tokenUUID string) error
 	findByTokenUUIDFunc func(ctx context.Context, tokenUUID string) (string, []byte, error)
 }
 

@@ -108,9 +108,9 @@ func NewAuthService(userRepo repository.UserRepository, tokenStore repository.To
 }
 
 var (
-	passwordMinLen   = 8
-	passwordRegexp   = regexp.MustCompile(`[A-Za-z].*[0-9]|[0-9].*[A-Za-z]`)
-	emailRegexp      = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	passwordMinLen = 8
+	passwordRegexp = regexp.MustCompile(`[A-Za-z].*[0-9]|[0-9].*[A-Za-z]`)
+	emailRegexp    = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )
 
 func validateRegisterRequest(req RegisterRequest) error {

@@ -49,6 +49,13 @@ start_ai_service() {
     exit 1
   fi
 
+  # Source .env early so the startup message reflects actual provider settings.
+  if [[ -f "$REPO_ROOT/ai-service/.env" ]]; then
+    set -a
+    source "$REPO_ROOT/ai-service/.env"
+    set +a
+  fi
+
   echo "Starting AI Service on :$AI_PORT with LLM_PROVIDER=${LLM_PROVIDER:-mock}, EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-mock}..."
   (
     cd "$REPO_ROOT/ai-service"

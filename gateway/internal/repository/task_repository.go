@@ -17,6 +17,7 @@ type TaskRepository interface {
 	GetByUUID(ctx context.Context, uuid string) (*model.Task, error)
 	GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
 	GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error)
+	ListLatestByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]model.Task, error)
 	ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error)
 	UpdateStatus(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string) error
 	UpdateStatusWithAttempt(ctx context.Context, id uint64, status string, progress uint8, result json.RawMessage, errMsg string, attemptCount uint8) error
@@ -38,6 +39,33 @@ func (r *GORMTaskRepository) GetLatestCompletedByResourceID(ctx context.Context,
 		return nil, fmt.Errorf("failed to get latest completed task by resource: %w", err)
 	}
 	return &task, nil
+}
+
+// ListLatestByResourceIDs returns the most recent task for each of the given resource IDs.
+func (r *GORMTaskRepository) ListLatestByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]model.Task, error) {
+	if len(resourceIDs) == 0 {
+		return map[uint64]model.Task{}, nil
+	}
+
+	latestIDs := r.db.WithContext(ctx).
+		Select("resource_id, MAX(id) AS max_id").
+		Model(&model.Task{}).
+		Where("resource_id IN ?", resourceIDs).
+		Group("resource_id")
+
+	var tasks []model.Task
+	if err := r.db.WithContext(ctx).
+		Model(&model.Task{}).
+		Joins("JOIN (?) latest ON tasks.resource_id = latest.resource_id AND tasks.id = latest.max_id", latestIDs).
+		Find(&tasks).Error; err != nil {
+		return nil, fmt.Errorf("failed to list latest tasks by resources: %w", err)
+	}
+
+	result := make(map[uint64]model.Task, len(tasks))
+	for _, task := range tasks {
+		result[task.ResourceID] = task
+	}
+	return result, nil
 }
 
 // GORMTaskRepository is a GORM-backed TaskRepository.

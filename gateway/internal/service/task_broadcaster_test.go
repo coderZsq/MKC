@@ -115,7 +115,7 @@ func TestTaskBroadcaster_NonBlockingPublishDropsForSlowConsumer(t *testing.T) {
 	}
 
 	readCount := 0
-	drain:
+drain:
 	for {
 		select {
 		case <-ch:

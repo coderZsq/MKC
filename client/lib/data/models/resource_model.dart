@@ -8,12 +8,14 @@ class ResourceModel {
     required this.type,
     required this.status,
     required this.updatedAt,
+    this.taskId,
     this.summary,
     this.summaryTruncated = false,
     this.tags = const <String>[],
   });
 
   final String resourceId;
+  final String? taskId;
   final String name;
   final String type;
   final String status;
@@ -26,6 +28,7 @@ class ResourceModel {
     final rawTags = json['tags'];
     return ResourceModel(
       resourceId: json['resource_id'] as String? ?? json['id'] as String? ?? '',
+      taskId: json['task_id'] as String?,
       name: json['name'] as String? ?? '',
       type: json['type'] as String? ?? '',
       status: json['status'] as String? ?? '',
@@ -46,6 +49,7 @@ class ResourceModel {
   Resource toDomain() {
     return Resource(
       id: resourceId,
+      taskId: taskId,
       name: name,
       type: type,
       status: status,

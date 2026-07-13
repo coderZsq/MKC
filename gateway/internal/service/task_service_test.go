@@ -101,6 +101,10 @@ func (r *stubTaskRepositoryForTask) GetLatestCompletedByResourceID(ctx context.C
 	return nil, repository.ErrNotFound
 }
 
+func (r *stubTaskRepositoryForTask) ListLatestByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]model.Task, error) {
+	return map[uint64]model.Task{}, nil
+}
+
 func (r *stubTaskRepositoryForTask) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Task, int64, error) {
 	if r.listByUserIDFunc != nil {
 		return r.listByUserIDFunc(ctx, userID, page, limit)

@@ -14,7 +14,7 @@ class ResourceCard extends StatelessWidget {
   });
 
   final Resource resource;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final ValueChanged<String> onTagTap;
 
   @override
