@@ -3,6 +3,7 @@ from flask import Flask, Response
 from app.api.asr import asr_bp
 from app.api.chunking import chunking_bp
 from app.api.embedding import embedding_bp
+from app.api.extraction import extraction_bp
 from app.api.health import health_bp
 from app.api.internal import internal_bp
 from app.api.llm import llm_bp
@@ -21,6 +22,14 @@ from app.services.embedding.factory import (
     validate_embedding_config,
 )
 from app.services.embedding.service import EmbeddingService
+from app.services.extraction import (
+    EntityResolver,
+    ExtractionRepository,
+    ExtractionService,
+    LLMExtractionProvider,
+    RuleExtractionProvider,
+    TagNormalizer,
+)
 from app.services.llm import LLMClient, build_llm_client, validate_llm_config
 from app.services.retrieval import RetrievalService, build_retrieval_service
 from app.services.summary import (
@@ -101,6 +110,16 @@ def init_extensions(
         config=summary_cfg,
     )
 
+    extraction_cfg = (settings.ai_config or {}).get("extraction", {})
+    app.extensions["extraction_service"] = ExtractionService(
+        llm_provider=LLMExtractionProvider(app.extensions["llm"], extraction_cfg),
+        rule_provider=RuleExtractionProvider(),
+        tag_normalizer=TagNormalizer(extraction_cfg.get("tags", {})),
+        entity_resolver=EntityResolver(),
+        repository=ExtractionRepository(),
+        config=extraction_cfg,
+    )
+
     celery_app.conf.update(
         broker_url=settings.celery_broker_url,
         result_backend=settings.celery_result_backend,
@@ -119,6 +138,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(vectors_bp, url_prefix="/ai/v1")
     app.register_blueprint(retrieval_bp, url_prefix="/ai/v1")
     app.register_blueprint(summary_bp, url_prefix="/ai/v1")
+    app.register_blueprint(extraction_bp, url_prefix="/ai/v1")
     app.register_blueprint(llm_bp, url_prefix="/ai/v1")
     app.register_blueprint(qa_bp, url_prefix="/ai/v1")
 

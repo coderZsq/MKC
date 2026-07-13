@@ -135,8 +135,9 @@ func (r *stubTaskRepositoryForTask) ResetForRetry(ctx context.Context, id uint64
 var _ repository.TaskRepository = (*stubTaskRepositoryForTask)(nil)
 
 type fakeTaskDispatcher struct {
-	calls        []dispatchCall
-	summaryCalls []summaryDispatchCall
+	calls           []dispatchCall
+	summaryCalls    []summaryDispatchCall
+	extractionCalls []extractionDispatchCall
 }
 
 type dispatchCall struct {
@@ -149,6 +150,11 @@ type summaryDispatchCall struct {
 	Payload  SummaryDispatchPayload
 }
 
+type extractionDispatchCall struct {
+	Resource *model.Resource
+	Payload  ExtractionDispatchPayload
+}
+
 func (d *fakeTaskDispatcher) Dispatch(ctx context.Context, task *model.Task, resource *model.Resource) error {
 	d.calls = append(d.calls, dispatchCall{Task: task, Resource: resource})
 	return nil
@@ -156,6 +162,11 @@ func (d *fakeTaskDispatcher) Dispatch(ctx context.Context, task *model.Task, res
 
 func (d *fakeTaskDispatcher) DispatchSummary(ctx context.Context, resource *model.Resource, payload SummaryDispatchPayload) error {
 	d.summaryCalls = append(d.summaryCalls, summaryDispatchCall{Resource: resource, Payload: payload})
+	return nil
+}
+
+func (d *fakeTaskDispatcher) DispatchExtraction(ctx context.Context, resource *model.Resource, payload ExtractionDispatchPayload) error {
+	d.extractionCalls = append(d.extractionCalls, extractionDispatchCall{Resource: resource, Payload: payload})
 	return nil
 }
 
@@ -436,6 +447,11 @@ func TestTaskService_CompletedAutoDispatchesSummary(t *testing.T) {
 	assert.Equal(t, "res-1", dispatcher.summaryCalls[0].Resource.UUID)
 	assert.Equal(t, "pdf", dispatcher.summaryCalls[0].Payload.SourceType)
 	assert.Equal(t, "sum-res-1-auto", dispatcher.summaryCalls[0].Payload.TaskID)
+	require.Len(t, dispatcher.extractionCalls, 1)
+	assert.Equal(t, "res-1", dispatcher.extractionCalls[0].Resource.UUID)
+	assert.Equal(t, "pdf", dispatcher.extractionCalls[0].Payload.SourceType)
+	assert.Equal(t, "正文", dispatcher.extractionCalls[0].Payload.Content)
+	assert.Equal(t, "tag-res-1-auto", dispatcher.extractionCalls[0].Payload.TaskID)
 }
 
 func TestTaskService_CompletedSkipsSummaryWhenDisabled(t *testing.T) {
@@ -457,6 +473,8 @@ func TestTaskService_CompletedSkipsSummaryWhenDisabled(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Empty(t, dispatcher.summaryCalls)
+	require.Len(t, dispatcher.extractionCalls, 1)
+	assert.Equal(t, "tag-res-1-auto", dispatcher.extractionCalls[0].Payload.TaskID)
 }
 
 func TestTaskService_MarkFailed_Success(t *testing.T) {

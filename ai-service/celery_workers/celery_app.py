@@ -11,6 +11,7 @@ celery_app = Celery(
         "celery_workers.tasks.asr_task",
         "celery_workers.tasks.pdf_parse_task",
         "celery_workers.tasks.summarize_task",
+        "celery_workers.tasks.extract_tags_task",
     ],
 )
 
@@ -33,5 +34,6 @@ celery_app.conf.update(
         "celery_workers.tasks.asr_task.*": {"queue": "transcribe"},
         "celery_workers.tasks.pdf_parse_task.*": {"queue": "parse_pdf"},
         "celery_workers.tasks.summarize_task.*": {"queue": "rag"},
+        "celery_workers.tasks.extract_tags_task.*": {"queue": "rag"},
     },
 )
