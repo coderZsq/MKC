@@ -18,32 +18,48 @@ class Citation {
   const Citation({
     required this.resourceId,
     required this.resourceName,
+    this.index,
+    this.chunkId,
     this.page,
     this.timestamp,
+    this.timestampEnd,
+    this.snippet,
     required this.score,
     this.contentType = ContentType.pdf,
   });
 
   final String resourceId;
   final String resourceName;
+  final int? index;
+  final String? chunkId;
   final String? page;
   final Duration? timestamp;
+  final Duration? timestampEnd;
+  final String? snippet;
   final double score;
   final ContentType contentType;
 
   Citation copyWith({
     String? resourceId,
     String? resourceName,
+    int? index,
+    String? chunkId,
     String? page,
     Duration? timestamp,
+    Duration? timestampEnd,
+    String? snippet,
     double? score,
     ContentType? contentType,
   }) {
     return Citation(
       resourceId: resourceId ?? this.resourceId,
       resourceName: resourceName ?? this.resourceName,
+      index: index ?? this.index,
+      chunkId: chunkId ?? this.chunkId,
       page: page ?? this.page,
       timestamp: timestamp ?? this.timestamp,
+      timestampEnd: timestampEnd ?? this.timestampEnd,
+      snippet: snippet ?? this.snippet,
       score: score ?? this.score,
       contentType: contentType ?? this.contentType,
     );

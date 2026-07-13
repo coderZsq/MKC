@@ -9,6 +9,7 @@ import pytest
 from flask.testing import FlaskClient
 
 from app.models.retrieval import RetrievalChunk, RetrievalResult
+from app.services.llm.models import LLMStreamChunk
 from app.services.retrieval.retrieval_service import RetrievalService
 
 INTERNAL_API_KEY = os.environ["INTERNAL_API_KEY"]
@@ -56,13 +57,18 @@ def test_qa_stream_success(client: FlaskClient) -> None:
                 resource_id="res-1",
                 text="topic",
                 score=0.91,
-                metadata={"page": 2},
+                metadata={"page": 2, "resource_type": "pdf"},
             ),
         ],
         prompt="contextual prompt",
         context_token_count=5,
     )
     client.application.extensions["retrieval"] = retrieval_service
+
+    async def _stream_with_citation(_request: object) -> Any:
+        yield LLMStreamChunk(delta="topic answer [^1]", finish_reason="stop")
+
+    client.application.extensions["llm"].stream_complete = _stream_with_citation
 
     response = _post(
         client,
@@ -82,7 +88,14 @@ def test_qa_stream_success(client: FlaskClient) -> None:
     event_types = [e.get("event_type") for e in events]
     assert "chunk" in event_types
     assert "done" in event_types
-    assert any(e.get("event_type") == "citation" for e in events)
+    citation = next(e for e in events if e.get("event_type") == "citation")
+    assert citation["data"]["index"] == 1
+    assert citation["data"]["chunk_id"] == "c-1"
+    assert citation["data"]["resource_id"] == "res-1"
+    assert citation["data"]["resource_type"] == "pdf"
+    assert citation["data"]["page"] == 2
+    assert citation["data"]["snippet"] == "topic"
+    assert events[-1]["data"]["citation_count"] == 1
     assert all(
         e["data"]["message_id"] == "msg-1"
         for e in events

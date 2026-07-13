@@ -157,8 +157,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final citation = Citation(
       resourceId: data.resourceId,
       resourceName: data.resourceName ?? '',
+      index: data.index,
+      chunkId: data.chunkId,
       page: data.page,
       timestamp: data.timestamp,
+      timestampEnd: data.timestampEnd,
+      snippet: data.snippet,
       score: data.score,
       contentType: ContentType.fromParam(data.contentType),
     );

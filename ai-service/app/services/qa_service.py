@@ -10,7 +10,8 @@ from app.core.exceptions import (
     LLMUnavailableError,
 )
 from app.models.qa import QARequest, QAStreamEvent, format_sse_event
-from app.models.retrieval import RetrievalRequest
+from app.models.retrieval import RetrievalChunk, RetrievalRequest
+from app.services.citation_service import CitationService, citation_to_event_data
 from app.services.llm.llm_client import LLMClient
 from app.services.llm.models import LLMRequest, Message
 from app.services.retrieval.retrieval_service import RetrievalService
@@ -25,9 +26,11 @@ class QAService:
         self,
         retrieval_service: RetrievalService,
         llm_client: LLMClient,
+        citation_service: CitationService | None = None,
     ) -> None:
         self._retrieval = retrieval_service
         self._llm = llm_client
+        self._citation = citation_service
 
     async def stream_answer(self, request: QARequest) -> AsyncIterator[QAStreamEvent]:
         """Yield SSE events for a single question.
@@ -69,8 +72,10 @@ class QAService:
 
         try:
             index = 0
+            answer_parts: list[str] = []
             async for chunk in self._llm.stream_complete(llm_request):
                 if chunk.delta:
+                    answer_parts.append(chunk.delta)
                     yield self._chunk_event(request, chunk.delta, index)
                     index += 1
                 if chunk.finish_reason == "error":
@@ -78,10 +83,14 @@ class QAService:
                     return
                 if chunk.finish_reason == "stop":
                     break
-            if retrieval_result is not None:
-                for citation_chunk in retrieval_result.chunks:
-                    yield self._citation_event(request, citation_chunk)
-            yield self._done_event(request)
+            citations = self._build_citations(
+                request,
+                "".join(answer_parts),
+                retrieval_result.chunks if retrieval_result is not None else [],
+            )
+            for citation in citations:
+                yield self._citation_event(request, citation)
+            yield self._done_event(request, len(citations))
         except (LLMUnavailableError, LLMTimeoutError) as exc:
             logger.warning("LLM stream failed: %s", exc.code)
             yield self._error_event(request, exc.code, exc.message)
@@ -108,21 +117,32 @@ class QAService:
             },
         )
 
-    def _citation_event(self, request: QARequest, chunk: Any) -> QAStreamEvent:
+    def _build_citations(
+        self, request: QARequest, answer: str, chunks: list[RetrievalChunk]
+    ) -> list[dict[str, Any]]:
+        if self._citation is None or not chunks:
+            return []
+        result = self._citation.build_citations(
+            answer=answer,
+            chunks=chunks,
+            authorized_resource_ids=set(request.resource_ids),
+        )
+        return [citation_to_event_data(citation) for citation in result.citations]
+
+    def _citation_event(self, request: QARequest, citation: dict[str, Any]) -> QAStreamEvent:
         return QAStreamEvent(
             event_type="citation",
-            data={
-                "message_id": request.message_id,
-                "resource_id": chunk.resource_id,
-                "score": chunk.score,
-                "metadata": chunk.metadata,
-            },
+            data={"message_id": request.message_id, **citation},
         )
 
-    def _done_event(self, request: QARequest) -> QAStreamEvent:
+    def _done_event(self, request: QARequest, citation_count: int = 0) -> QAStreamEvent:
         return QAStreamEvent(
             event_type="done",
-            data={"message_id": request.message_id, "finish_reason": "stop"},
+            data={
+                "message_id": request.message_id,
+                "finish_reason": "stop",
+                "citation_count": citation_count,
+            },
         )
 
     def _error_event(self, request: QARequest, error_code: str, message: str) -> QAStreamEvent:

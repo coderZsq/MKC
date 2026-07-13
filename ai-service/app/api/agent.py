@@ -74,4 +74,9 @@ def _build_runner() -> AgentRunner:
         config=agent_cfg,
     )
     graph = AgentGraph(nodes, checkpointer)
-    return AgentRunner(graph, agent_cfg, checkpointer)
+    return AgentRunner(
+        graph,
+        agent_cfg,
+        checkpointer,
+        citation_service=current_app.extensions.get("citation_service"),
+    )

@@ -42,6 +42,21 @@ class TestPromptBuilder:
         assert "知识库助手" in prompt
         assert "无相关知识" in prompt
 
+    def test_rag_citation_template_includes_citation_instruction_and_numbering(self) -> None:
+        """MKC-TC-S4-5-002: rag_citation.txt carries [^n] guidance and chunk numbering."""
+        template_path = Path(__file__).resolve().parents[2] / "prompts" / "rag_citation.txt"
+        builder = PromptBuilder(template_path=str(template_path))
+        chunks = [
+            type("Chunk", (), {"text": "first source", "metadata": {"page": 1}})(),
+            type("Chunk", (), {"text": "second source", "metadata": {"page": 2}})(),
+        ]
+
+        prompt = builder.build(chunks, "what is the topic?")
+
+        assert "[^n]" in prompt
+        assert "[^1] first source" in prompt
+        assert "[^2] second source" in prompt
+
     def test_build_raises_on_invalid_template(self) -> None:
         with pytest.raises(RetrievalUnavailableError) as exc_info:
             PromptBuilder(template_text="{% for c in chunks %}")  # unclosed loop

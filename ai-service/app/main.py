@@ -18,6 +18,9 @@ from app.core.exceptions import APIException
 from app.core.response import make_response
 from app.middleware.logging import init_request_logging
 from app.middleware.request_id import init_request_id
+from app.services.citation_formatter import CitationFormatter
+from app.services.citation_service import CitationService
+from app.services.citation_validator import CitationValidator
 from app.services.embedding.factory import (
     build_embedding_service,
     validate_embedding_config,
@@ -101,6 +104,18 @@ def init_extensions(
     else:
         validate_llm_config()
         app.extensions["llm"] = build_llm_client()
+
+    citation_cfg = (settings.ai_config or {}).get("citation", {})
+    app.extensions["citation_service"] = CitationService(
+        formatter=CitationFormatter(
+            marker_pattern=citation_cfg.get("marker_pattern", r"\[\^(\d+)\]"),
+            snippet_max_chars=int(citation_cfg.get("snippet_max_chars", 200)),
+        ),
+        validator=CitationValidator(
+            max_citations=int(citation_cfg.get("max_citations", 8)),
+            log_dropped=bool(citation_cfg.get("log_dropped", True)),
+        ),
+    )
 
     summary_cfg = (settings.ai_config or {}).get("summary", {})
     summary_llm_provider = SummaryLLMProvider(app.extensions["llm"], summary_cfg)

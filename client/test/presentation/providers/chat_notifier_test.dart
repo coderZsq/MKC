@@ -52,7 +52,8 @@ void main() {
   });
 
   group('send', () {
-    test('appends user message and starts streaming assistant message', () async {
+    test('appends user message and starts streaming assistant message',
+        () async {
       repository.events = const [];
 
       await notifier.send('Question');
@@ -87,8 +88,12 @@ void main() {
           messageId: 'a1',
           citation: CitationData(
             resourceId: 'res-1',
+            index: 1,
+            chunkId: 'chunk-1',
             resourceName: 'doc.pdf',
             score: 0.9,
+            page: '4',
+            snippet: 'source',
             contentType: 'pdf',
           ),
         ),
@@ -100,6 +105,10 @@ void main() {
       final assistant = notifier.state.messages[1];
       expect(assistant.citations, hasLength(1));
       expect(assistant.citations.first.resourceId, 'res-1');
+      expect(assistant.citations.first.index, 1);
+      expect(assistant.citations.first.chunkId, 'chunk-1');
+      expect(assistant.citations.first.page, '4');
+      expect(assistant.citations.first.snippet, 'source');
       expect(assistant.citations.first.contentType.name, 'pdf');
     });
 

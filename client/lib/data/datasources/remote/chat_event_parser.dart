@@ -64,12 +64,31 @@ class ChatEventParser {
     if (resourceId == null || resourceId.isEmpty) return null;
     return CitationData(
       resourceId: resourceId,
+      index: _parseInt(json['index']),
+      chunkId: json['chunk_id'] as String?,
       resourceName: json['resource_name'] as String? ?? '',
-      page: metadata['page']?.toString(),
-      timestamp: _parseDuration(metadata['timestamp']),
+      page: (json['page'] ?? metadata['page'])?.toString(),
+      timestamp: _parseDuration(
+        json['timestamp_start'] ??
+            metadata['timestamp_start'] ??
+            metadata['timestamp'],
+      ),
+      timestampEnd: _parseDuration(
+        json['timestamp_end'] ?? metadata['timestamp_end'],
+      ),
+      snippet: json['snippet'] as String? ?? metadata['snippet'] as String?,
       score: (json['score'] as num?)?.toDouble() ?? 0.0,
-      contentType: metadata['content_type'] as String?,
+      contentType: json['resource_type'] as String? ??
+          metadata['content_type'] as String?,
     );
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   /// Parses an assistant message from the fallback polling API.

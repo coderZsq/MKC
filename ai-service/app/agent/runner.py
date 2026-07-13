@@ -11,6 +11,7 @@ from app.agent.router import route_after_validate, route_by_intent
 from app.agent.state import AgentState
 from app.core.exceptions import APIException, RetrievalForbiddenError
 from app.models.agent import AgentRunRequest, AgentStreamEvent
+from app.services.citation_service import CitationService, citation_to_event_data
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +55,13 @@ class AgentRunner:
         graph: AgentGraph,
         config: AgentConfig,
         checkpointer: AgentCheckpointer | None = None,
+        citation_service: CitationService | None = None,
     ) -> None:
         self._graph = graph
         self._nodes = graph.nodes
         self._config = config
         self._checkpointer = checkpointer
+        self._citation = citation_service
 
     async def run_stream(self, request: AgentRunRequest) -> AsyncIterator[AgentStreamEvent]:
         state = self._initial_state(request)
@@ -146,7 +149,9 @@ class AgentRunner:
         else:
             raise RecursionError
 
-        for citation in state.get("citations", []):
+        citations = self._build_citations(request, state)
+        state["citations"] = citations
+        for citation in citations:
             yield AgentStreamEvent(
                 event_type="citation",
                 data={"message_id": request.message_id, **citation},
@@ -162,8 +167,20 @@ class AgentRunner:
                 "finish_reason": "stop",
                 "iterations": state.get("iterations", 0),
                 "low_confidence": state.get("low_confidence", False),
+                "citation_count": len(citations),
             },
         )
+
+    def _build_citations(self, request: AgentRunRequest, state: AgentState) -> list[dict[str, Any]]:
+        chunks = state.get("retrieved_chunks", [])
+        if self._citation is None or not chunks:
+            return []
+        result = self._citation.build_citations(
+            answer=state.get("draft_answer", ""),
+            chunks=list(chunks),
+            authorized_resource_ids=set(request.resource_ids),
+        )
+        return [citation_to_event_data(citation) for citation in result.citations]
 
     async def _run_node(self, name: str, state: AgentState, fn: Any) -> None:
         update = await fn(state)

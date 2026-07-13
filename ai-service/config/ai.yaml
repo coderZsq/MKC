@@ -117,7 +117,16 @@ retrieval:
   default_top_k: 5
   score_threshold: 0.7
   max_context_tokens: 4096
-  prompt_template: "prompts/rag.txt"
+  prompt_template: "prompts/rag_citation.txt"
+
+citation:
+  enabled: true
+  max_citations: 8
+  snippet_max_chars: 200
+  marker_pattern: "\\[\\^(\\d+)\\]"
+  prompt_template: "prompts/rag_citation.txt"
+  drop_ungrounded: true
+  log_dropped: true
 
 agent:
   enabled: true

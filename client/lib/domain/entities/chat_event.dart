@@ -27,17 +27,25 @@ class ChatEvent {
 class CitationData {
   const CitationData({
     required this.resourceId,
+    this.index,
+    this.chunkId,
     this.resourceName,
     this.page,
     this.timestamp,
+    this.timestampEnd,
+    this.snippet,
     required this.score,
     this.contentType,
   });
 
   final String resourceId;
+  final int? index;
+  final String? chunkId;
   final String? resourceName;
   final String? page;
   final Duration? timestamp;
+  final Duration? timestampEnd;
+  final String? snippet;
   final double score;
   final String? contentType;
 }
