@@ -52,9 +52,9 @@ const subscriberBufferSize = 4
 // NewTaskBroadcaster creates an in-memory TaskBroadcaster.
 func NewTaskBroadcaster() TaskBroadcaster {
 	return &inMemoryTaskBroadcaster{
-		subs:               make(map[string][]chan TaskEvent),
-		maxSubscribers:     defaultMaxSubscribersPerTask,
-		subscriberBufSize:  subscriberBufferSize,
+		subs:              make(map[string][]chan TaskEvent),
+		maxSubscribers:    defaultMaxSubscribersPerTask,
+		subscriberBufSize: subscriberBufferSize,
 	}
 }
 

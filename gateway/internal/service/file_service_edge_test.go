@@ -16,9 +16,9 @@ import (
 
 type failingFile struct{}
 
-func (f *failingFile) Read(p []byte) (int, error)    { return 0, errors.New("read failed") }
+func (f *failingFile) Read(p []byte) (int, error)              { return 0, errors.New("read failed") }
 func (f *failingFile) ReadAt(p []byte, off int64) (int, error) { return 0, errors.New("read failed") }
-func (f *failingFile) Close() error                  { return nil }
+func (f *failingFile) Close() error                            { return nil }
 func (f *failingFile) Seek(offset int64, whence int) (int64, error) {
 	return 0, errors.New("seek not supported")
 }
