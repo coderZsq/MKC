@@ -11,6 +11,13 @@ class ValidationException(APIException):
         super().__init__("VALIDATION_ERROR", message, 400)
 
 
+class InvalidRequestError(APIException):
+    """Hybrid retrieval request failed structural validation (missing/invalid fields)."""
+
+    def __init__(self, message: str = "请求参数无效") -> None:
+        super().__init__("INVALID_REQUEST", message, 400)
+
+
 class AudioProcessingError(APIException):
     def __init__(self, message: str = "无法解析音频文件") -> None:
         super().__init__("INVALID_AUDIO", message, 400)

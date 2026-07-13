@@ -119,6 +119,27 @@ retrieval:
   max_context_tokens: 4096
   prompt_template: "prompts/rag_citation.txt"
 
+hybrid_retrieval:
+  bm25_weight: 1.0          # BM25 路径 RRF 权重
+  vector_weight: 1.0        # 向量路径 RRF 权重
+  rrf_k: 60                 # RRF 平滑常数
+  rerank_top_n: 20          # 每路召回 + 进入重排的候选数
+  final_top_k: 5            # 最终返回数量
+  score_threshold: 0.0      # 重排后分数过滤阈值（0.0 = 不过滤）
+  timeout_ms: 800           # 整体超时阈值，超时降级为纯向量检索
+  fallback_to_vector: true  # 降级时回退到 S3-4 纯向量检索
+  bm25:
+    tokenizer: jieba        # jieba / whitespace
+    user_dict: ""           # jieba 自定义词典路径（可选）
+    cache_index: true       # 是否缓存 BM25 索引（按 user_id + resource_ids）
+    max_docs: 1000          # 加载语料上限，避免全量扫描
+    cache_max_entries: 100  # BM25 索引缓存最大条目数
+  reranker:
+    model_name: "BAAI/bge-reranker-base"
+    device: "cpu"
+    max_length: 512
+    enabled: true           # false 时跳过重排，直接返回 RRF 融合 Top-K
+
 citation:
   enabled: true
   max_citations: 8
