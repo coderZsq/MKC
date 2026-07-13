@@ -119,6 +119,23 @@ retrieval:
   max_context_tokens: 4096
   prompt_template: "prompts/rag.txt"
 
+agent:
+  enabled: true
+  recursion_limit: 12
+  max_iterations: 3
+  overall_timeout: 120
+  default_intent: qa
+  enable_dynamic_intent: false
+  dynamic_intent_model: glm-4-flash
+  enable_web_search: false
+  compare_concurrency: 3
+  fallback_message: "抱歉，暂无法生成答案，请稍后重试"
+  checkpointer:
+    backend: memory
+    sqlite_path: "data/agent_checkpoints.db"
+  sse:
+    emit_node_events: true
+
 extraction:
   enabled: true
   llm:

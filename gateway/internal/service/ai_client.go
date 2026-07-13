@@ -73,7 +73,7 @@ func NewAIClient(cfg *config.Config) AIClient {
 	}
 }
 
-// StreamQA calls the AI Service Q&A stream endpoint and returns a channel of SSE events.
+// StreamQA calls the AI Service Agent stream endpoint and returns a channel of SSE events.
 func (c *HTTPAIClient) StreamQA(ctx context.Context, req QARequest) (<-chan SSEEvent, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 
@@ -83,7 +83,7 @@ func (c *HTTPAIClient) StreamQA(ctx context.Context, req QARequest) (<-chan SSEE
 		return nil, fmt.Errorf("failed to marshal QA request: %w", err)
 	}
 
-	endpoint := fmt.Sprintf("%s/ai/v1/qa/stream", c.baseURL)
+	endpoint := fmt.Sprintf("%s/ai/v1/agent/run", c.baseURL)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		cancel()

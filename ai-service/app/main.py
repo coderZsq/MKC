@@ -1,5 +1,6 @@
 from flask import Flask, Response
 
+from app.api.agent import agent_bp
 from app.api.asr import asr_bp
 from app.api.chunking import chunking_bp
 from app.api.embedding import embedding_bp
@@ -52,6 +53,7 @@ def create_app(
 ) -> Flask:
     app = Flask(__name__)
     app.config.from_object(settings)
+    app.config["AI_CONFIG"] = settings.ai_config
 
     init_extensions(
         app,
@@ -141,6 +143,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(extraction_bp, url_prefix="/ai/v1")
     app.register_blueprint(llm_bp, url_prefix="/ai/v1")
     app.register_blueprint(qa_bp, url_prefix="/ai/v1")
+    app.register_blueprint(agent_bp, url_prefix="/ai/v1")
 
 
 def register_error_handlers(app: Flask) -> None:
