@@ -6,12 +6,16 @@ from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import MagicMock
 
+import chromadb
 import pytest
 from flask.testing import FlaskClient
 
 from app.core.exceptions import RetrievalForbiddenError
 from app.models.retrieval import RetrievalChunk, RetrievalResult
 from app.services.llm.models import LLMStreamChunk
+from app.services.memory import MemoryConfig, build_memory_service
+from app.vector_store import ChromaStore
+from app.vector_store.config import build_vector_store_config
 
 INTERNAL_API_KEY = os.environ["INTERNAL_API_KEY"]
 
@@ -103,6 +107,25 @@ def test_agent_run_recalls_long_term_memory(client: FlaskClient) -> None:
         yield LLMStreamChunk(delta="", finish_reason="stop")
 
     llm.stream_complete = MagicMock(side_effect=_capture_stream)
+
+    # Use an isolated in-memory collection for long-term memory so this test
+    # does not pollute the shared vector store collection used by other tests.
+    embedding = client.application.extensions["embedding"]
+    store_config = build_vector_store_config()
+    store_config.provider = "chroma"
+    store_config.collection_name = "mkc_memory_test"
+    store_config.chroma_path = ":memory:"
+    memory_store = ChromaStore(store_config, client=chromadb.Client())
+    client.application.extensions["memory_service"] = build_memory_service(
+        embedding,
+        memory_store,
+        config=MemoryConfig(
+            enabled=True,
+            top_k=5,
+            score_threshold=0.0,
+            max_context_tokens=2048,
+        ),
+    )
 
     response = _post(
         client,
