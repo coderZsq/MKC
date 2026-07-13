@@ -102,9 +102,11 @@ class _ResourceListPageState extends ConsumerState<ResourceListPage> {
           constraints: const BoxConstraints(maxWidth: 960),
           child: ResourceCard(
             resource: resource,
-            onTap: () => context.push(
-              '${contentViewRoute.replaceFirst(':id', resource.id)}?type=${_contentTypeParam(resource.type)}',
-            ),
+            onTap: resource.taskId == null || resource.taskId!.isEmpty
+                ? null
+                : () => context.push(
+                      '${contentViewRoute.replaceFirst(':id', resource.taskId!)}?type=${_contentTypeParam(resource.type)}',
+                    ),
             onTagTap:
                 ref.read(resourceListNotifierProvider.notifier).filterByTag,
           ),
