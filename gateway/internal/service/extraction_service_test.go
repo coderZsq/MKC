@@ -24,7 +24,7 @@ func (s *stubExtractionResourceRepo) GetByUUID(ctx context.Context, uuid string)
 func (s *stubExtractionResourceRepo) GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
 	return s.resource, s.err
 }
-func (s *stubExtractionResourceRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int) ([]model.Resource, int64, error) {
+func (s *stubExtractionResourceRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int, tag string) ([]model.Resource, int64, error) {
 	return nil, 0, nil
 }
 func (s *stubExtractionResourceRepo) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
@@ -51,6 +51,13 @@ func (s *stubExtractionRepo) UpsertEntities(ctx context.Context, resourceID uint
 }
 func (s *stubExtractionRepo) ListTagsByResourceID(ctx context.Context, resourceID uint64) ([]model.ResourceTag, error) {
 	return s.tags, nil
+}
+func (s *stubExtractionRepo) ListTagsByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64][]string, error) {
+	result := make(map[uint64][]string)
+	for _, tag := range s.tags {
+		result[tag.ResourceID] = append(result[tag.ResourceID], tag.Tag)
+	}
+	return result, nil
 }
 func (s *stubExtractionRepo) ListEntitiesByResourceID(ctx context.Context, resourceID uint64) ([]model.ResourceEntity, error) {
 	return s.entities, nil

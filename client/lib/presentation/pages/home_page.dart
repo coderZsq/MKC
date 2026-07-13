@@ -87,6 +87,12 @@ class _HomePageState extends State<HomePage> {
                   onTap: () => context.push(taskCenterRoute),
                 ),
                 _DebugEntry(
+                  title: '资源库',
+                  subtitle: '摘要与标签',
+                  icon: Icons.folder_copy_outlined,
+                  onTap: () => context.push(resourcesRoute),
+                ),
+                _DebugEntry(
                   title: '会话列表',
                   subtitle: '创建与管理会话',
                   icon: Icons.forum_outlined,

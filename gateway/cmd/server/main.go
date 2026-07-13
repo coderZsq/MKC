@@ -51,6 +51,7 @@ func main() {
 	var internalTaskHandler *handler.InternalTaskHandler
 	var taskSSEHandler *handler.TaskSSEHandler
 	var resultHandler *handler.ResultHandler
+	var resourceHandler *handler.ResourceHandler
 	var qaSSEHandler *handler.QASSEHandler
 	var convHandler *handler.ConversationHandler
 	var summaryHandler *handler.SummaryHandler
@@ -75,6 +76,8 @@ func main() {
 		taskHandler = handler.NewTaskHandler(taskSvc)
 		internalTaskHandler = handler.NewInternalTaskHandler(taskSvc)
 		taskSSEHandler = handler.NewTaskSSEHandler(taskSvc, taskBroadcaster)
+		resourceSvc := service.NewResourceService(appLogger, resourceRepo, summaryRepo, extractionRepo)
+		resourceHandler = handler.NewResourceHandler(resourceSvc)
 
 		aiClient := service.NewAIClient(cfg)
 		ctxWindow := service.NewContextWindowService(msgRepo, cfg.Conversation.MaxContextMessages, cfg.Conversation.MaxContextTokens)
@@ -102,7 +105,7 @@ func main() {
 		}
 	}
 
-	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, resultHandler, qaSSEHandler, convHandler, summaryHandler, extractionHandler, jwtMgr)
+	r := router.New(cfg, appLogger, healthHandler, authHandler, fileHandler, taskHandler, internalTaskHandler, taskSSEHandler, resultHandler, resourceHandler, qaSSEHandler, convHandler, summaryHandler, extractionHandler, jwtMgr)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),

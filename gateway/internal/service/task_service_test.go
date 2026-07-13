@@ -52,6 +52,10 @@ func (r *stubResourceRepositoryForTask) GetByUUIDAndUserID(ctx context.Context, 
 	return nil, repository.ErrNotFound
 }
 
+func (r *stubResourceRepositoryForTask) ListByUserID(ctx context.Context, userID uint64, page, limit int, tag string) ([]model.Resource, int64, error) {
+	return nil, 0, nil
+}
+
 func (r *stubResourceRepositoryForTask) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
 	if r.countByUUIDsAndUserFunc != nil {
 		return r.countByUUIDsAndUserFunc(ctx, uuids, userID)
