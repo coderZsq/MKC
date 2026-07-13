@@ -44,11 +44,13 @@ class ChatEventParser {
 
   static ChatEvent _buildEvent(Map<String, dynamic> json, String eventType) {
     final metadata = json['metadata'] as Map<String, dynamic>? ?? const {};
+    final isReasoning = eventType == 'reasoning';
     return ChatEvent(
       type: eventType,
       messageId: json['message_id'] as String? ?? '',
       conversationId: json['conversation_id'] as String?,
-      delta: json['delta'] as String?,
+      delta: isReasoning ? null : json['delta'] as String?,
+      reasoningDelta: isReasoning ? json['delta'] as String? : null,
       citation: eventType == 'citation' ? _parseCitation(json, metadata) : null,
       finishReason: json['finish_reason'] as String?,
       errorCode: json['error_code'] as String?,
@@ -97,6 +99,7 @@ class ChatEventParser {
       id: raw['message_id'] as String? ?? '',
       conversationId: raw['conversation_id'] as String? ?? '',
       content: raw['content'] as String? ?? '',
+      reasoning: raw['reasoning'] as String? ?? '',
       createdAt: _parseTimestamp(raw['created_at']),
       isStreaming: raw['is_streaming'] as bool? ?? false,
     );

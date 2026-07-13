@@ -35,8 +35,9 @@ class QAService:
     async def stream_answer(self, request: QARequest) -> AsyncIterator[QAStreamEvent]:
         """Yield SSE events for a single question.
 
-        The stream yields ``chunk`` events for incremental LLM output, followed by
-        ``citation`` events for retrieved sources, and finally ``done`` or
+        The stream yields ``chunk`` events for incremental LLM output,
+        ``reasoning`` events for model chain-of-thought (when provided by the
+        LLM), ``citation`` events for retrieved sources, and finally ``done`` or
         ``error``.
         """
         retrieval_result: Any | None = None
@@ -71,13 +72,19 @@ class QAService:
         )
 
         try:
-            index = 0
+            chunk_index = 0
+            reasoning_index = 0
             answer_parts: list[str] = []
+            reasoning_parts: list[str] = []
             async for chunk in self._llm.stream_complete(llm_request):
                 if chunk.delta:
                     answer_parts.append(chunk.delta)
-                    yield self._chunk_event(request, chunk.delta, index)
-                    index += 1
+                    yield self._chunk_event(request, chunk.delta, chunk_index)
+                    chunk_index += 1
+                if chunk.reasoning_delta:
+                    reasoning_parts.append(chunk.reasoning_delta)
+                    yield self._reasoning_event(request, chunk.reasoning_delta, reasoning_index)
+                    reasoning_index += 1
                 if chunk.finish_reason == "error":
                     yield self._error_event(request, "LLM_TIMEOUT", "生成超时")
                     return
@@ -109,6 +116,17 @@ class QAService:
     def _chunk_event(self, request: QARequest, delta: str, index: int) -> QAStreamEvent:
         return QAStreamEvent(
             event_type="chunk",
+            data={
+                "message_id": request.message_id,
+                "conversation_id": request.conversation_id,
+                "delta": delta,
+                "index": index,
+            },
+        )
+
+    def _reasoning_event(self, request: QARequest, delta: str, index: int) -> QAStreamEvent:
+        return QAStreamEvent(
+            event_type="reasoning",
             data={
                 "message_id": request.message_id,
                 "conversation_id": request.conversation_id,

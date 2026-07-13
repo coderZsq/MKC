@@ -124,22 +124,23 @@ func (s *qaService) stream(ctx context.Context, out chan<- SSEEvent, aiEvents <-
 	defer close(out)
 
 	var answer strings.Builder
+	var reasoning strings.Builder
 	var citations []any
 
 	for {
 		select {
 		case <-ctx.Done():
-			s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), citations)
+			s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), reasoning.String(), citations)
 			return
 		case ev, ok := <-aiEvents:
 			if !ok {
-				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), citations)
+				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), reasoning.String(), citations)
 				return
 			}
 			select {
 			case out <- ev:
 			case <-ctx.Done():
-				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), citations)
+				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), reasoning.String(), citations)
 				return
 			}
 			switch ev.Event {
@@ -147,21 +148,25 @@ func (s *qaService) stream(ctx context.Context, out chan<- SSEEvent, aiEvents <-
 				if delta := extractString(ev.Data, "delta"); delta != "" {
 					answer.WriteString(delta)
 				}
+			case "reasoning":
+				if delta := extractString(ev.Data, "delta"); delta != "" {
+					reasoning.WriteString(delta)
+				}
 			case "citation":
 				if c := parseCitation(ev.Data); c != nil {
 					citations = append(citations, c)
 				}
 			}
 			if ev.Event == "done" || ev.Event == "error" {
-				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), citations)
+				s.saveAssistant(context.Background(), conversation, userMsg, assistantMsgUUID, answer.String(), reasoning.String(), citations)
 				return
 			}
 		}
 	}
 }
 
-func (s *qaService) saveAssistant(ctx context.Context, conversation *model.Conversation, userMsg *model.Message, assistantMsgUUID string, answer string, citations []any) {
-	if answer == "" && len(citations) == 0 {
+func (s *qaService) saveAssistant(ctx context.Context, conversation *model.Conversation, userMsg *model.Message, assistantMsgUUID string, answer string, reasoning string, citations []any) {
+	if answer == "" && reasoning == "" && len(citations) == 0 {
 		return
 	}
 	ctx, cancel := context.WithTimeout(ctx, assistantSaveTimeout)
@@ -183,6 +188,7 @@ func (s *qaService) saveAssistant(ctx context.Context, conversation *model.Conve
 		ParentMessageID: &userMsg.ID,
 		Role:            "assistant",
 		Content:         answer,
+		Reasoning:       reasoning,
 		Citations:       citationsJSON,
 		TokenUsage:      estimateTokens(answer),
 	}

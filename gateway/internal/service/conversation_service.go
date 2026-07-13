@@ -51,6 +51,7 @@ type MessageResponse struct {
 	ID        string           `json:"id"`
 	Role      string           `json:"role"`
 	Content   string           `json:"content"`
+	Reasoning string           `json:"reasoning,omitempty"`
 	Model     string           `json:"model,omitempty"`
 	Citations []map[string]any `json:"citations,omitempty"`
 	CreatedAt time.Time        `json:"created_at"`
@@ -246,6 +247,7 @@ func (s *conversationService) mapMessage(m *model.Message) *MessageResponse {
 		ID:        m.UUID,
 		Role:      m.Role,
 		Content:   m.Content,
+		Reasoning: m.Reasoning,
 		Model:     m.Model,
 		Citations: citations,
 		CreatedAt: m.CreatedAt,

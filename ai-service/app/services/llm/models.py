@@ -35,6 +35,7 @@ class LLMResponse(BaseModel):
     """Non-streaming response from an LLM provider."""
 
     content: str
+    reasoning: str | None = None
     model: str
     finish_reason: str = "stop"
     usage: Usage
@@ -44,4 +45,5 @@ class LLMStreamChunk(BaseModel):
     """A single incremental chunk from a streaming completion."""
 
     delta: str
+    reasoning_delta: str | None = None
     finish_reason: str | None = None

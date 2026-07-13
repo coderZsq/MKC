@@ -10,7 +10,7 @@ from app.agent.tools import RetrievalTool, SummarizerTool, WebSearchTool
 from app.core.exceptions import APIException, RetrievalForbiddenError
 from app.models.retrieval import RetrievalChunk
 from app.services.llm.llm_client import LLMClient
-from app.services.llm.models import LLMRequest, Message
+from app.services.llm.models import LLMRequest, LLMStreamChunk, Message
 from app.services.retrieval.retrieval_service import RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ class AgentNodes:
             "final_answer": state.get("draft_answer", ""),
         }
 
-    async def stream_generation(self, state: AgentState, node: str) -> AsyncIterator[str]:
+    async def stream_generation(self, state: AgentState, node: str) -> AsyncIterator[LLMStreamChunk]:
         prompt = state["question"]
         if node == "qa":
             prompt = self._build_context_prompt(state, "请基于资料回答问题。")
@@ -137,8 +137,8 @@ class AgentNodes:
             max_tokens=state.get("max_tokens") or 2048,
         )
         async for chunk in self._llm.stream_complete(request):
-            if chunk.delta:
-                yield chunk.delta
+            if chunk.delta or chunk.reasoning_delta:
+                yield chunk
             if chunk.finish_reason in {"stop", "error"}:
                 break
 

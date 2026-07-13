@@ -106,11 +106,12 @@ def parse_openai_compatible_response(response: object, model: str) -> LLMRespons
     data = _model_dump(response)
     choice = data.get("choices", [{}])[0]
     message = choice.get("message", {}) if isinstance(choice, dict) else {}
-    content = _message_text(message) if isinstance(message, dict) else ""
+    content, reasoning = _message_content(message) if isinstance(message, dict) else ("", None)
     finish_reason = choice.get("finish_reason") if isinstance(choice, dict) else "stop"
     usage = data.get("usage", {}) or {}
     return LLMResponse(
         content=content,
+        reasoning=reasoning,
         model=model,
         finish_reason=finish_reason or "stop",
         usage=Usage(
@@ -130,15 +131,26 @@ def parse_openai_compatible_stream_chunk(chunk: object) -> LLMStreamChunk:
     if not isinstance(choice, dict):
         return LLMStreamChunk(delta="")
     delta = choice.get("delta", {}) or {}
-    content = _message_text(delta) if isinstance(delta, dict) else str(delta or "")
+    content, reasoning = _message_content(delta) if isinstance(delta, dict) else (str(delta or ""), None)
     finish_reason = choice.get("finish_reason")
-    return LLMStreamChunk(delta=content, finish_reason=finish_reason)
+    return LLMStreamChunk(
+        delta=content,
+        reasoning_delta=reasoning,
+        finish_reason=finish_reason,
+    )
 
 
-def _message_text(message: dict[str, Any]) -> str:
-    reasoning = str(message.get("reasoning") or message.get("reasoning_content") or "")
+def _message_content(message: dict[str, Any]) -> tuple[str, str | None]:
+    """Return (content, reasoning) from a message or delta dictionary.
+
+    Reasoning is kept separate so callers can stream it independently of the
+    answer content.
+    """
     content = str(message.get("content") or "")
-    return reasoning + content
+    reasoning = message.get("reasoning") or message.get("reasoning_content")
+    if reasoning:
+        return content, str(reasoning)
+    return content, None
 
 
 def _message_params(request: LLMRequest) -> list[ChatCompletionMessageParam]:

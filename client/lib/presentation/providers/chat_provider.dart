@@ -121,6 +121,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     switch (event.type) {
       case 'chunk':
         _appendChunk(event);
+      case 'reasoning':
+        _appendReasoning(event);
       case 'citation':
         _appendCitation(event);
       case 'done':
@@ -146,6 +148,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return message.copyWith(
         id: message.id.isEmpty ? event.messageId : message.id,
         content: message.content + (event.delta ?? ''),
+      );
+    }).toList();
+    state = state.copyWith(messages: updated);
+  }
+
+  void _appendReasoning(ChatEvent event) {
+    final targetId = event.messageId.isNotEmpty ? event.messageId : null;
+    final updated = state.messages.map((message) {
+      if (!_matchesTarget(message, targetId)) return message;
+      return message.copyWith(
+        id: message.id.isEmpty ? event.messageId : message.id,
+        reasoning: message.reasoning + (event.reasoningDelta ?? ''),
       );
     }).toList();
     state = state.copyWith(messages: updated);
