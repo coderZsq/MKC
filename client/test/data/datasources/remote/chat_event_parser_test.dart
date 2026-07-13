@@ -27,20 +27,44 @@ void main() {
 
     test('parses citation event', () {
       final json = jsonEncode({
+        'index': 1,
+        'chunk_id': 'chunk-1',
         'resource_id': 'r-1',
         'resource_name': 'Paper',
+        'resource_type': 'pdf',
+        'page': 12,
+        'snippet': 'quoted text',
         'score': 0.95,
-        'metadata': {'page': '12', 'content_type': 'pdf'},
       });
-      final event = ChatEventParser.parseEvent('event: citation\ndata: $json\n');
+      final event =
+          ChatEventParser.parseEvent('event: citation\ndata: $json\n');
       expect(event, isNotNull);
       expect(event!.type, 'citation');
       expect(event.citation, isNotNull);
       expect(event.citation!.resourceId, 'r-1');
+      expect(event.citation!.index, 1);
+      expect(event.citation!.chunkId, 'chunk-1');
       expect(event.citation!.resourceName, 'Paper');
       expect(event.citation!.page, '12');
+      expect(event.citation!.snippet, 'quoted text');
       expect(event.citation!.score, 0.95);
       expect(event.citation!.contentType, 'pdf');
+    });
+
+    test('parses audio citation timestamps from top-level fields', () {
+      final json = jsonEncode({
+        'resource_id': 'r-2',
+        'resource_type': 'audio',
+        'timestamp_start': 75.5,
+        'timestamp_end': 90,
+        'score': 0.88,
+      });
+      final event =
+          ChatEventParser.parseEvent('event: citation\ndata: $json\n');
+      expect(event, isNotNull);
+      expect(event!.citation!.timestamp, const Duration(milliseconds: 75500));
+      expect(event.citation!.timestampEnd, const Duration(seconds: 90));
+      expect(event.citation!.contentType, 'audio');
     });
 
     test('skips citation event when resource_id is missing', () {
@@ -48,7 +72,8 @@ void main() {
         'resource_name': 'Paper',
         'score': 0.95,
       });
-      final event = ChatEventParser.parseEvent('event: citation\ndata: $json\n');
+      final event =
+          ChatEventParser.parseEvent('event: citation\ndata: $json\n');
       expect(event, isNotNull);
       expect(event!.citation, isNull);
     });

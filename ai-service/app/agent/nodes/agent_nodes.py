@@ -65,7 +65,7 @@ class AgentNodes:
         except Exception:
             logger.exception("retrieval failed")
             chunks = []
-        return {"retrieved_chunks": chunks, "citations": self._citations(chunks)}
+        return {"retrieved_chunks": chunks, "citations": []}
 
     async def summarize_node(self, state: AgentState) -> dict[str, Any]:
         retrieval_update: dict[str, Any] = {}
@@ -179,18 +179,19 @@ class AgentNodes:
     def _build_context_prompt(self, state: AgentState, instruction: str) -> str:
         chunks = state.get("retrieved_chunks", [])
         context = "\n\n".join(
-            f"[{idx + 1}] resource={chunk.resource_id} score={chunk.score}\n{chunk.text}"
+            f"[^{idx + 1}] resource={chunk.resource_id} score={chunk.score}\n{chunk.text}"
             for idx, chunk in enumerate(chunks)
         )
         if not context:
             context = "无相关知识库上下文。"
-        return f"{instruction}\n\n上下文：\n{context}\n\n用户问题：{state['question']}"
-
-    def _citations(self, chunks: list[RetrievalChunk]) -> list[dict[str, Any]]:
-        return [
-            {"resource_id": chunk.resource_id, "score": chunk.score, "metadata": chunk.metadata}
-            for chunk in chunks
-        ]
+        citation_rules = (
+            "引用上下文片段时，请在句末使用 [^n] 标记，n 必须对应上下文片段序号；"
+            "不得引用未提供的片段。"
+        )
+        return (
+            f"{instruction}\n{citation_rules}\n\n"
+            f"上下文：\n{context}\n\n用户问题：{state['question']}"
+        )
 
     def _citations_traceable(
         self, citations: list[dict[str, Any]], chunks: list[RetrievalChunk]

@@ -15,16 +15,27 @@ class CitationCard extends StatelessWidget {
   final Citation citation;
 
   String get _label {
-    final buffer = StringBuffer(citation.resourceName);
+    final buffer = StringBuffer();
+    if (citation.index != null) {
+      buffer.write('[^${citation.index}] ');
+    }
+    buffer.write(citation.resourceName);
     if (citation.page != null && citation.page!.isNotEmpty) {
-      buffer.write(' P${citation.page}');
+      buffer.write(' 第 ${citation.page} 页');
     } else if (citation.timestamp != null) {
-      final ts = citation.timestamp!;
-      final minutes = ts.inMinutes.remainder(60).toString().padLeft(2, '0');
-      final seconds = ts.inSeconds.remainder(60).toString().padLeft(2, '0');
-      buffer.write(' ${ts.inHours.toString().padLeft(2, '0')}:$minutes:$seconds');
+      buffer.write(' ${_formatTimestamp(citation.timestamp!)}');
+      if (citation.timestampEnd != null) {
+        buffer.write('-${_formatTimestamp(citation.timestampEnd!)}');
+      }
     }
     return buffer.toString();
+  }
+
+  String _formatTimestamp(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   void _onTap(BuildContext context) {
@@ -41,10 +52,14 @@ class CitationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: const Icon(Icons.insert_drive_file_outlined, size: 18),
-      label: Text(_label),
-      onPressed: () => _onTap(context),
+    final snippet = citation.snippet;
+    return Tooltip(
+      message: snippet == null || snippet.isEmpty ? _label : snippet,
+      child: ActionChip(
+        avatar: const Icon(Icons.insert_drive_file_outlined, size: 18),
+        label: Text(_label),
+        onPressed: () => _onTap(context),
+      ),
     );
   }
 }

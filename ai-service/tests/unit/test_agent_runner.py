@@ -8,11 +8,14 @@ from app.agent import AgentConfig, AgentGraph, AgentNodes, AgentRunner
 from app.agent.checkpointer import AgentCheckpointer
 from app.models.agent import AgentRunRequest
 from app.models.retrieval import RetrievalChunk, RetrievalResult
+from app.services.citation_formatter import CitationFormatter
+from app.services.citation_service import CitationService
+from app.services.citation_validator import CitationValidator
 from app.services.llm.models import LLMStreamChunk
 
 
 async def _stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
-    yield LLMStreamChunk(delta="agent")
+    yield LLMStreamChunk(delta="agent [^1]")
     yield LLMStreamChunk(delta=" answer")
     yield LLMStreamChunk(delta="", finish_reason="stop")
 
@@ -36,7 +39,12 @@ def test_runner_streams_node_chunk_citation_done_events() -> None:
     llm.stream_complete.side_effect = _stream
     checkpointer = AgentCheckpointer()
     nodes = AgentNodes(retrieval, llm, config=AgentConfig())
-    runner = AgentRunner(AgentGraph(nodes, checkpointer), AgentConfig(), checkpointer)
+    runner = AgentRunner(
+        AgentGraph(nodes, checkpointer),
+        AgentConfig(),
+        checkpointer,
+        citation_service=CitationService(CitationFormatter(), CitationValidator(log_dropped=False)),
+    )
 
     async def collect() -> list[str]:
         events = [
@@ -51,6 +59,17 @@ def test_runner_streams_node_chunk_citation_done_events() -> None:
                 )
             )
         ]
+        assert next(event for event in events if event.event_type == "citation").data == {
+            "message_id": "msg-1",
+            "index": 1,
+            "chunk_id": "c-1",
+            "resource_id": "res-1",
+            "resource_type": "pdf",
+            "page": 1,
+            "score": 0.9,
+            "snippet": "text",
+        }
+        assert events[-1].data["citation_count"] == 1
         return [event.event_type for event in events]
 
     event_types = asyncio.run(collect())

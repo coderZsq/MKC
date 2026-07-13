@@ -10,6 +10,9 @@ import pytest
 from app.core.exceptions import RetrievalUnavailableError
 from app.models.qa import ChatMessage, QARequest, QAStreamEvent, format_sse_event
 from app.models.retrieval import RetrievalChunk, RetrievalResult
+from app.services.citation_formatter import CitationFormatter
+from app.services.citation_service import CitationService
+from app.services.citation_validator import CitationValidator
 from app.services.llm.llm_client import LLMClient
 from app.services.llm.models import LLMStreamChunk
 from app.services.qa_service import QAService
@@ -43,7 +46,7 @@ def test_stream_answer_emits_chunk_citation_done(qa_request: QARequest) -> None:
                 resource_id="res-1",
                 text="relevant text",
                 score=0.95,
-                metadata={"page": 1},
+                metadata={"page": 1, "resource_type": "pdf"},
             ),
         ],
         prompt="constructed prompt",
@@ -55,21 +58,29 @@ def test_stream_answer_emits_chunk_citation_done(qa_request: QARequest) -> None:
     llm_client = MagicMock(spec=LLMClient)
 
     async def _fake_stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
-        yield LLMStreamChunk(delta="hello")
+        yield LLMStreamChunk(delta="hello [^1]")
         yield LLMStreamChunk(delta=" ")
         yield LLMStreamChunk(delta="world", finish_reason="stop")
 
     llm_client.stream_complete.side_effect = _fake_stream
 
-    service = QAService(retrieval_service, llm_client)
+    service = QAService(
+        retrieval_service,
+        llm_client,
+        citation_service=CitationService(CitationFormatter(), CitationValidator(log_dropped=False)),
+    )
     events = _collect_events(service.stream_answer(qa_request))
 
     assert [e.event_type for e in events] == ["chunk", "chunk", "chunk", "citation", "done"]
-    assert events[0].data["delta"] == "hello"
+    assert events[0].data["delta"] == "hello [^1]"
     assert events[0].data["index"] == 0
+    assert events[3].data["chunk_id"] == "chunk-1"
     assert events[3].data["resource_id"] == "res-1"
+    assert events[3].data["page"] == 1
+    assert events[3].data["snippet"] == "relevant text"
     assert events[3].data["score"] == 0.95
     assert events[4].data["finish_reason"] == "stop"
+    assert events[4].data["citation_count"] == 1
 
     retrieval_service.retrieve.assert_called_once()
     llm_client.stream_complete.assert_called_once()
@@ -160,6 +171,40 @@ def test_stream_answer_llm_error_yields_error_event(qa_request: QARequest) -> No
 
     assert events[-1].event_type == "error"
     assert events[-1].data["error_code"] == "LLM_TIMEOUT"
+
+
+def test_stream_answer_without_markers_emits_no_citations(qa_request: QARequest) -> None:
+    retrieval_result = RetrievalResult(
+        chunks=[
+            RetrievalChunk(
+                chunk_id="chunk-1",
+                resource_id="res-1",
+                text="relevant text",
+                score=0.95,
+                metadata={"page": 1},
+            )
+        ],
+        prompt="prompt",
+        context_token_count=0,
+    )
+    retrieval_service = MagicMock(spec=RetrievalService)
+    retrieval_service.retrieve.return_value = retrieval_result
+    llm_client = MagicMock(spec=LLMClient)
+
+    async def _fake_stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
+        yield LLMStreamChunk(delta="answer without marker", finish_reason="stop")
+
+    llm_client.stream_complete.side_effect = _fake_stream
+    service = QAService(
+        retrieval_service,
+        llm_client,
+        citation_service=CitationService(CitationFormatter(), CitationValidator(log_dropped=False)),
+    )
+
+    events = _collect_events(service.stream_answer(qa_request))
+
+    assert [event.event_type for event in events] == ["chunk", "done"]
+    assert events[-1].data["citation_count"] == 0
 
 
 def test_stream_answer_generic_exception_yields_error_event(qa_request: QARequest) -> None:

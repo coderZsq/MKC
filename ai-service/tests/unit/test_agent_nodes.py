@@ -72,7 +72,7 @@ def test_intent_node_fixed_and_dynamic_paths() -> None:
     llm.complete.assert_called_once()
 
 
-def test_retrieval_node_maps_chunks_to_citations() -> None:
+def test_retrieval_node_maps_chunks_without_prebuilt_citations() -> None:
     nodes, retrieval, _ = _nodes()
     update = _run(
         nodes.retrieval_node(
@@ -86,7 +86,7 @@ def test_retrieval_node_maps_chunks_to_citations() -> None:
         )
     )
     assert len(update["retrieved_chunks"]) == 1
-    assert update["citations"][0]["resource_id"] == "res-1"
+    assert update["citations"] == []
     retrieval.retrieve.assert_called_once()
 
 
@@ -125,6 +125,8 @@ def test_qa_generate_and_validate_nodes() -> None:
     update = _run(nodes.qa_node(state))
     assert update["draft_answer"] == "hello world"
     assert llm.stream_complete.called
+    passed_request = llm.stream_complete.call_args.args[0]
+    assert "[^1] resource=res-1" in passed_request.messages[0].content
 
     state.update(update)
     validate = _run(nodes.validate_node(state))

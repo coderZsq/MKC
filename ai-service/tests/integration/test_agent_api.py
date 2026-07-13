@@ -57,7 +57,7 @@ def test_agent_run_returns_sse_stream(client: FlaskClient) -> None:
     client.application.extensions["retrieval"] = retrieval
 
     async def _stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
-        yield LLMStreamChunk(delta="hello")
+        yield LLMStreamChunk(delta="hello [^1]")
         yield LLMStreamChunk(delta="", finish_reason="stop")
 
     client.application.extensions["llm"].stream_complete = _stream
@@ -80,7 +80,15 @@ def test_agent_run_returns_sse_stream(client: FlaskClient) -> None:
     assert "node_start" in event_types
     assert "chunk" in event_types
     assert "citation" in event_types
+    citation = next(event for event in events if event["event_type"] == "citation")
+    assert citation["data"]["index"] == 1
+    assert citation["data"]["chunk_id"] == "c-1"
+    assert citation["data"]["resource_id"] == "res-1"
+    assert citation["data"]["resource_type"] == "pdf"
+    assert citation["data"]["page"] == 2
+    assert citation["data"]["snippet"] == "topic"
     assert event_types[-1] == "done"
+    assert events[-1]["data"]["citation_count"] == 1
 
 
 @pytest.mark.integration
