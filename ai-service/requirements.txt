@@ -28,6 +28,10 @@ langgraph>=0.2.0,<0.3.0
 langchain-core>=0.2.0,<0.4.0
 sentence-transformers>=3.0.0,<4.0.0
 
+# Hybrid retrieval (BM25 sparse retrieval + Chinese tokenization + reranking)
+jieba>=0.42.1,<0.43.0
+rank-bm25>=0.2.2,<0.3.0
+
 # Vector store (Milvus + Chroma fallback)
 pymilvus>=2.4.0,<2.5.0
 milvus-lite>=2.4.0,<2.5.0

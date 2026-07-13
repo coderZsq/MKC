@@ -97,6 +97,48 @@ class ChromaStore:
             )
         return results
 
+    def query(
+        self,
+        filters: dict[str, Any] | None = None,
+        limit: int = 1000,
+    ) -> list[VectorSearchResult]:
+        """Fetch records matching ``filters`` without vector similarity.
+
+        Used by hybrid retrieval to load the BM25 corpus. Returned scores are
+        ``0.0`` because no similarity ranking is performed.
+        """
+        where_clause = _search_filter(filters or {})
+        n_results = min(limit, self._config.top_k_limit)
+        try:
+            get_results = self._collection.get(
+                where=where_clause or None,
+                limit=n_results,
+                include=["metadatas", "documents"],
+            )
+        except Exception as exc:
+            logger.exception("Chroma query failed")
+            raise VectorStoreUnavailableError("Chroma 查询失败") from exc
+
+        results: list[VectorSearchResult] = []
+        ids = get_results.get("ids") or []
+        metadatas = get_results.get("metadatas") or []
+        documents = get_results.get("documents") or []
+        for id_, metadata, document in zip(ids, metadatas, documents, strict=False):
+            if metadata is None:
+                continue
+            results.append(
+                VectorSearchResult(
+                    id=str(id_),
+                    resource_id=str(metadata.get("resource_id", "")),
+                    user_id=str(metadata.get("user_id", "")),
+                    text=str(document) if document is not None else "",
+                    metadata={k: v for k, v in metadata.items() if k not in _RESERVED_KEYS},
+                    score=0.0,
+                    created_at=int(metadata.get("created_at", 0)),
+                )
+            )
+        return results
+
     def _get_collection(self) -> Any:
         try:
             return self._client.get_or_create_collection(

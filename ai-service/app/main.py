@@ -6,6 +6,7 @@ from app.api.chunking import chunking_bp
 from app.api.embedding import embedding_bp
 from app.api.extraction import extraction_bp
 from app.api.health import health_bp
+from app.api.hybrid_retrieval import hybrid_retrieval_bp
 from app.api.internal import internal_bp
 from app.api.llm import llm_bp
 from app.api.pdf import pdf_bp
@@ -34,6 +35,10 @@ from app.services.extraction import (
     RuleExtractionProvider,
     TagNormalizer,
 )
+from app.services.hybrid_retrieval import (
+    HybridRetrievalService,
+    build_hybrid_retrieval_service,
+)
 from app.services.llm import LLMClient, build_llm_client, validate_llm_config
 from app.services.retrieval import RetrievalService, build_retrieval_service
 from app.services.summary import (
@@ -52,6 +57,7 @@ def create_app(
     embedding_service: EmbeddingService | None = None,
     vector_store: VectorStore | None = None,
     retrieval_service: RetrievalService | None = None,
+    hybrid_retrieval_service: HybridRetrievalService | None = None,
     llm_client: LLMClient | None = None,
 ) -> Flask:
     app = Flask(__name__)
@@ -63,6 +69,7 @@ def create_app(
         embedding_service=embedding_service,
         vector_store=vector_store,
         retrieval_service=retrieval_service,
+        hybrid_retrieval_service=hybrid_retrieval_service,
         llm_client=llm_client,
     )
     init_request_id(app)
@@ -78,6 +85,7 @@ def init_extensions(
     embedding_service: EmbeddingService | None = None,
     vector_store: VectorStore | None = None,
     retrieval_service: RetrievalService | None = None,
+    hybrid_retrieval_service: HybridRetrievalService | None = None,
     llm_client: LLMClient | None = None,
 ) -> None:
     if embedding_service is not None:
@@ -95,6 +103,14 @@ def init_extensions(
         app.extensions["retrieval"] = retrieval_service
     else:
         app.extensions["retrieval"] = build_retrieval_service(
+            app.extensions["embedding"],
+            app.extensions["vector_store"],
+        )
+
+    if hybrid_retrieval_service is not None:
+        app.extensions["hybrid_retrieval"] = hybrid_retrieval_service
+    else:
+        app.extensions["hybrid_retrieval"] = build_hybrid_retrieval_service(
             app.extensions["embedding"],
             app.extensions["vector_store"],
         )
@@ -154,6 +170,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(embedding_bp, url_prefix="/ai/v1")
     app.register_blueprint(vectors_bp, url_prefix="/ai/v1")
     app.register_blueprint(retrieval_bp, url_prefix="/ai/v1")
+    app.register_blueprint(hybrid_retrieval_bp, url_prefix="/ai/v1")
     app.register_blueprint(summary_bp, url_prefix="/ai/v1")
     app.register_blueprint(extraction_bp, url_prefix="/ai/v1")
     app.register_blueprint(llm_bp, url_prefix="/ai/v1")

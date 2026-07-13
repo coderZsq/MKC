@@ -110,6 +110,39 @@ class MilvusStore:
             _hit_to_result(hit, metric_type=self._config.metric_type) for hit in search_results[0]
         ]
 
+    def query(
+        self,
+        filters: dict[str, Any] | None = None,
+        limit: int = 1000,
+    ) -> list[VectorSearchResult]:
+        """Fetch records matching ``filters`` without vector similarity.
+
+        Used by hybrid retrieval to load the BM25 corpus. Returned scores are
+        ``0.0`` because no similarity ranking is performed.
+        """
+        expr = _search_filter(filters or {})
+        query_limit = min(limit, self._config.top_k_limit)
+
+        def _query() -> list[dict[str, Any]]:
+            return cast(
+                list[dict[str, Any]],
+                self._client.query(
+                    collection_name=self._collection_name,
+                    filter=expr or None,
+                    output_fields=[
+                        "resource_id",
+                        "user_id",
+                        "text",
+                        "metadata",
+                        "created_at",
+                    ],
+                    limit=query_limit,
+                ),
+            )
+
+        rows = self._with_retry(_query)
+        return [_query_row_to_result(row) for row in rows]
+
     def _create_client_with_retry(self) -> MilvusClient:
         def _connect() -> MilvusClient:
             client = MilvusClient(
@@ -313,6 +346,20 @@ def _hit_to_result(hit: dict[str, Any], metric_type: str) -> VectorSearchResult:
         metadata=entity.get("metadata", {}) or {},
         score=_distance_to_score(distance, metric_type),
         created_at=int(entity.get("created_at", 0)),
+    )
+
+
+def _query_row_to_result(row: dict[str, Any]) -> VectorSearchResult:
+    """Convert a Milvus ``query()`` row (no distance) into a VectorSearchResult."""
+    row_id = row.get("id", "")
+    return VectorSearchResult(
+        id=str(row_id),
+        resource_id=str(row.get("resource_id", "")),
+        user_id=str(row.get("user_id", "")),
+        text=str(row.get("text", "")),
+        metadata=row.get("metadata", {}) or {},
+        score=0.0,
+        created_at=int(row.get("created_at", 0)),
     )
 
 
