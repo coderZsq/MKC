@@ -40,6 +40,7 @@ from app.services.hybrid_retrieval import (
     build_hybrid_retrieval_service,
 )
 from app.services.llm import LLMClient, build_llm_client, validate_llm_config
+from app.services.memory import MemoryService, build_memory_config, build_memory_service
 from app.services.retrieval import RetrievalService, build_retrieval_service
 from app.services.summary import (
     MapReduceSummarizer,
@@ -59,6 +60,7 @@ def create_app(
     retrieval_service: RetrievalService | None = None,
     hybrid_retrieval_service: HybridRetrievalService | None = None,
     llm_client: LLMClient | None = None,
+    memory_service: MemoryService | None = None,
 ) -> Flask:
     app = Flask(__name__)
     app.config.from_object(settings)
@@ -71,6 +73,7 @@ def create_app(
         retrieval_service=retrieval_service,
         hybrid_retrieval_service=hybrid_retrieval_service,
         llm_client=llm_client,
+        memory_service=memory_service,
     )
     init_request_id(app)
     init_request_logging(app)
@@ -87,6 +90,7 @@ def init_extensions(
     retrieval_service: RetrievalService | None = None,
     hybrid_retrieval_service: HybridRetrievalService | None = None,
     llm_client: LLMClient | None = None,
+    memory_service: MemoryService | None = None,
 ) -> None:
     if embedding_service is not None:
         app.extensions["embedding"] = embedding_service
@@ -120,6 +124,15 @@ def init_extensions(
     else:
         validate_llm_config()
         app.extensions["llm"] = build_llm_client()
+
+    if memory_service is not None:
+        app.extensions["memory_service"] = memory_service
+    else:
+        app.extensions["memory_service"] = build_memory_service(
+            app.extensions["embedding"],
+            app.extensions["vector_store"],
+            config=build_memory_config(),
+        )
 
     citation_cfg = (settings.ai_config or {}).get("citation", {})
     app.extensions["citation_service"] = CitationService(

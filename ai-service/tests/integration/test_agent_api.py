@@ -92,6 +92,51 @@ def test_agent_run_returns_sse_stream(client: FlaskClient) -> None:
 
 
 @pytest.mark.integration
+def test_agent_run_recalls_long_term_memory(client: FlaskClient) -> None:
+    """A second request with no history still sees a fact saved in a previous turn."""
+    captured_requests: list[object] = []
+    llm = client.application.extensions["llm"]
+
+    async def _capture_stream(request: object) -> AsyncIterator[LLMStreamChunk]:
+        captured_requests.append(request)
+        yield LLMStreamChunk(delta="ok")
+        yield LLMStreamChunk(delta="", finish_reason="stop")
+
+    llm.stream_complete = MagicMock(side_effect=_capture_stream)
+
+    response = _post(
+        client,
+        {
+            "question": "我叫 Alice",
+            "conversation_id": "conv-memory",
+            "message_id": "msg-1",
+            "user_id": "user-memory",
+            "resource_ids": [],
+        },
+    )
+    assert response.status_code == 200
+    _ = response.get_data()
+
+    response = _post(
+        client,
+        {
+            "question": "我叫什么",
+            "conversation_id": "conv-memory",
+            "message_id": "msg-2",
+            "user_id": "user-memory",
+            "resource_ids": [],
+        },
+    )
+    assert response.status_code == 200
+    _ = response.get_data()
+
+    # The second LLM request should include the long-term memory context.
+    second_request = captured_requests[-1]
+    assert second_request.messages[0].role == "system"
+    assert "Alice" in second_request.messages[0].content
+
+
+@pytest.mark.integration
 def test_agent_run_rejects_missing_and_invalid_key(client: FlaskClient) -> None:
     payload = {
         "question": "q",

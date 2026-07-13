@@ -79,4 +79,5 @@ def _build_runner() -> AgentRunner:
         agent_cfg,
         checkpointer,
         citation_service=current_app.extensions.get("citation_service"),
+        memory_service=current_app.extensions.get("memory_service"),
     )

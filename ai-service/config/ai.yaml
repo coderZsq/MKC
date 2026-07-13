@@ -166,6 +166,14 @@ agent:
   sse:
     emit_node_events: true
 
+memory:
+  enabled: true
+  top_k: 5
+  score_threshold: 0.7
+  max_context_tokens: 1024
+  conversation_prefix: "memory:conversation"
+  user_prefix: "memory:user"
+
 extraction:
   enabled: true
   llm:
