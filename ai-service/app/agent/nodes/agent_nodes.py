@@ -125,7 +125,7 @@ class AgentNodes:
             max_tokens=state.get("max_tokens") or 2048,
         )
         async for chunk in self._llm.stream_complete(request):
-            if chunk.delta or chunk.reasoning_delta:
+            if chunk.delta:
                 yield chunk
             if chunk.finish_reason in {"stop", "error"}:
                 break
