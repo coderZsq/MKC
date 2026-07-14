@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from celery import Task
+
 from app.services.chunking.factory import build_chunking_service
 from app.services.embedding.factory import build_embedding_service
 from app.services.vector_indexing import VectorIndexService, build_vector_indexing_config
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
     name="celery_workers.tasks.index_vectors_task.index_resource_vectors",
 )
 def index_resource_vectors(
-    self,
+    self: Task,
     task_id: str,
     user_id: str,
     resource_id: str,
