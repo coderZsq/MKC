@@ -45,7 +45,9 @@ def build_retrieval_config(config: dict[str, Any] | None = None) -> RetrievalCon
     """Build a ``RetrievalConfig`` from ``config/ai.yaml`` and environment variables."""
     cfg = config if config is not None else (settings.ai_config or {}).get("retrieval", {})
     return RetrievalConfig(
-        default_top_k=int(_resolve_env_value(cfg.get("default_top_k", _DEFAULT_CONFIG.default_top_k))),
+        default_top_k=int(
+            _resolve_env_value(cfg.get("default_top_k", _DEFAULT_CONFIG.default_top_k))
+        ),
         score_threshold=float(
             _resolve_env_value(cfg.get("score_threshold", _DEFAULT_CONFIG.score_threshold)),
         ),
