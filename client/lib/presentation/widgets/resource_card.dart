@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/resource.dart';
+import 'claude_layout.dart';
 import 'resource_summary_text.dart';
 import 'tag_chip_row.dart';
 
@@ -20,42 +21,36 @@ class ResourceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: ClaudePanel(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      resource.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    resource.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium,
                   ),
-                  const SizedBox(width: 12),
-                  _ResourceStatusChip(status: resource.status),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ResourceSummaryText(
-                summary: resource.summary,
-                truncated: resource.summaryTruncated,
-              ),
-              const SizedBox(height: 8),
-              TagChipRow(tags: resource.tags, onTagTap: onTagTap),
-            ],
-          ),
+                ),
+                const SizedBox(width: 12),
+                _ResourceStatusChip(status: resource.status),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ResourceSummaryText(
+              summary: resource.summary,
+              truncated: resource.summaryTruncated,
+            ),
+            const SizedBox(height: 8),
+            TagChipRow(tags: resource.tags, onTagTap: onTagTap),
+          ],
         ),
       ),
     );

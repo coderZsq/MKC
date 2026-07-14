@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/task.dart';
 import '../../../domain/entities/task_event.dart';
 import '../providers/task_sse_provider.dart';
+import 'claude_layout.dart';
 import 'task_status_chip.dart';
 
 /// List item rendering a single task summary.
@@ -39,63 +40,60 @@ class TaskListItem extends ConsumerWidget {
     final displayTask =
         shouldSubscribe ? taskWithEvent(task, ref.watch(eventProvider)) : task;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: ClaudePanel(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      displayTask.resourceName,
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  TaskStatusChip(status: displayTask.status),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    displayTask.type.label,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    formatTaskUpdatedAt(displayTask.updatedAt),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              if (displayTask.status == TaskStatus.running ||
-                  displayTask.status == TaskStatus.pending) ...[
-                const SizedBox(height: 12),
-                LinearProgressIndicator(value: displayTask.progress / 100),
-                const SizedBox(height: 4),
-                Text('${displayTask.progress}%',
-                    style: Theme.of(context).textTheme.bodySmall),
-              ],
-              if (onViewContent != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: onViewContent,
-                    child: const Text('查看内容'),
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    displayTask.resourceName,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                TaskStatusChip(status: displayTask.status),
               ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  displayTask.type.label,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  formatTaskUpdatedAt(displayTask.updatedAt),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            if (displayTask.status == TaskStatus.running ||
+                displayTask.status == TaskStatus.pending) ...[
+              const SizedBox(height: 12),
+              LinearProgressIndicator(value: displayTask.progress / 100),
+              const SizedBox(height: 4),
+              Text('${displayTask.progress}%',
+                  style: Theme.of(context).textTheme.bodySmall),
             ],
-          ),
+            if (onViewContent != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: onViewContent,
+                  child: const Text('查看内容'),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

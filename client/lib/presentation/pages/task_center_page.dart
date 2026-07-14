@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/task.dart';
 import '../providers/task_center_provider.dart';
 import '../routes/app_routes.dart';
+import '../widgets/claude_layout.dart';
 import '../widgets/task_center_skeleton.dart';
 import '../widgets/task_list_item.dart';
 
@@ -42,9 +43,23 @@ class _TaskCenterPageState extends ConsumerState<TaskCenterPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('任务中心')),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        child: _buildBody(state),
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 28, 24, 16),
+            child: ClaudeSectionHeader(
+              label: 'Tasks',
+              title: '任务中心',
+              description: '跟踪解析任务状态，并在完成后进入相应资源内容。',
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              child: _buildBody(state),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -56,57 +71,55 @@ class _TaskCenterPageState extends ConsumerState<TaskCenterPage> {
 
     final error = state.error;
     if (error != null && state.tasks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(error.message),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _onRefresh,
-              child: const Text('重试'),
-            ),
-          ],
+      return ClaudeEmptyState(
+        title: error.message,
+        icon: Icons.error_outline,
+        action: ElevatedButton(
+          onPressed: _onRefresh,
+          child: const Text('重试'),
         ),
       );
     }
 
     if (state.tasks.isEmpty) {
-      return const Center(child: Text('暂无任务'));
+      return const ClaudeEmptyState(title: '暂无任务', icon: Icons.task_alt);
     }
 
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: state.tasks.length + (state.hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == state.tasks.length) {
-          if (!state.isLoadingMore) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ref.read(taskCenterNotifierProvider.notifier).loadMore();
-              }
-            });
+    return ClaudeListShell(
+      padding: EdgeInsets.zero,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        itemCount: state.tasks.length + (state.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == state.tasks.length) {
+            if (!state.isLoadingMore) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  ref.read(taskCenterNotifierProvider.notifier).loadMore();
+                }
+              });
+            }
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            );
           }
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
 
-        final task = state.tasks[index];
-        return TaskListItem(
-          task: task,
-          onTaskEvent:
-              ref.read(taskCenterNotifierProvider.notifier).applyTaskEvent,
-          onTap: () => context.go('$taskCenterRoute/${task.id}'),
-          onViewContent: task.status == TaskStatus.completed
-              ? () => context.push(
-                    '${contentViewRoute.replaceFirst(':id', task.resourceId)}?type=${_contentTypeParam(task.type)}',
-                  )
-              : null,
-        );
-      },
+          final task = state.tasks[index];
+          return TaskListItem(
+            task: task,
+            onTaskEvent:
+                ref.read(taskCenterNotifierProvider.notifier).applyTaskEvent,
+            onTap: () => context.go('$taskCenterRoute/${task.id}'),
+            onViewContent: task.status == TaskStatus.completed
+                ? () => context.push(
+                      '${contentViewRoute.replaceFirst(':id', task.resourceId)}?type=${_contentTypeParam(task.type)}',
+                    )
+                : null,
+          );
+        },
+      ),
     );
   }
 }

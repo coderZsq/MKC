@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/resource_list_provider.dart';
 import '../routes/app_routes.dart';
+import '../widgets/claude_layout.dart';
 import '../widgets/resource_card.dart';
 
 /// Page displaying resource cards with summaries and tags.
@@ -35,6 +36,14 @@ class _ResourceListPageState extends ConsumerState<ResourceListPage> {
       appBar: AppBar(title: const Text('资源库')),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 28, 24, 16),
+            child: ClaudeSectionHeader(
+              label: 'Library',
+              title: '资源库',
+              description: '浏览已解析资源、摘要和标签，并从资源直接进入内容视图。',
+            ),
+          ),
           if (state.selectedTag != null)
             _ActiveTagFilterBar(
               tag: state.selectedTag!,
@@ -78,38 +87,38 @@ class _ResourceListPageState extends ConsumerState<ResourceListPage> {
       );
     }
 
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: state.resources.length + (state.hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == state.resources.length) {
-          if (!state.isLoadingMore) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ref.read(resourceListNotifierProvider.notifier).loadMore();
-              }
-            });
+    return ClaudeListShell(
+      padding: EdgeInsets.zero,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        itemCount: state.resources.length + (state.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == state.resources.length) {
+            if (!state.isLoadingMore) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  ref.read(resourceListNotifierProvider.notifier).loadMore();
+                }
+              });
+            }
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            );
           }
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
 
-        final resource = state.resources[index];
-        return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: ResourceCard(
+          final resource = state.resources[index];
+          return ResourceCard(
             resource: resource,
             onTap: () => context.push(
               '${contentViewRoute.replaceFirst(':id', resource.id)}?type=${_contentTypeParam(resource.type)}',
             ),
             onTagTap:
                 ref.read(resourceListNotifierProvider.notifier).filterByTag,
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -129,7 +138,7 @@ class _ActiveTagFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.secondaryContainer.withAlpha(128),
+      color: theme.colorScheme.secondaryContainer.withAlpha(170),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
@@ -190,17 +199,17 @@ class _CenteredState extends StatelessWidget {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
-        const SizedBox(height: 160),
-        Center(child: Text(message)),
-        if (actionLabel != null && onPressed != null) ...[
-          const SizedBox(height: 16),
-          Center(
-            child: OutlinedButton(
-              onPressed: onPressed,
-              child: Text(actionLabel!),
-            ),
-          ),
-        ],
+        const SizedBox(height: 96),
+        ClaudeEmptyState(
+          title: message,
+          icon: Icons.folder_copy_outlined,
+          action: actionLabel != null && onPressed != null
+              ? OutlinedButton(
+                  onPressed: onPressed,
+                  child: Text(actionLabel!),
+                )
+              : null,
+        ),
       ],
     );
   }
