@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../domain/entities/chat_event.dart';
+import '../../../domain/entities/content_type.dart';
 import '../../../domain/entities/message.dart';
 
 /// Shared SSE event parser for both native and web SSE clients.
@@ -100,9 +101,49 @@ class ChatEventParser {
       conversationId: raw['conversation_id'] as String? ?? '',
       content: raw['content'] as String? ?? '',
       reasoning: raw['reasoning'] as String? ?? '',
+      citations: _parseCitations(raw['citations']),
       createdAt: _parseTimestamp(raw['created_at']),
       isStreaming: raw['is_streaming'] as bool? ?? false,
     );
+  }
+
+  static List<Citation> _parseCitations(dynamic raw) {
+    if (raw is! List) return const <Citation>[];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map((json) {
+          final metadata =
+              json['metadata'] as Map<String, dynamic>? ?? const {};
+          final resourceId = json['resource_id'] as String? ?? '';
+          if (resourceId.isEmpty) return null;
+          return Citation(
+            resourceId: resourceId,
+            resourceName: json['resource_name'] as String? ?? '',
+            index: _parseInt(json['index'] ?? metadata['index']),
+            chunkId:
+                json['chunk_id'] as String? ?? metadata['chunk_id'] as String?,
+            page: (json['page'] ?? metadata['page'])?.toString(),
+            timestamp: _parseDuration(
+              json['timestamp_start'] ??
+                  json['timestamp'] ??
+                  metadata['timestamp_start'] ??
+                  metadata['timestamp'],
+            ),
+            timestampEnd: _parseDuration(
+              json['timestamp_end'] ?? metadata['timestamp_end'],
+            ),
+            snippet:
+                json['snippet'] as String? ?? metadata['snippet'] as String?,
+            score: (json['score'] as num?)?.toDouble() ?? 0.0,
+            contentType: ContentType.fromParam(
+              json['resource_type'] as String? ??
+                  json['content_type'] as String? ??
+                  metadata['content_type'] as String?,
+            ),
+          );
+        })
+        .whereType<Citation>()
+        .toList();
   }
 
   static Duration? _parseDuration(dynamic value) {

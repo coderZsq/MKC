@@ -48,7 +48,8 @@ class MessageModel {
   static List<CitationModel> _parseCitations(List<dynamic>? raw) {
     if (raw == null) return const <CitationModel>[];
     return raw
-        .map((dynamic item) => CitationModel.fromJson(item as Map<String, dynamic>))
+        .map((dynamic item) =>
+            CitationModel.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
@@ -68,16 +69,24 @@ class CitationModel {
   const CitationModel({
     required this.resourceId,
     required this.resourceName,
+    this.index,
+    this.chunkId,
     this.page,
     this.timestamp,
+    this.timestampEnd,
+    this.snippet,
     required this.score,
     this.contentType,
   });
 
   final String resourceId;
   final String resourceName;
+  final int? index;
+  final String? chunkId;
   final String? page;
   final Duration? timestamp;
+  final Duration? timestampEnd;
+  final String? snippet;
   final double score;
   final String? contentType;
 
@@ -86,10 +95,23 @@ class CitationModel {
     return CitationModel(
       resourceId: json['resource_id'] as String? ?? '',
       resourceName: json['resource_name'] as String? ?? '',
-      page: metadata['page']?.toString(),
-      timestamp: _parseTimestamp(metadata['timestamp']),
+      index: _parseInt(json['index'] ?? metadata['index']),
+      chunkId: json['chunk_id'] as String? ?? metadata['chunk_id'] as String?,
+      page: (json['page'] ?? metadata['page'])?.toString(),
+      timestamp: _parseTimestamp(
+        json['timestamp_start'] ??
+            json['timestamp'] ??
+            metadata['timestamp_start'] ??
+            metadata['timestamp'],
+      ),
+      timestampEnd: _parseTimestamp(
+        json['timestamp_end'] ?? metadata['timestamp_end'],
+      ),
+      snippet: json['snippet'] as String? ?? metadata['snippet'] as String?,
       score: (json['score'] as num?)?.toDouble() ?? 0.0,
-      contentType: metadata['content_type'] as String?,
+      contentType: json['resource_type'] as String? ??
+          json['content_type'] as String? ??
+          metadata['content_type'] as String?,
     );
   }
 
@@ -97,8 +119,12 @@ class CitationModel {
     return Citation(
       resourceId: resourceId,
       resourceName: resourceName,
+      index: index,
+      chunkId: chunkId,
       page: page,
       timestamp: timestamp,
+      timestampEnd: timestampEnd,
+      snippet: snippet,
       score: score,
       contentType: _parseContentType(contentType),
     );
@@ -109,6 +135,14 @@ class CitationModel {
       'audio' => ContentType.audio,
       _ => ContentType.pdf,
     };
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   static Duration? _parseTimestamp(dynamic value) {

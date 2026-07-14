@@ -308,7 +308,12 @@ func parseResourceIDs(raw json.RawMessage) []string {
 func mapMessagesToHistory(messages []model.Message) []ChatMessage {
 	history := make([]ChatMessage, 0, len(messages))
 	for _, m := range messages {
-		history = append(history, ChatMessage{Role: m.Role, Content: m.Content})
+		history = append(history, ChatMessage{
+			Role:      m.Role,
+			Content:   m.Content,
+			Reasoning: m.Reasoning,
+			Citations: m.Citations,
+		})
 	}
 	return history
 }

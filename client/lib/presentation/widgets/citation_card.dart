@@ -45,9 +45,18 @@ class CitationCard extends StatelessWidget {
       );
       return;
     }
-    context.push(
-      '${contentViewRoute.replaceFirst(':id', citation.resourceId)}?type=${citation.contentType.paramValue}',
+    final query = <String, String>{
+      'type': citation.contentType.paramValue,
+      if (citation.page != null && citation.page!.isNotEmpty)
+        'page': citation.page!,
+      if (citation.timestamp != null)
+        'timestamp': citation.timestamp!.inMilliseconds.toString(),
+    };
+    final uri = Uri(
+      path: contentViewRoute.replaceFirst(':id', citation.resourceId),
+      queryParameters: query,
     );
+    context.push(uri.toString());
   }
 
   @override

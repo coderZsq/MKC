@@ -9,6 +9,7 @@ import 'highlight_text.dart';
 class PdfTextView extends StatefulWidget {
   const PdfTextView({
     required this.pages,
+    this.initialPage,
     required this.expandedPageNumbers,
     required this.matches,
     required this.currentMatchIndex,
@@ -18,6 +19,7 @@ class PdfTextView extends StatefulWidget {
   });
 
   final List<ParsedPage> pages;
+  final int? initialPage;
   final Set<int> expandedPageNumbers;
   final List<TextMatch> matches;
   final int currentMatchIndex;
@@ -31,13 +33,43 @@ class PdfTextView extends StatefulWidget {
 class _PdfTextViewState extends State<PdfTextView> {
   final _scrollController = ScrollController();
   final _itemKeys = <int, GlobalKey>{};
+  int? _lastScrolledInitialPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollToInitialPage();
+  }
 
   @override
   void didUpdateWidget(covariant PdfTextView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPage != widget.initialPage ||
+        oldWidget.pages != widget.pages) {
+      _scrollToInitialPage();
+    }
     if (oldWidget.currentMatchIndex != widget.currentMatchIndex) {
       _scrollToCurrentMatch();
     }
+  }
+
+  void _scrollToInitialPage() {
+    final pageNumber = widget.initialPage;
+    if (pageNumber == null || _lastScrolledInitialPage == pageNumber) return;
+    final index =
+        widget.pages.indexWhere((page) => page.pageNumber == pageNumber);
+    if (index < 0) return;
+    _lastScrolledInitialPage = pageNumber;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _itemKeys[index];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 220),
+          alignment: 0.08,
+        );
+      }
+    });
   }
 
   @override

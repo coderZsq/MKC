@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -298,6 +299,34 @@ func TestContextWindowService_BuildMessages(t *testing.T) {
 	assert.Equal(t, "user", history[0].Role)
 	assert.Equal(t, "user", history[len(history)-2].Role)
 	assert.Equal(t, "assistant", history[len(history)-1].Role)
+}
+
+func TestContextWindowService_BuildMessages_PreservesMetadata(t *testing.T) {
+	db := setupConversationServiceTestDB(t)
+	ctx := context.Background()
+	user := newConversationServiceTestUser(t, db)
+
+	convRepo := repository.NewConversationRepository(db)
+	conv := &model.Conversation{UUID: uuid.NewString(), UserID: user.ID, Title: "ctx"}
+	require.NoError(t, convRepo.Create(ctx, conv))
+
+	msgRepo := repository.NewMessageRepository(db)
+	citations := json.RawMessage(`[{"resource_id":"res-1","page":6}]`)
+	require.NoError(t, msgRepo.Create(ctx, &model.Message{
+		UUID:           uuid.NewString(),
+		ConversationID: conv.ID,
+		Role:           "assistant",
+		Content:        "answer",
+		Reasoning:      "thinking",
+		Citations:      citations,
+	}))
+
+	svc := NewContextWindowService(msgRepo, 10, 1000)
+	history, err := svc.BuildMessages(ctx, conv.ID, "question")
+	require.NoError(t, err)
+	require.Len(t, history, 1)
+	assert.Equal(t, "thinking", history[0].Reasoning)
+	assert.JSONEq(t, string(citations), string(history[0].Citations))
 }
 
 func TestContextWindowService_Truncation(t *testing.T) {

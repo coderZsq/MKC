@@ -21,42 +21,60 @@ class TextSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              key: const Key('content_search_field'),
-              decoration: const InputDecoration(
-                hintText: '搜索内容',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      key: const Key('content_search_field'),
+                      decoration: const InputDecoration(
+                        hintText: '搜索内容',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onChanged: onChanged,
+                    ),
+                  ),
+                  if (keyword.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      matchCount == 0
+                          ? '无结果'
+                          : '${currentIndex + 1} / $matchCount',
+                      key: const Key('content_search_count'),
+                    ),
+                    IconButton(
+                      key: const Key('content_search_previous'),
+                      icon: const Icon(Icons.keyboard_arrow_up),
+                      onPressed: matchCount == 0 ? null : onPrevious,
+                    ),
+                    IconButton(
+                      key: const Key('content_search_next'),
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      onPressed: matchCount == 0 ? null : onNext,
+                    ),
+                  ],
+                ],
               ),
-              onChanged: onChanged,
             ),
           ),
-          if (keyword.isNotEmpty) ...[
-            const SizedBox(width: 8),
-            Text(
-              matchCount == 0
-                  ? '无结果'
-                  : '${currentIndex + 1} / $matchCount',
-              key: const Key('content_search_count'),
-            ),
-            IconButton(
-              key: const Key('content_search_previous'),
-              icon: const Icon(Icons.keyboard_arrow_up),
-              onPressed: matchCount == 0 ? null : onPrevious,
-            ),
-            IconButton(
-              key: const Key('content_search_next'),
-              icon: const Icon(Icons.keyboard_arrow_down),
-              onPressed: matchCount == 0 ? null : onNext,
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

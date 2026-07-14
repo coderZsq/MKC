@@ -17,8 +17,10 @@ import (
 
 // ChatMessage is a single turn in a conversation history.
 type ChatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role      string          `json:"role"`
+	Content   string          `json:"content"`
+	Reasoning string          `json:"reasoning,omitempty"`
+	Citations json.RawMessage `json:"citations,omitempty"`
 }
 
 // QARequest is the payload sent to the AI Service streaming Q&A endpoint.

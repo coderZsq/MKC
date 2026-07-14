@@ -76,9 +76,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           final contentType = ContentType.fromParam(
             state.uri.queryParameters['type'],
           );
+          final initialPage = int.tryParse(
+            state.uri.queryParameters['page'] ?? '',
+          );
+          final initialTimestampMs = int.tryParse(
+            state.uri.queryParameters['timestamp'] ?? '',
+          );
           return ContentViewPage(
             resourceId: resourceId,
             contentType: contentType,
+            initialPage: initialPage,
+            initialTimestamp: initialTimestampMs == null
+                ? null
+                : Duration(milliseconds: initialTimestampMs),
           );
         },
       ),

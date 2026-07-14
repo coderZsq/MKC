@@ -37,6 +37,7 @@ class _SegmentBucket {
 class SrtListView extends StatefulWidget {
   const SrtListView({
     required this.segments,
+    this.initialTimestamp,
     required this.matches,
     required this.currentMatchIndex,
     required this.showCleanedText,
@@ -46,6 +47,7 @@ class SrtListView extends StatefulWidget {
   });
 
   final List<SubtitleSegment> segments;
+  final Duration? initialTimestamp;
   final List<TextMatch> matches;
   final int currentMatchIndex;
   final bool showCleanedText;
@@ -61,6 +63,7 @@ class _SrtListViewState extends State<SrtListView> {
   final _bucketKeys = <int, GlobalKey>{};
   final _segmentKeys = <int, GlobalKey>{};
   final _expandedBucketIndices = <int>{0};
+  Duration? _lastScrolledInitialTimestamp;
 
   @override
   void initState() {
@@ -68,11 +71,18 @@ class _SrtListViewState extends State<SrtListView> {
     if (widget.segments.isEmpty) {
       _expandedBucketIndices.clear();
     }
+    _ensureBucketExpandedForInitialTimestamp();
+    _scrollToInitialTimestamp();
   }
 
   @override
   void didUpdateWidget(covariant SrtListView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTimestamp != widget.initialTimestamp ||
+        oldWidget.segments != widget.segments) {
+      _ensureBucketExpandedForInitialTimestamp();
+      _scrollToInitialTimestamp();
+    }
     if (oldWidget.currentMatchIndex != widget.currentMatchIndex) {
       _ensureBucketExpandedForCurrentMatch();
       _scrollToCurrentMatch();
@@ -113,6 +123,43 @@ class _SrtListViewState extends State<SrtListView> {
       }
     }
     return null;
+  }
+
+  int? _segmentIndexForTimestamp(Duration? timestamp) {
+    if (timestamp == null) return null;
+    for (var i = 0; i < widget.segments.length; i++) {
+      final segment = widget.segments[i];
+      if (timestamp >= segment.start && timestamp <= segment.end) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  void _ensureBucketExpandedForInitialTimestamp() {
+    final segmentIndex = _segmentIndexForTimestamp(widget.initialTimestamp);
+    if (segmentIndex == null) return;
+    final bucketIndex = _bucketIndexForSegment(segmentIndex);
+    if (bucketIndex == null) return;
+    _expandedBucketIndices.add(bucketIndex);
+  }
+
+  void _scrollToInitialTimestamp() {
+    final timestamp = widget.initialTimestamp;
+    if (timestamp == null || _lastScrolledInitialTimestamp == timestamp) return;
+    final segmentIndex = _segmentIndexForTimestamp(timestamp);
+    if (segmentIndex == null) return;
+    _lastScrolledInitialTimestamp = timestamp;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _segmentKeys[segmentIndex];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 220),
+          alignment: 0.16,
+        );
+      }
+    });
   }
 
   void _ensureBucketExpandedForCurrentMatch() {

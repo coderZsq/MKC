@@ -6,7 +6,6 @@ import '../../domain/entities/content_type.dart';
 import '../../domain/services/audio_seek_service.dart';
 import '../../shared/errors/app_exception.dart';
 import '../providers/content_view_provider.dart';
-import '../widgets/claude_layout.dart';
 import '../widgets/pdf_text_view.dart';
 import '../widgets/srt_list_view.dart';
 import '../widgets/text_search_bar.dart';
@@ -16,12 +15,16 @@ class ContentViewPage extends ConsumerStatefulWidget {
   const ContentViewPage({
     required this.resourceId,
     required this.contentType,
+    this.initialPage,
+    this.initialTimestamp,
     this.audioSeekService,
     super.key,
   });
 
   final String resourceId;
   final ContentType contentType;
+  final int? initialPage;
+  final Duration? initialTimestamp;
   final AudioSeekService? audioSeekService;
 
   @override
@@ -43,6 +46,7 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
   ContentViewRouteArgs get _args => ContentViewRouteArgs(
         resourceId: widget.resourceId,
         contentType: widget.contentType,
+        initialPage: widget.initialPage,
       );
 
   @override
@@ -64,14 +68,6 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
       ),
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
-            child: ClaudeSectionHeader(
-              label: 'Reader',
-              title: '内容阅读',
-              description: '搜索、折叠和定位已解析内容。',
-            ),
-          ),
           TextSearchBar(
             keyword: state.keyword,
             matchCount: state.matches.length,
@@ -110,13 +106,16 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
 
     final content = state.content;
     if (content == null) {
-      return const ClaudeEmptyState(
-          title: '暂无内容', icon: Icons.article_outlined);
+      return const _CompactState(
+        message: '暂无内容',
+        icon: Icons.article_outlined,
+      );
     }
 
     return switch (content) {
       AudioContent(:final segments) => SrtListView(
           segments: segments,
+          initialTimestamp: widget.initialTimestamp,
           matches: state.matches,
           currentMatchIndex: state.currentMatchIndex,
           showCleanedText: state.showCleanedText,
@@ -125,6 +124,7 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
         ),
       PdfContent(:final pages) => PdfTextView(
           pages: pages,
+          initialPage: widget.initialPage,
           expandedPageNumbers: state.expandedPageNumbers,
           matches: state.matches,
           currentMatchIndex: state.currentMatchIndex,
@@ -147,16 +147,64 @@ class _ErrorView extends StatelessWidget {
     final isNotCompleted = error is TaskNotCompletedException;
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(error.message),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: Text(isNotCompleted ? '刷新' : '重试'),
-          ),
-        ],
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 360),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border:
+              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isNotCompleted ? Icons.hourglass_empty : Icons.wifi_off_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(error.message),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: Text(isNotCompleted ? '刷新' : '重试'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactState extends StatelessWidget {
+  const _CompactState({required this.message, required this.icon});
+
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border:
+              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }
