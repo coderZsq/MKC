@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/theme.dart';
 import '../providers/conversation_list_provider.dart';
 import '../routes/app_routes.dart';
 import '../widgets/claude_layout.dart';
@@ -125,9 +126,15 @@ class ConversationListPage extends ConsumerWidget {
   }
 
   void _delete(BuildContext context, WidgetRef ref, String id) {
+    final theme = Theme.of(context);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: ClaudeColors.ivory,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        titleTextStyle: theme.textTheme.headlineSmall,
+        contentTextStyle: theme.textTheme.bodyMedium,
         title: const Text('Delete conversation'),
         content:
             const Text('Are you sure you want to delete this conversation?'),

@@ -224,9 +224,12 @@ class _ResourceListSkeleton extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: 4,
-      itemBuilder: (context, index) => const Card(
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: SizedBox(height: 128),
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: ClaudePanel(
+          padding: EdgeInsets.zero,
+          child: SizedBox(height: 128),
+        ),
       ),
     );
   }

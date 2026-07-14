@@ -61,17 +61,6 @@ abstract final class AppTheme {
           bottom: BorderSide(color: ClaudeColors.borderCream),
         ),
       ),
-      cardTheme: CardThemeData(
-        color: ClaudeColors.ivory,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: ClaudeColors.borderCream),
-        ),
-      ),
       listTileTheme: ListTileThemeData(
         iconColor: ClaudeColors.terracotta,
         textColor: ClaudeColors.nearBlack,
@@ -155,13 +144,6 @@ abstract final class AppTheme {
             textTheme.bodyMedium?.copyWith(color: ClaudeColors.ivory),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: ClaudeColors.ivory,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        titleTextStyle: textTheme.headlineSmall,
-        contentTextStyle: textTheme.bodyMedium,
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
