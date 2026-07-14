@@ -29,6 +29,7 @@ def test_create_pdf_parse_task_success(
         json={
             "task_id": "task-1",
             "resource_id": "res-1",
+            "user_id": "user-1",
             "pdf_url": "minio://resources/doc.pdf",
         },
     )
@@ -114,6 +115,7 @@ def test_create_pdf_parse_task_unsupported_scheme(
         json={
             "task_id": "task-1",
             "resource_id": "res-1",
+            "user_id": "user-1",
             "pdf_url": "https://example.com/doc.pdf",
         },
     )
@@ -136,6 +138,7 @@ def test_create_pdf_parse_task_missing_object_name(
         json={
             "task_id": "task-1",
             "resource_id": "res-1",
+            "user_id": "user-1",
             "pdf_url": "minio://resources",
         },
     )

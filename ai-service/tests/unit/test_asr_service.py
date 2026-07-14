@@ -150,6 +150,7 @@ class TestAsrService:
             task = AsrTaskRequest(
                 task_id="task-1",
                 resource_id="res-1",
+                user_id="user-1",
                 audio_url="minio://resources/audio.mp3",
                 language="zh",
                 model="small",
@@ -190,6 +191,7 @@ class TestAsrService:
             task = AsrTaskRequest(
                 task_id="task-4",
                 resource_id="res-4",
+                user_id="user-1",
                 audio_url="minio://resources/audio.mp3",
             )
 
@@ -215,6 +217,7 @@ class TestAsrService:
         task = AsrTaskRequest(
             task_id="task-2",
             resource_id="res-2",
+            user_id="user-1",
             audio_url="minio://missing/audio.mp3",
         )
 
@@ -238,6 +241,7 @@ class TestAsrService:
         task = AsrTaskRequest(
             task_id="task-3",
             resource_id="res-3",
+            user_id="user-1",
             audio_url="minio://resources/audio.mp3",
         )
 

@@ -13,6 +13,7 @@ class AsrSegment(BaseModel):
 class AsrTaskRequest(BaseModel):
     task_id: str
     resource_id: str
+    user_id: str
     audio_url: str
     language: str | None = "zh"
     model: str | None = "small"

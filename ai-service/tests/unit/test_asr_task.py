@@ -13,9 +13,48 @@ def _task_payload(model: str = "large-v3") -> dict[str, str]:
     return {
         "task_id": "task-1",
         "resource_id": "res-1",
+        "user_id": "user-1",
         "audio_url": "minio://resources/audio.mp3",
         "model": model,
     }
+
+
+@patch("celery_workers.tasks.asr_task.index_resource_vectors")
+@patch("celery_workers.tasks.asr_task._build_engine")
+@patch("celery_workers.tasks.asr_task.AudioProcessor")
+@patch("celery_workers.tasks.asr_task.GatewayProgressReporter")
+@patch("celery_workers.tasks.asr_task.AsrService")
+@patch("celery_workers.tasks.asr_task.settings")
+def test_run_asr_success_enqueues_index_task(
+    mock_settings: MagicMock,
+    mock_service_class: MagicMock,
+    _mock_reporter_class: MagicMock,
+    _mock_processor_class: MagicMock,
+    _mock_engine_func: MagicMock,
+    mock_index_task: MagicMock,
+) -> None:
+    mock_settings.ai_config = {"asr": {}}
+    result = MagicMock()
+    result.model_dump.return_value = {
+        "task_id": "task-1",
+        "resource_id": "res-1",
+        "segments": [{"start": 0.0, "end": 1.0, "text": "hello"}],
+        "text": "hello",
+    }
+    service = MagicMock()
+    service.process.return_value = result
+    mock_service_class.return_value = service
+
+    output = run_asr.run(task_id="task-1", payload=_task_payload("small"))
+
+    assert output == result.model_dump.return_value
+    mock_index_task.delay.assert_called_once_with(
+        task_id="task-1",
+        user_id="user-1",
+        resource_id="res-1",
+        source_type="audio",
+        parsed_result=result.model_dump.return_value,
+    )
 
 
 @patch("celery_workers.tasks.asr_task._build_engine")
