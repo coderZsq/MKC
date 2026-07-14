@@ -66,6 +66,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-1",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/doc.pdf",
         )
 
@@ -100,6 +101,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-1",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/doc.pdf",
         )
 
@@ -116,6 +118,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-1",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/doc.pdf",
         )
 
@@ -151,6 +154,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-1",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/scanned.pdf",
         )
 
@@ -181,6 +185,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-2",
             resource_id="res-2",
+            user_id="user-1",
             pdf_url="minio://resources/encrypted.pdf",
         )
 
@@ -212,6 +217,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-3",
             resource_id="res-3",
+            user_id="user-1",
             pdf_url="minio://resources/missing.pdf",
         )
 
@@ -242,6 +248,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-4",
             resource_id="res-4",
+            user_id="user-1",
             pdf_url="minio://resources/bad.pdf",
         )
 
@@ -271,6 +278,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-1/../../evil",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/doc.pdf",
         )
 
@@ -297,6 +305,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-size",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/doc.pdf",
         )
 
@@ -340,6 +349,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-pages",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/doc.pdf",
         )
 
@@ -375,6 +385,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-5",
             resource_id="res-5",
+            user_id="user-1",
             pdf_url="minio://resources/scanned.pdf",
         )
 
@@ -434,6 +445,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-ocr",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/scanned.pdf",
         )
 
@@ -472,6 +484,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-ocr-unavailable",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/scanned.pdf",
         )
 
@@ -511,6 +524,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-ocr-empty",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/scanned.pdf",
         )
 
@@ -550,6 +564,7 @@ class TestPdfParserService:
         task = PdfParseTask(
             task_id="task-ocr-page",
             resource_id="res-1",
+            user_id="user-1",
             pdf_url="minio://resources/scanned.pdf",
         )
 

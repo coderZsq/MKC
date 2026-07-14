@@ -14,10 +14,12 @@ def _task_payload() -> dict[str, str]:
     return {
         "task_id": "task-1",
         "resource_id": "res-1",
+        "user_id": "user-1",
         "pdf_url": "minio://resources/doc.pdf",
     }
 
 
+@patch("celery_workers.tasks.pdf_parse_task.index_resource_vectors")
 @patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")
 @patch("celery_workers.tasks.pdf_parse_task._build_extractor")
 @patch("celery_workers.tasks.pdf_parse_task.GatewayProgressReporter")
@@ -29,6 +31,7 @@ def test_run_pdf_parse_success(
     _mock_reporter_class: MagicMock,
     _mock_build_extractor: MagicMock,
     _mock_build_ocr_service: MagicMock,
+    mock_index_task: MagicMock,
 ) -> None:
     mock_settings.ai_config = {"pdf": {"ocr_threshold": 50}}
     expected = {
@@ -52,8 +55,16 @@ def test_run_pdf_parse_success(
     assert result == expected
     service.parse.assert_called_once()
     assert mock_service_class.call_args.kwargs.get("report_status") is False
+    mock_index_task.delay.assert_called_once_with(
+        task_id="task-1",
+        user_id="user-1",
+        resource_id="res-1",
+        source_type="pdf",
+        parsed_result=expected,
+    )
 
 
+@patch("celery_workers.tasks.pdf_parse_task.index_resource_vectors")
 @patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")
 @patch("celery_workers.tasks.pdf_parse_task._build_extractor")
 @patch("celery_workers.tasks.pdf_parse_task.GatewayProgressReporter")
@@ -65,6 +76,7 @@ def test_run_pdf_parse_continues_when_ocr_unavailable(
     _mock_reporter_class: MagicMock,
     _mock_build_extractor: MagicMock,
     mock_build_ocr_service: MagicMock,
+    mock_index_task: MagicMock,
 ) -> None:
     mock_settings.ai_config = {"pdf": {"ocr_threshold": 50}}
     mock_build_ocr_service.side_effect = OcrUnavailableError("PaddleOCR is not installed")
@@ -89,6 +101,13 @@ def test_run_pdf_parse_continues_when_ocr_unavailable(
     assert result == expected
     service.parse.assert_called_once()
     assert mock_service_class.call_args.kwargs.get("ocr_service") is None
+    mock_index_task.delay.assert_called_once_with(
+        task_id="task-1",
+        user_id="user-1",
+        resource_id="res-1",
+        source_type="pdf",
+        parsed_result=expected,
+    )
 
 
 @patch("celery_workers.tasks.pdf_parse_task._build_ocr_service")

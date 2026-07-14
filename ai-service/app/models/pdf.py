@@ -44,6 +44,7 @@ class PdfParseTask(BaseModel):
 
     task_id: str
     resource_id: str
+    user_id: str
     pdf_url: str
 
 

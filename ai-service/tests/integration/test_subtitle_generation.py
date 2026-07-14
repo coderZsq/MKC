@@ -71,6 +71,7 @@ def test_asr_flow_generates_and_uploads_subtitle(
     task = AsrTaskRequest(
         task_id="task-1",
         resource_id="res-1",
+        user_id="user-1",
         audio_url="minio://resources/audio.mp3",
         language="zh",
     )
@@ -117,6 +118,7 @@ def test_asr_flow_reports_failure_on_subtitle_upload_error(
         task = AsrTaskRequest(
             task_id="task-2",
             resource_id="res-2",
+            user_id="user-1",
             audio_url="minio://resources/audio.mp3",
         )
         with pytest.raises(SubtitleGenerationError):

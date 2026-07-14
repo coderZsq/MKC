@@ -17,6 +17,7 @@ from app.services.pymupdf_extractor import PyMuPDFExtractor
 from app.utils.pdf_renderer import PdfRenderer
 from celery_workers.celery_app import celery_app
 from celery_workers.tasks.base import BaseAITask
+from celery_workers.tasks.index_vectors_task import index_resource_vectors
 
 logger = logging.getLogger(__name__)
 
@@ -102,5 +103,16 @@ def run_pdf_parse(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str
         )
         self._failure_reported = True
         raise
+
+    try:
+        index_resource_vectors.delay(
+            task_id=task_id,
+            user_id=task.user_id,
+            resource_id=task.resource_id,
+            source_type="pdf",
+            parsed_result=document,
+        )
+    except Exception:
+        logger.exception("Failed to enqueue vector indexing for resource %s", task.resource_id)
 
     return document

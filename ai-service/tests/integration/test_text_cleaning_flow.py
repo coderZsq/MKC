@@ -86,6 +86,7 @@ class TestTextCleaningFlow:
             task = AsrTaskRequest(
                 task_id="task-1",
                 resource_id="res-1",
+                user_id="user-1",
                 audio_url="minio://resources/audio.mp3",
                 language="zh",
             )
@@ -130,6 +131,7 @@ class TestTextCleaningFlow:
         task = AsrTaskRequest(
             task_id="task-1",
             resource_id="res-1",
+            user_id="user-1",
             audio_url="minio://resources/audio.mp3",
             language="zh",
         )

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -208,6 +209,7 @@ func (d *HTTPTaskDispatcher) buildDispatchRequest(task *model.Task, resource *mo
 		payload := asrDispatchRequest{
 			TaskID:     task.UUID,
 			ResourceID: resource.UUID,
+			UserID:     strconv.FormatUint(resource.UserID, 10),
 			AudioURL:   storageURL,
 			Language:   "zh",
 			Model:      "small",
@@ -218,6 +220,7 @@ func (d *HTTPTaskDispatcher) buildDispatchRequest(task *model.Task, resource *mo
 		payload := pdfDispatchRequest{
 			TaskID:     task.UUID,
 			ResourceID: resource.UUID,
+			UserID:     strconv.FormatUint(resource.UserID, 10),
 			PDFURL:     storageURL,
 		}
 		return endpoint, payload, nil
@@ -229,6 +232,7 @@ func (d *HTTPTaskDispatcher) buildDispatchRequest(task *model.Task, resource *mo
 type asrDispatchRequest struct {
 	TaskID     string `json:"task_id"`
 	ResourceID string `json:"resource_id"`
+	UserID     string `json:"user_id"`
 	AudioURL   string `json:"audio_url"`
 	Language   string `json:"language,omitempty"`
 	Model      string `json:"model,omitempty"`
@@ -237,6 +241,7 @@ type asrDispatchRequest struct {
 type pdfDispatchRequest struct {
 	TaskID     string `json:"task_id"`
 	ResourceID string `json:"resource_id"`
+	UserID     string `json:"user_id"`
 	PDFURL     string `json:"pdf_url"`
 }
 

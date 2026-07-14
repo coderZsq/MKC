@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from celery import Task
@@ -14,6 +15,9 @@ from app.services.gateway_reporter import GatewayProgressReporter
 from app.services.whisper_engine import WhisperEngine
 from celery_workers.celery_app import celery_app
 from celery_workers.tasks.base import BaseAITask
+from celery_workers.tasks.index_vectors_task import index_resource_vectors
+
+logger = logging.getLogger(__name__)
 
 
 def _build_engine(model_name: str | None) -> WhisperEngine:
@@ -78,4 +82,17 @@ def run_asr(self: Task, task_id: str, payload: dict[str, Any]) -> dict[str, Any]
         self._failure_reported = True
         raise
 
-    return result.model_dump()
+    result_dict = result.model_dump()
+
+    try:
+        index_resource_vectors.delay(
+            task_id=task_id,
+            user_id=task.user_id,
+            resource_id=task.resource_id,
+            source_type="audio",
+            parsed_result=result_dict,
+        )
+    except Exception:
+        logger.exception("Failed to enqueue vector indexing for resource %s", task.resource_id)
+
+    return result_dict

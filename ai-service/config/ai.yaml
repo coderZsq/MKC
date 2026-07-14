@@ -166,6 +166,10 @@ agent:
   sse:
     emit_node_events: true
 
+vector_indexing:
+  enabled: true
+  strategy: null            # optional override for chunking.strategy; null uses chunking config
+
 memory:
   enabled: true
   top_k: 5
