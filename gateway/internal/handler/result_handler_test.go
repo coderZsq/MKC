@@ -17,12 +17,19 @@ import (
 )
 
 type stubResultService struct {
-	getResultFunc func(ctx context.Context, userID uint64, taskUUID string) (*service.ResultSummary, error)
+	getResultFunc           func(ctx context.Context, userID uint64, taskUUID string) (*service.ResultSummary, error)
+	getResultByResourceIDFunc func(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error)
 }
 
 func (s *stubResultService) GetResult(ctx context.Context, userID uint64, taskUUID string) (*service.ResultSummary, error) {
 	if s.getResultFunc != nil {
 		return s.getResultFunc(ctx, userID, taskUUID)
+	}
+	return nil, nil
+}
+func (s *stubResultService) GetResultByResourceID(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error) {
+	if s.getResultByResourceIDFunc != nil {
+		return s.getResultByResourceIDFunc(ctx, userID, resourceUUID)
 	}
 	return nil, nil
 }
@@ -125,6 +132,86 @@ func TestResultHandler_Get_InternalError(t *testing.T) {
 	c.Params = []gin.Param{{Key: "task_id", Value: "task-1"}}
 
 	h.Get(c)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestResultHandler_GetByResourceID_Success(t *testing.T) {
+	svc := &stubResultService{
+		getResultByResourceIDFunc: func(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error) {
+			assert.Equal(t, uint64(42), userID)
+			assert.Equal(t, "res-1", resourceUUID)
+			url := "https://minio/parsed.md?X-Amz-..."
+			return &service.ResultSummary{
+				TaskID: "task-7",
+				Status: "completed",
+				Files: service.ResultFiles{
+					ParsedURL: &url,
+				},
+			}, nil
+		},
+	}
+	h := NewResultHandler(svc)
+	w, c := newResultHandlerTestContext(t, http.MethodGet, "/api/v1/resources/res-1/result", nil)
+	c.Params = []gin.Param{{Key: "id", Value: "res-1"}}
+
+	h.GetByResourceID(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.True(t, resp["success"].(bool))
+	data := resp["data"].(map[string]any)
+	assert.Equal(t, "task-7", data["task_id"])
+	files := data["files"].(map[string]any)
+	assert.Equal(t, "https://minio/parsed.md?X-Amz-...", files["parsed_url"])
+}
+
+func TestResultHandler_GetByResourceID_NotFound(t *testing.T) {
+	svc := &stubResultService{
+		getResultByResourceIDFunc: func(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error) {
+			return nil, apperrors.New(404, apperrors.CodeNotFound, "resource not found")
+		},
+	}
+	h := NewResultHandler(svc)
+	w, c := newResultHandlerTestContext(t, http.MethodGet, "/api/v1/resources/missing/result", nil)
+	c.Params = []gin.Param{{Key: "resource_id", Value: "missing"}}
+
+	h.GetByResourceID(c)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestResultHandler_GetByResourceID_NotCompleted(t *testing.T) {
+	svc := &stubResultService{
+		getResultByResourceIDFunc: func(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error) {
+			return nil, apperrors.New(400, apperrors.CodeTaskNotCompleted, "task is not completed")
+		},
+	}
+	h := NewResultHandler(svc)
+	w, c := newResultHandlerTestContext(t, http.MethodGet, "/api/v1/resources/res-1/result", nil)
+	c.Params = []gin.Param{{Key: "id", Value: "res-1"}}
+
+	h.GetByResourceID(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	errInfo := resp["error"].(map[string]any)
+	assert.Equal(t, apperrors.CodeTaskNotCompleted, errInfo["code"])
+}
+
+func TestResultHandler_GetByResourceID_InternalError(t *testing.T) {
+	svc := &stubResultService{
+		getResultByResourceIDFunc: func(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error) {
+			return nil, errors.New("boom")
+		},
+	}
+	h := NewResultHandler(svc)
+	w, c := newResultHandlerTestContext(t, http.MethodGet, "/api/v1/resources/res-1/result", nil)
+	c.Params = []gin.Param{{Key: "id", Value: "res-1"}}
+
+	h.GetByResourceID(c)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

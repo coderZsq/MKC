@@ -33,6 +33,20 @@ func (h *ResultHandler) Get(c *gin.Context) {
 	response.OK(c, result)
 }
 
+// GetByResourceID returns the result summary for the latest completed task of a resource.
+func (h *ResultHandler) GetByResourceID(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	resourceUUID := c.Param("id")
+
+	result, err := h.svc.GetResultByResourceID(c.Request.Context(), userID, resourceUUID)
+	if err != nil {
+		mapResultError(c, err)
+		return
+	}
+
+	response.OK(c, result)
+}
+
 func mapResultError(c *gin.Context, err error) {
 	var appErr *apperrors.AppError
 	if errors.As(err, &appErr) {

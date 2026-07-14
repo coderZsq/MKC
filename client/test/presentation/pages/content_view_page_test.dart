@@ -51,7 +51,7 @@ class _FakeAudioSeekService implements AudioSeekService {
 
 Future<void> _pumpContentViewPage(
   WidgetTester tester, {
-  required String taskId,
+  required String resourceId,
   required ContentType contentType,
   FakeContentRepository? repository,
   AudioSeekService? audioSeekService,
@@ -65,7 +65,7 @@ Future<void> _pumpContentViewPage(
       ],
       child: MaterialApp(
         home: ContentViewPage(
-          taskId: taskId,
+          resourceId: resourceId,
           contentType: contentType,
           audioSeekService: audioSeekService,
         ),
@@ -84,7 +84,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -104,7 +104,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -123,7 +123,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.pdf,
         repository: repository,
       );
@@ -142,7 +142,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -160,7 +160,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -176,7 +176,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -199,7 +199,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -222,7 +222,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
         audioSeekService: seekService,
@@ -243,7 +243,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
         repository: repository,
       );
@@ -267,7 +267,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.pdf,
         repository: repository,
       );
@@ -295,7 +295,7 @@ void main() {
 
       await _pumpContentViewPage(
         tester,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.pdf,
         repository: repository,
       );

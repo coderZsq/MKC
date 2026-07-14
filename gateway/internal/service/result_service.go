@@ -22,6 +22,7 @@ var minioURLRegex = regexp.MustCompile(`^minio://([^/]+)/(.+)$`)
 // ResultService provides task result retrieval with presigned URLs.
 type ResultService interface {
 	GetResult(ctx context.Context, userID uint64, taskUUID string) (*ResultSummary, error)
+	GetResultByResourceID(ctx context.Context, userID uint64, resourceUUID string) (*ResultSummary, error)
 }
 
 // ResultSummary is the API representation of a task result.
@@ -43,19 +44,21 @@ type ResultFiles struct {
 type resultService struct {
 	logger        *zap.Logger
 	taskRepo      repository.TaskRepository
+	resourceRepo  repository.ResourceRepository
 	storage       storage.ObjectStorage
 	expiry        time.Duration
 	resultsBucket string
 }
 
 // NewResultService creates a ResultService.
-func NewResultService(logger *zap.Logger, taskRepo repository.TaskRepository, storage storage.ObjectStorage, expiry time.Duration, resultsBucket string) ResultService {
+func NewResultService(logger *zap.Logger, taskRepo repository.TaskRepository, resourceRepo repository.ResourceRepository, storage storage.ObjectStorage, expiry time.Duration, resultsBucket string) ResultService {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 	return &resultService{
 		logger:        logger,
 		taskRepo:      taskRepo,
+		resourceRepo:  resourceRepo,
 		storage:       storage,
 		expiry:        expiry,
 		resultsBucket: resultsBucket,
@@ -73,6 +76,33 @@ func (s *resultService) GetResult(ctx context.Context, userID uint64, taskUUID s
 		return nil, apperrors.Internal("internal server error")
 	}
 
+	return s.summaryForTask(ctx, task)
+}
+
+// GetResultByResourceID returns the latest completed task result for a resource.
+func (s *resultService) GetResultByResourceID(ctx context.Context, userID uint64, resourceUUID string) (*ResultSummary, error) {
+	resource, err := s.resourceRepo.GetByUUIDAndUserID(ctx, resourceUUID, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, apperrors.New(404, apperrors.CodeNotFound, "resource not found")
+		}
+		s.logger.Error("failed to get resource for result", zap.Error(err))
+		return nil, apperrors.Internal("internal server error")
+	}
+
+	task, err := s.taskRepo.GetLatestCompletedByResourceID(ctx, resource.ID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, apperrors.New(400, apperrors.CodeTaskNotCompleted, "task is not completed")
+		}
+		s.logger.Error("failed to get latest completed task for resource", zap.Error(err))
+		return nil, apperrors.Internal("internal server error")
+	}
+
+	return s.summaryForTask(ctx, task)
+}
+
+func (s *resultService) summaryForTask(ctx context.Context, task *model.Task) (*ResultSummary, error) {
 	if task.Status != model.TaskStatusCompleted {
 		return nil, apperrors.New(400, apperrors.CodeTaskNotCompleted, "task is not completed")
 	}

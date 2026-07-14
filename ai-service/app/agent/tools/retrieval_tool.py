@@ -25,7 +25,7 @@ class RetrievalTool:
             user_id=user_id,
             resource_ids=resource_ids,
             top_k=top_k or 5,
-            score_threshold=score_threshold if score_threshold is not None else 0.7,
+            score_threshold=score_threshold,
             max_context_tokens=max_context_tokens,
         )
         result = self._retrieval.retrieve(request)

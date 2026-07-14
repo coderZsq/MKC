@@ -15,7 +15,7 @@ class RetrievalRequest(BaseModel):
     user_id: str = Field(..., min_length=1, max_length=128)
     resource_ids: list[str] = Field(..., min_length=1, max_length=100)
     top_k: int = Field(default=5, ge=1, le=100)
-    score_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     max_context_tokens: int | None = Field(default=None, ge=1)
 
     @field_validator("resource_ids")

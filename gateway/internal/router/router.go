@@ -73,6 +73,7 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 				}
 				if result != nil {
 					api.GET("/tasks/:task_id/result", middleware.JWTAuth(jwtMgr), result.Get)
+					api.GET("/resources/:id/result", middleware.JWTAuth(jwtMgr), result.GetByResourceID)
 				}
 				if resource != nil {
 					api.GET("/resources", middleware.JWTAuth(jwtMgr), resource.List)
