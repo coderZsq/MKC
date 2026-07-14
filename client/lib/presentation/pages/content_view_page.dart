@@ -6,6 +6,7 @@ import '../../domain/entities/content_type.dart';
 import '../../domain/services/audio_seek_service.dart';
 import '../../shared/errors/app_exception.dart';
 import '../providers/content_view_provider.dart';
+import '../widgets/claude_layout.dart';
 import '../widgets/pdf_text_view.dart';
 import '../widgets/srt_list_view.dart';
 import '../widgets/text_search_bar.dart';
@@ -47,9 +48,8 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(_provider);
-    final audioSeekService =
-        (widget.audioSeekService ?? ref.watch(audioSeekServiceProvider))
-            as AudioSeekService;
+    final audioSeekService = (widget.audioSeekService ??
+        ref.watch(audioSeekServiceProvider)) as AudioSeekService;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,12 +64,22 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
       ),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: ClaudeSectionHeader(
+              label: 'Reader',
+              title: '内容阅读',
+              description: '搜索、折叠和定位已解析内容。',
+            ),
+          ),
           TextSearchBar(
             keyword: state.keyword,
             matchCount: state.matches.length,
             currentIndex: state.currentMatchIndex,
-            onChanged: (value) => ref.read(_provider.notifier).onSearchChanged(value),
-            onPrevious: () => ref.read(_provider.notifier).jumpToPreviousMatch(),
+            onChanged: (value) =>
+                ref.read(_provider.notifier).onSearchChanged(value),
+            onPrevious: () =>
+                ref.read(_provider.notifier).jumpToPreviousMatch(),
             onNext: () => ref.read(_provider.notifier).jumpToNextMatch(),
           ),
           Expanded(child: _buildBody(context, state, audioSeekService)),
@@ -86,19 +96,22 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
     };
   }
 
-  Widget _buildBody(BuildContext context, ContentViewState state, AudioSeekService audioSeekService) {
+  Widget _buildBody(BuildContext context, ContentViewState state,
+      AudioSeekService audioSeekService) {
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final error = state.error;
     if (error != null) {
-      return _ErrorView(error: error, onRetry: () => ref.read(_provider.notifier).retry());
+      return _ErrorView(
+          error: error, onRetry: () => ref.read(_provider.notifier).retry());
     }
 
     final content = state.content;
     if (content == null) {
-      return const Center(child: Text('暂无内容'));
+      return const ClaudeEmptyState(
+          title: '暂无内容', icon: Icons.article_outlined);
     }
 
     return switch (content) {

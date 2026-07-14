@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/parsed_page.dart';
 import '../providers/content_view_provider.dart';
+import 'claude_layout.dart';
 import 'highlight_text.dart';
 
 /// Collapsible page-based view for parsed PDF text.
@@ -65,6 +66,7 @@ class _PdfTextViewState extends State<PdfTextView> {
   Widget build(BuildContext context) {
     return ListView.builder(
       controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
       itemCount: widget.pages.length,
       itemBuilder: (context, index) {
         final page = widget.pages[index];
@@ -110,28 +112,31 @@ class _PageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Column(
-        children: [
-          ListTile(
-            title: Text('第 ${page.pageNumber} 页'),
-            trailing: Icon(
-              isExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
-            onTap: onToggle,
-          ),
-          if (isExpanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: HighlightText(
-                text: page.text,
-                keyword: keyword,
-                highlightStart: match?.startOffset ?? -1,
-                highlightEnd: match?.endOffset ?? -1,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: ClaudePanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            ListTile(
+              title: Text('第 ${page.pageNumber} 页'),
+              trailing: Icon(
+                isExpanded ? Icons.expand_less : Icons.expand_more,
               ),
+              onTap: onToggle,
             ),
-        ],
+            if (isExpanded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: HighlightText(
+                  text: page.text,
+                  keyword: keyword,
+                  highlightStart: match?.startOffset ?? -1,
+                  highlightEnd: match?.endOffset ?? -1,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

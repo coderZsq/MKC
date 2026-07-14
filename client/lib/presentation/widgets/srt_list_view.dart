@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/constants.dart';
 import '../../domain/entities/subtitle_segment.dart';
 import '../providers/content_view_provider.dart';
+import 'claude_layout.dart';
 import 'highlight_text.dart';
 
 /// Formats a duration as an SRT timecode `HH:mm:ss,fff`.
@@ -10,7 +11,8 @@ String formatSrtTimecode(Duration duration) {
   final hours = duration.inHours.toString().padLeft(2, '0');
   final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-  final millis = duration.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
+  final millis =
+      duration.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
   return '$hours:$minutes:$seconds,$millis';
 }
 
@@ -146,6 +148,7 @@ class _SrtListViewState extends State<SrtListView> {
     final buckets = _buildBuckets();
     return ListView.builder(
       controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
       itemCount: buckets.length,
       itemBuilder: (context, index) {
         final bucket = buckets[index];
@@ -206,34 +209,37 @@ class _BucketTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(
-              '${formatSrtTimecode(bucket.start)} - ${formatSrtTimecode(bucket.end)}',
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: ClaudePanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            ListTile(
+              title: Text(
+                '${formatSrtTimecode(bucket.start)} - ${formatSrtTimecode(bucket.end)}',
+              ),
+              trailing: Icon(
+                isExpanded ? Icons.expand_less : Icons.expand_more,
+              ),
+              onTap: onToggle,
             ),
-            trailing: Icon(
-              isExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
-            onTap: onToggle,
-          ),
-          if (isExpanded)
-            ...bucket.segments.map((indexed) {
-              return _SegmentTile(
-                key: segmentKeyBuilder(indexed.globalIndex),
-                segment: indexed.segment,
-                showCleanedText: showCleanedText,
-                keyword: keyword,
-                highlightStart:
-                    _matchForSegment(indexed.globalIndex)?.startOffset ?? -1,
-                highlightEnd:
-                    _matchForSegment(indexed.globalIndex)?.endOffset ?? -1,
-                onTimestampTap: onTimestampTap,
-              );
-            }),
-        ],
+            if (isExpanded)
+              ...bucket.segments.map((indexed) {
+                return _SegmentTile(
+                  key: segmentKeyBuilder(indexed.globalIndex),
+                  segment: indexed.segment,
+                  showCleanedText: showCleanedText,
+                  keyword: keyword,
+                  highlightStart:
+                      _matchForSegment(indexed.globalIndex)?.startOffset ?? -1,
+                  highlightEnd:
+                      _matchForSegment(indexed.globalIndex)?.endOffset ?? -1,
+                  onTimestampTap: onTimestampTap,
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
@@ -273,7 +279,8 @@ class _SegmentTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
-            onTap: onTimestampTap == null ? null : () => onTimestampTap!(segment),
+            onTap:
+                onTimestampTap == null ? null : () => onTimestampTap!(segment),
             child: Text(
               '${formatSrtTimecode(segment.start)} --> ${formatSrtTimecode(segment.end)}',
               style: TextStyle(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../config/theme.dart';
+
 const int _maxQuestionLength = 2000;
 
 /// Bottom input bar with send and cancel actions.
@@ -41,9 +43,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: ClaudeColors.parchment.withAlpha(242),
           border: Border(
             top: BorderSide(
               color: Theme.of(context).colorScheme.outlineVariant,
@@ -79,10 +81,13 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 onPressed: widget.onCancel,
               )
             else
-              IconButton(
-                icon: const Icon(Icons.send),
-                tooltip: 'Send',
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  padding: EdgeInsets.zero,
+                ),
                 onPressed: _send,
+                child: const Icon(Icons.send, size: 20),
               ),
           ],
         ),

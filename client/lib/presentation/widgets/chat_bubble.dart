@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/theme.dart';
 import '../../domain/entities/message.dart';
 import 'markdown_message.dart';
 
@@ -17,14 +18,9 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final alignment = _isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final bubbleColor = _isUser
-        ? colorScheme.primaryContainer
-        : colorScheme.surfaceContainerHighest;
-    final textColor = _isUser
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurfaceVariant;
+    final bubbleColor = _isUser ? ClaudeColors.terracotta : ClaudeColors.ivory;
+    final textColor = _isUser ? ClaudeColors.ivory : ClaudeColors.nearBlack;
 
     return Align(
       alignment: alignment,
@@ -33,15 +29,19 @@ class ChatBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: bubbleColor,
+            border: Border.all(
+              color:
+                  _isUser ? ClaudeColors.terracotta : ClaudeColors.borderCream,
+            ),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(12),
               topRight: const Radius.circular(12),
-              bottomLeft: Radius.circular(_isUser ? 12 : 4),
-              bottomRight: Radius.circular(_isUser ? 4 : 12),
+              bottomLeft: Radius.circular(_isUser ? 12 : 6),
+              bottomRight: Radius.circular(_isUser ? 6 : 12),
             ),
           ),
           child: _isUser
