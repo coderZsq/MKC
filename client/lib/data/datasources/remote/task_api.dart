@@ -37,4 +37,11 @@ class TaskApi {
       parser: (dynamic data) => TaskResultModel.fromJson(data as Map<String, dynamic>),
     );
   }
+
+  Future<Result<TaskResultModel>> getResultByResourceId(String resourceId) async {
+    return _client.get<TaskResultModel>(
+      '/resources/$resourceId/result',
+      parser: (dynamic data) => TaskResultModel.fromJson(data as Map<String, dynamic>),
+    );
+  }
 }

@@ -82,7 +82,15 @@ func main() {
 		aiClient := service.NewAIClient(cfg)
 		ctxWindow := service.NewContextWindowService(msgRepo, cfg.Conversation.MaxContextMessages, cfg.Conversation.MaxContextTokens)
 		uow := repository.NewUnitOfWork(db)
-		qaSvc := service.NewQAService(aiClient, convRepo, msgRepo, appLogger, service.WithContextWindowService(ctxWindow), service.WithUnitOfWork(uow))
+		qaSvc := service.NewQAService(
+			aiClient,
+			convRepo,
+			msgRepo,
+			appLogger,
+			service.WithContextWindowService(ctxWindow),
+			service.WithUnitOfWork(uow),
+			service.WithResourceRepository(resourceRepo),
+		)
 		qaSSEHandler = handler.NewQASSEHandler(qaSvc)
 
 		convSvc := service.NewConversationService(convRepo, msgRepo, resourceRepo, uow, cfg.Conversation.DefaultTitle, appLogger)
@@ -97,7 +105,7 @@ func main() {
 			appLogger.Warn("minio connection failed", zap.Error(err))
 		} else {
 			resultsClient := minioClient.WithBucket(cfg.MinIO.ResultsBucket)
-			resultSvc := service.NewResultService(appLogger, taskRepo, resultsClient, cfg.MinIO.PresignedExpiry, cfg.MinIO.ResultsBucket)
+			resultSvc := service.NewResultService(appLogger, taskRepo, resourceRepo, resultsClient, cfg.MinIO.PresignedExpiry, cfg.MinIO.ResultsBucket)
 			resultHandler = handler.NewResultHandler(resultSvc)
 
 			fileSvc := service.NewFileService(appLogger, minioClient, resourceRepo, taskRepo, taskDispatcher)

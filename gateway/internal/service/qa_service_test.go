@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ func setupConversationTestDB(t *testing.T) *gorm.DB {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := gorm.Open(sqlite.Open(dbPath+"?_fk=1&_loc=auto"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.Conversation{}, &model.Message{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.Resource{}, &model.Conversation{}, &model.Message{}))
 	return db
 }
 
@@ -94,6 +95,49 @@ func TestQAService_Ask_Success(t *testing.T) {
 	assert.NotNil(t, messages[1].ParentMessageID)
 	assert.Equal(t, messages[0].ID, *messages[1].ParentMessageID)
 	assert.Greater(t, messages[1].TokenUsage, 0)
+	assert.Equal(t, []string{"res-1"}, aiclient.lastRequest.ResourceIDs)
+	assert.Equal(t, strconv.FormatUint(user.ID, 10), aiclient.lastRequest.UserID)
+}
+
+func TestQAService_Ask_UsesAllUserResourcesAsDefaultRAGScope(t *testing.T) {
+	db := setupConversationTestDB(t)
+	ctx := context.Background()
+
+	user := &model.User{UUID: uuid.NewString(), Email: "qa@example.com", PasswordHash: "hash"}
+	require.NoError(t, db.WithContext(ctx).Create(user).Error)
+	otherUser := &model.User{UUID: uuid.NewString(), Email: "other@example.com", PasswordHash: "hash"}
+	require.NoError(t, db.WithContext(ctx).Create(otherUser).Error)
+
+	resources := []model.Resource{
+		{UUID: "res-completed-1", UserID: user.ID, Name: "one.pdf", Type: "pdf", Status: 3},
+		{UUID: "res-completed-2", UserID: user.ID, Name: "two.mp3", Type: "audio", Status: 3},
+		{UUID: "res-processing", UserID: user.ID, Name: "pending.pdf", Type: "pdf", Status: 2},
+		{UUID: "res-failed", UserID: user.ID, Name: "failed.pdf", Type: "pdf", Status: 4},
+		{UUID: "res-other", UserID: otherUser.ID, Name: "other.pdf", Type: "pdf", Status: 3},
+	}
+	require.NoError(t, db.WithContext(ctx).Create(&resources).Error)
+
+	conv := newTestConversation(user.ID, "", nil)
+	require.NoError(t, db.WithContext(ctx).Create(conv).Error)
+
+	aiclient := &mockAIClient{
+		events: []SSEEvent{
+			{Event: "done", Data: []byte(`{"finish_reason":"stop"}`), Raw: "event: done\ndata: {}\n\n"},
+		},
+	}
+
+	svc := NewQAService(
+		aiclient,
+		repository.NewConversationRepository(db),
+		repository.NewMessageRepository(db),
+		nil,
+		WithResourceRepository(repository.NewResourceRepository(db)),
+	)
+	_, err := svc.Ask(ctx, user.ID, user.UUID, conv.UUID, "hi")
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, []string{"res-completed-1", "res-completed-2"}, aiclient.lastRequest.ResourceIDs)
+	assert.Equal(t, strconv.FormatUint(user.ID, 10), aiclient.lastRequest.UserID)
 }
 
 func TestQAService_Ask_PersistsReasoning(t *testing.T) {

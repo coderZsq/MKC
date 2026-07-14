@@ -85,6 +85,10 @@ func (s *stubResultServiceForRouter) GetResult(ctx context.Context, userID uint6
 	return nil, nil
 }
 
+func (s *stubResultServiceForRouter) GetResultByResourceID(ctx context.Context, userID uint64, resourceUUID string) (*service.ResultSummary, error) {
+	return nil, nil
+}
+
 var _ service.ResultService = (*stubResultServiceForRouter)(nil)
 
 type stubSummaryServiceForRouter struct{}
@@ -321,6 +325,34 @@ func TestResultRoute_Registered(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/tasks/task-uuid/result", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestResourceResultRoute_Registered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{
+		App:    config.AppConfig{Env: "test"},
+		Server: config.ServerConfig{Port: 8080, Mode: "test"},
+	}
+	logger := zap.NewNop()
+	healthSvc := service.NewHealthService("0.1.0")
+	healthH := handler.NewHealthHandler(healthSvc)
+	authH := handler.NewAuthHandler(&stubAuthService{})
+	taskH := handler.NewTaskHandler(&stubTaskServiceForRouter{})
+	resultH := handler.NewResultHandler(&stubResultServiceForRouter{})
+	jwtMgr := jwt.NewManager("test-secret", time.Hour, 24*time.Hour)
+
+	r := New(cfg, logger, healthH, authH, nil, taskH, nil, nil, resultH, nil, nil, nil, nil, nil, jwtMgr)
+
+	token, err := jwtMgr.GenerateAccessToken("user-uuid", "user@example.com", 42)
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/resources/res-uuid/result", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	r.ServeHTTP(w, req)
 

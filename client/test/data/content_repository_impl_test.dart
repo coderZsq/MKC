@@ -14,13 +14,15 @@ import '../shared/content_test_helpers.dart';
 
 class _FakeTaskApi extends TaskApi {
   Result<TaskResultModel>? nextResult;
-  String? lastTaskId;
+  String? lastResourceId;
 
   _FakeTaskApi() : super(client: _StubApiClient());
 
   @override
-  Future<Result<TaskResultModel>> getResult(String taskId) async {
-    lastTaskId = taskId;
+  Future<Result<TaskResultModel>> getResultByResourceId(
+    String resourceId,
+  ) async {
+    lastResourceId = resourceId;
     return nextResult ??
         const Result<TaskResultModel>.failure(ServerException(code: 'UNEXPECTED'));
   }
@@ -171,7 +173,7 @@ Text'''),
 
       final result = await repository.getContent('t1', ContentType.audio);
 
-      expect(taskApi.lastTaskId, 't1');
+      expect(taskApi.lastResourceId, 't1');
       expect(
         result.when(success: (_) => true, failure: (_) => false),
         isTrue,

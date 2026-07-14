@@ -72,12 +72,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: contentViewRoute,
         builder: (_, state) {
-          final taskId = state.pathParameters['id']!;
+          final resourceId = state.pathParameters['id']!;
           final contentType = ContentType.fromParam(
             state.uri.queryParameters['type'],
           );
           return ContentViewPage(
-            taskId: taskId,
+            resourceId: resourceId,
             contentType: contentType,
           );
         },

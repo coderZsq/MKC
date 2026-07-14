@@ -70,6 +70,12 @@ class AgentNodes:
         except Exception:
             logger.exception("retrieval failed")
             chunks = []
+        logger.info(
+            "retrieved %d chunks for user=%s resource_count=%d",
+            len(chunks),
+            state.get("user_id"),
+            len(state.get("resource_ids", [])),
+        )
         return {"retrieved_chunks": chunks, "citations": []}
 
     async def summarize_node(self, state: AgentState) -> dict[str, Any]:

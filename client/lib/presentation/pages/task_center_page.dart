@@ -101,8 +101,8 @@ class _TaskCenterPageState extends ConsumerState<TaskCenterPage> {
               ref.read(taskCenterNotifierProvider.notifier).applyTaskEvent,
           onTap: () => context.go('$taskCenterRoute/${task.id}'),
           onViewContent: task.status == TaskStatus.completed
-              ? () => context.go(
-                    '$taskCenterRoute/${task.id}/content?type=${_contentTypeParam(task.type)}',
+              ? () => context.push(
+                    '${contentViewRoute.replaceFirst(':id', task.resourceId)}?type=${_contentTypeParam(task.type)}',
                   )
               : null,
         );

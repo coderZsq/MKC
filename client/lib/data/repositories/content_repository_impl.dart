@@ -25,10 +25,10 @@ class ContentRepositoryImpl implements ContentRepository {
 
   @override
   Future<Result<Content>> getContent(
-    String taskId,
+    String resourceId,
     ContentType contentType,
   ) async {
-    final result = await _taskApi.getResult(taskId);
+    final result = await _taskApi.getResultByResourceId(resourceId);
     return result.when(
       success: (taskResult) async => _loadTaskResult(taskResult, contentType),
       failure: (error) => Result<Content>.failure(error),

@@ -4,9 +4,9 @@ import '../entities/content_type.dart';
 
 /// Abstract repository for loading task result content.
 abstract class ContentRepository {
-  /// Fetches and parses task result content for the given task and content type.
+  /// Fetches and parses task result content for the given resource and content type.
   Future<Result<Content>> getContent(
-    String taskId,
+    String resourceId,
     ContentType contentType,
   );
 }

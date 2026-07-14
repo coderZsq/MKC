@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/message.dart';
-
 import '../../shared/validators.dart';
+import '../routes/app_routes.dart';
 
 /// A clickable chip that navigates to the cited resource.
 class CitationCard extends StatelessWidget {
@@ -45,8 +45,8 @@ class CitationCard extends StatelessWidget {
       );
       return;
     }
-    context.go(
-      '/tasks/${citation.resourceId}/content?type=${citation.contentType.paramValue}',
+    context.push(
+      '${contentViewRoute.replaceFirst(':id', citation.resourceId)}?type=${citation.contentType.paramValue}',
     );
   }
 

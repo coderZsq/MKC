@@ -78,21 +78,21 @@ class ContentViewState {
 class ContentViewNotifier extends StateNotifier<ContentViewState> {
   ContentViewNotifier({
     required ContentRepository repository,
-    required String taskId,
+    required String resourceId,
     required ContentType contentType,
   })  : _repository = repository,
-        _taskId = taskId,
+        _resourceId = resourceId,
         _contentType = contentType,
         super(const ContentViewState());
 
   final ContentRepository _repository;
-  final String _taskId;
+  final String _resourceId;
   final ContentType _contentType;
   Timer? _debounceTimer;
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true, error: null);
-    final result = await _repository.getContent(_taskId, _contentType);
+    final result = await _repository.getContent(_resourceId, _contentType);
     state = result.when(
       success: (content) {
         final expanded = <int>{};
@@ -244,21 +244,21 @@ class ContentViewNotifier extends StateNotifier<ContentViewState> {
 /// Arguments used to identify a content view page instance.
 class ContentViewRouteArgs {
   const ContentViewRouteArgs({
-    required this.taskId,
+    required this.resourceId,
     required this.contentType,
   });
 
-  final String taskId;
+  final String resourceId;
   final ContentType contentType;
 
   @override
   bool operator ==(Object other) =>
       other is ContentViewRouteArgs &&
-      other.taskId == taskId &&
+      other.resourceId == resourceId &&
       other.contentType == contentType;
 
   @override
-  int get hashCode => Object.hash(taskId, contentType);
+  int get hashCode => Object.hash(resourceId, contentType);
 }
 
 final contentRemoteDataSourceProvider = Provider<ContentRemoteDataSource>((ref) {
@@ -276,7 +276,7 @@ final contentViewNotifierProvider = StateNotifierProvider.autoDispose
     .family<ContentViewNotifier, ContentViewState, ContentViewRouteArgs>(
   (ref, args) => ContentViewNotifier(
     repository: ref.watch(contentRepositoryProvider),
-    taskId: args.taskId,
+    resourceId: args.resourceId,
     contentType: args.contentType,
   ),
 );

@@ -13,27 +13,27 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TextEditingController _taskIdController = TextEditingController();
+  final TextEditingController _resourceIdController = TextEditingController();
   final TextEditingController _conversationIdController =
       TextEditingController();
 
   @override
   void dispose() {
-    _taskIdController.dispose();
+    _resourceIdController.dispose();
     _conversationIdController.dispose();
     super.dispose();
   }
 
   void _openTaskDetail() {
-    final taskId = _taskIdController.text.trim();
+    final taskId = _resourceIdController.text.trim();
     if (taskId.isEmpty) return;
     context.push(taskDetailRoute.replaceFirst(':id', taskId));
   }
 
-  void _openTaskContent(String type) {
-    final taskId = _taskIdController.text.trim();
-    if (taskId.isEmpty) return;
-    final path = contentViewRoute.replaceFirst(':id', taskId);
+  void _openResourceContent(String type) {
+    final resourceId = _resourceIdController.text.trim();
+    if (resourceId.isEmpty) return;
+    final path = contentViewRoute.replaceFirst(':id', resourceId);
     context.push('$path?type=$type');
   }
 
@@ -108,9 +108,9 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TextField(
-                    controller: _taskIdController,
+                    controller: _resourceIdController,
                     decoration: const InputDecoration(
-                      labelText: 'Task ID',
+                      labelText: 'Resource ID',
                       prefixIcon: Icon(Icons.tag),
                       border: OutlineInputBorder(),
                     ),
@@ -128,12 +128,12 @@ class _HomePageState extends State<HomePage> {
                         label: const Text('任务详情'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => _openTaskContent('audio'),
+                        onPressed: () => _openResourceContent('audio'),
                         icon: const Icon(Icons.subtitles_outlined),
                         label: const Text('音频内容'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => _openTaskContent('pdf'),
+                        onPressed: () => _openResourceContent('pdf'),
                         icon: const Icon(Icons.picture_as_pdf_outlined),
                         label: const Text('PDF 内容'),
                       ),

@@ -13,13 +13,13 @@ import '../widgets/text_search_bar.dart';
 /// Page displaying task result content (SRT subtitles or parsed PDF text).
 class ContentViewPage extends ConsumerStatefulWidget {
   const ContentViewPage({
-    required this.taskId,
+    required this.resourceId,
     required this.contentType,
     this.audioSeekService,
     super.key,
   });
 
-  final String taskId;
+  final String resourceId;
   final ContentType contentType;
   final AudioSeekService? audioSeekService;
 
@@ -40,7 +40,7 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
       get _provider => contentViewNotifierProvider(_args);
 
   ContentViewRouteArgs get _args => ContentViewRouteArgs(
-        taskId: widget.taskId,
+        resourceId: widget.resourceId,
         contentType: widget.contentType,
       );
 

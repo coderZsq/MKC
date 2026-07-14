@@ -115,7 +115,7 @@ vector_store:
 
 retrieval:
   default_top_k: 5
-  score_threshold: 0.7
+  score_threshold: "${RETRIEVAL_SCORE_THRESHOLD:-0.7}"
   max_context_tokens: 4096
   prompt_template: "prompts/rag_citation.txt"
 

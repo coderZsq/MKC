@@ -31,17 +31,17 @@ class FakeContentRepository implements ContentRepository {
   Result<Content>? nextResult;
   AppException? nextError;
   Duration delay = Duration.zero;
-  String? lastTaskId;
+  String? lastResourceId;
   ContentType? lastContentType;
   int callCount = 0;
 
   @override
   Future<Result<Content>> getContent(
-    String taskId,
+    String resourceId,
     ContentType contentType,
   ) async {
     callCount++;
-    lastTaskId = taskId;
+    lastResourceId = resourceId;
     lastContentType = contentType;
     if (delay != Duration.zero) {
       await Future.delayed(delay);

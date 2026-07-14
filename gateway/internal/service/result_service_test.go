@@ -17,7 +17,8 @@ import (
 )
 
 type stubTaskRepo struct {
-	getByUUIDAndUserIDFunc func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	getByUUIDAndUserIDFunc             func(ctx context.Context, uuid string, userID uint64) (*model.Task, error)
+	getLatestCompletedByResourceIDFunc func(ctx context.Context, resourceID uint64) (*model.Task, error)
 }
 
 func (r *stubTaskRepo) Create(ctx context.Context, t *model.Task) error { return nil }
@@ -31,6 +32,9 @@ func (r *stubTaskRepo) GetByUUIDAndUserID(ctx context.Context, uuid string, user
 	return nil, repository.ErrNotFound
 }
 func (r *stubTaskRepo) GetLatestCompletedByResourceID(ctx context.Context, resourceID uint64) (*model.Task, error) {
+	if r.getLatestCompletedByResourceIDFunc != nil {
+		return r.getLatestCompletedByResourceIDFunc(ctx, resourceID)
+	}
 	return nil, repository.ErrNotFound
 }
 func (r *stubTaskRepo) ListLatestByResourceIDs(ctx context.Context, resourceIDs []uint64) (map[uint64]model.Task, error) {
@@ -51,6 +55,30 @@ func (r *stubTaskRepo) UpdateStatusWithAttempt(ctx context.Context, id uint64, s
 func (r *stubTaskRepo) ResetForRetry(ctx context.Context, id uint64) error { return nil }
 
 var _ repository.TaskRepository = (*stubTaskRepo)(nil)
+
+type stubResourceRepo struct {
+	getByUUIDAndUserIDFunc func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error)
+}
+
+func (r *stubResourceRepo) Create(ctx context.Context, res *model.Resource) error { return nil }
+func (r *stubResourceRepo) GetByUUID(ctx context.Context, uuid string) (*model.Resource, error) {
+	return nil, repository.ErrNotFound
+}
+func (r *stubResourceRepo) GetByUUIDAndUserID(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
+	if r.getByUUIDAndUserIDFunc != nil {
+		return r.getByUUIDAndUserIDFunc(ctx, uuid, userID)
+	}
+	return nil, repository.ErrNotFound
+}
+func (r *stubResourceRepo) ListByUserID(ctx context.Context, userID uint64, page, limit int, tag string) ([]model.Resource, int64, error) {
+	return nil, 0, nil
+}
+func (r *stubResourceRepo) CountByUUIDsAndUserID(ctx context.Context, uuids []string, userID uint64) (int64, error) {
+	return 0, nil
+}
+func (r *stubResourceRepo) UpdateStatus(ctx context.Context, id uint64, status uint8) error { return nil }
+
+var _ repository.ResourceRepository = (*stubResourceRepo)(nil)
 
 type stubResultStorage struct {
 	presignedURL string
@@ -83,7 +111,7 @@ func TestResultService_GetResult_Success(t *testing.T) {
 		},
 	}
 	storage := &stubResultStorage{presignedURL: "https://minio/presigned"}
-	svc := NewResultService(nil, repo, storage, time.Hour, "mkc-resources")
+	svc := NewResultService(nil, repo, nil, storage, time.Hour, "mkc-resources")
 
 	result, err := svc.GetResult(context.Background(), 42, "task-1")
 
@@ -100,7 +128,7 @@ func TestResultService_GetResult_Success(t *testing.T) {
 
 func TestResultService_GetResult_TaskNotFound(t *testing.T) {
 	repo := &stubTaskRepo{}
-	svc := NewResultService(nil, repo, &stubResultStorage{}, time.Hour, "mkc-resources")
+	svc := NewResultService(nil, repo, nil, &stubResultStorage{}, time.Hour, "mkc-resources")
 
 	_, err := svc.GetResult(context.Background(), 42, "missing")
 
@@ -117,7 +145,7 @@ func TestResultService_GetResult_NotCompleted(t *testing.T) {
 			return &model.Task{UUID: uuid, UserID: userID, Status: model.TaskStatusRunning}, nil
 		},
 	}
-	svc := NewResultService(nil, repo, &stubResultStorage{}, time.Hour, "mkc-resources")
+	svc := NewResultService(nil, repo, nil, &stubResultStorage{}, time.Hour, "mkc-resources")
 
 	_, err := svc.GetResult(context.Background(), 42, "task-1")
 
@@ -139,7 +167,7 @@ func TestResultService_GetResult_BucketMismatch(t *testing.T) {
 		},
 	}
 	storage := &stubResultStorage{presignedURL: "https://minio/presigned"}
-	svc := NewResultService(nil, repo, storage, time.Hour, "mkc-resources")
+	svc := NewResultService(nil, repo, nil, storage, time.Hour, "mkc-resources")
 
 	result, err := svc.GetResult(context.Background(), 42, "task-1")
 
@@ -158,12 +186,79 @@ func TestResultService_GetResult_PresignFailure(t *testing.T) {
 		},
 	}
 	storage := &stubResultStorage{err: errors.New("minio unavailable")}
-	svc := NewResultService(nil, repo, storage, time.Hour, "mkc-resources")
+	svc := NewResultService(nil, repo, nil, storage, time.Hour, "mkc-resources")
 
 	result, err := svc.GetResult(context.Background(), 42, "task-1")
 
 	require.NoError(t, err)
 	assert.Nil(t, result.Files.TranscriptURL)
+}
+
+func TestResultService_GetResultByResourceID_Success(t *testing.T) {
+	resourceRepo := &stubResourceRepo{
+		getByUUIDAndUserIDFunc: func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
+			assert.Equal(t, "res-1", uuid)
+			assert.Equal(t, uint64(42), userID)
+			return &model.Resource{ID: 7, UUID: uuid, UserID: userID}, nil
+		},
+	}
+	taskRepo := &stubTaskRepo{
+		getLatestCompletedByResourceIDFunc: func(ctx context.Context, resourceID uint64) (*model.Task, error) {
+			assert.Equal(t, uint64(7), resourceID)
+			return &model.Task{
+				UUID:       "task-7",
+				ResourceID: 7,
+				UserID:     42,
+				Status:     model.TaskStatusCompleted,
+				Result:     json.RawMessage(`{"parsed_url": "minio://mkc-resources/results/task-7/parsed.md"}`),
+			}, nil
+		},
+	}
+	storage := &stubResultStorage{presignedURL: "https://minio/presigned"}
+	svc := NewResultService(nil, taskRepo, resourceRepo, storage, time.Hour, "mkc-resources")
+
+	result, err := svc.GetResultByResourceID(context.Background(), 42, "res-1")
+
+	require.NoError(t, err)
+	assert.Equal(t, "task-7", result.TaskID)
+	require.NotNil(t, result.Files.ParsedURL)
+	assert.Equal(t, "https://minio/presigned", *result.Files.ParsedURL)
+}
+
+func TestResultService_GetResultByResourceID_ResourceNotFound(t *testing.T) {
+	resourceRepo := &stubResourceRepo{}
+	taskRepo := &stubTaskRepo{}
+	svc := NewResultService(nil, taskRepo, resourceRepo, &stubResultStorage{}, time.Hour, "mkc-resources")
+
+	_, err := svc.GetResultByResourceID(context.Background(), 42, "missing")
+
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, 404, appErr.Status)
+	assert.Equal(t, apperrors.CodeNotFound, appErr.Code)
+}
+
+func TestResultService_GetResultByResourceID_TaskNotCompleted(t *testing.T) {
+	resourceRepo := &stubResourceRepo{
+		getByUUIDAndUserIDFunc: func(ctx context.Context, uuid string, userID uint64) (*model.Resource, error) {
+			return &model.Resource{ID: 7, UUID: uuid, UserID: userID}, nil
+		},
+	}
+	taskRepo := &stubTaskRepo{
+		getLatestCompletedByResourceIDFunc: func(ctx context.Context, resourceID uint64) (*model.Task, error) {
+			return &model.Task{UUID: "task-7", ResourceID: 7, UserID: 42, Status: model.TaskStatusRunning}, nil
+		},
+	}
+	svc := NewResultService(nil, taskRepo, resourceRepo, &stubResultStorage{}, time.Hour, "mkc-resources")
+
+	_, err := svc.GetResultByResourceID(context.Background(), 42, "res-1")
+
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, 400, appErr.Status)
+	assert.Equal(t, apperrors.CodeTaskNotCompleted, appErr.Code)
 }
 
 func TestParseMinIOURL(t *testing.T) {

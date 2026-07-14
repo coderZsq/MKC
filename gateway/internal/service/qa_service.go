@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,9 @@ const (
 	maxQuestionLength    = 2000
 	messageHistoryLimit  = 100
 	assistantSaveTimeout = 5 * time.Second
+	defaultRAGScopeLimit = 100
+
+	resourceStatusCompleted uint8 = 3
 )
 
 // QAService orchestrates question validation, message persistence, and AI Service streaming.
@@ -39,6 +43,11 @@ func WithUnitOfWork(uow repository.UnitOfWork) QAOption {
 	return func(qs *qaService) { qs.uow = uow }
 }
 
+// WithResourceRepository lets QAService use all user resources as the default RAG scope.
+func WithResourceRepository(repo repository.ResourceRepository) QAOption {
+	return func(qs *qaService) { qs.resourceRepo = repo }
+}
+
 // NewQAService creates a QAService.
 func NewQAService(aiClient AIClient, convRepo repository.ConversationRepository, msgRepo repository.MessageRepository, logger *zap.Logger, opts ...QAOption) QAService {
 	if logger == nil {
@@ -57,12 +66,13 @@ func NewQAService(aiClient AIClient, convRepo repository.ConversationRepository,
 }
 
 type qaService struct {
-	aiClient  AIClient
-	convRepo  repository.ConversationRepository
-	msgRepo   repository.MessageRepository
-	uow       repository.UnitOfWork
-	ctxWindow ContextWindowService
-	logger    *zap.Logger
+	aiClient     AIClient
+	convRepo     repository.ConversationRepository
+	msgRepo      repository.MessageRepository
+	resourceRepo repository.ResourceRepository
+	uow          repository.UnitOfWork
+	ctxWindow    ContextWindowService
+	logger       *zap.Logger
 }
 
 // Ask validates the conversation, persists the user message, and opens a streaming Q&A session.
@@ -100,13 +110,19 @@ func (s *qaService) Ask(ctx context.Context, userID uint64, userUUID string, con
 		return nil, apperrors.Internal("failed to save user message")
 	}
 
+	resourceIDs, err := s.resolveResourceIDs(ctx, conversation, userID)
+	if err != nil {
+		s.logger.Error("failed to resolve RAG resource scope", zap.Error(err))
+		return nil, apperrors.Internal("failed to resolve RAG resource scope")
+	}
+
 	assistantMsgUUID := uuid.NewString()
 	req := QARequest{
 		Question:       question,
 		ConversationID: conversation.UUID,
 		MessageID:      assistantMsgUUID,
-		UserID:         userUUID,
-		ResourceIDs:    parseResourceIDs(conversation.ResourceIDs),
+		UserID:         strconv.FormatUint(userID, 10),
+		ResourceIDs:    resourceIDs,
 		History:        history,
 	}
 
@@ -249,6 +265,25 @@ func (s *qaService) loadHistory(ctx context.Context, conversation *model.Convers
 		return nil, err
 	}
 	return mapMessagesToHistory(messages), nil
+}
+
+func (s *qaService) resolveResourceIDs(ctx context.Context, conversation *model.Conversation, userID uint64) ([]string, error) {
+	resourceIDs := parseResourceIDs(conversation.ResourceIDs)
+	if len(resourceIDs) > 0 || s.resourceRepo == nil {
+		return resourceIDs, nil
+	}
+
+	resources, _, err := s.resourceRepo.ListByUserID(ctx, userID, 1, defaultRAGScopeLimit, "")
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		if resource.UUID != "" && resource.Status == resourceStatusCompleted {
+			ids = append(ids, resource.UUID)
+		}
+	}
+	return ids, nil
 }
 
 func truncate(text string, maxLen int) string {

@@ -457,14 +457,16 @@ void main() {
         filename: filename,
         mimeType: 'audio/mpeg',
       );
-      final taskId = upload['task_id'] as String;
+      final resourceId = upload['resource_id'] as String;
 
       await tester.pumpWidget(
         ProviderScope(key: UniqueKey(), child: const MKCApp()),
       );
       await pumpUntilPage(tester, '首页占位 — 功能开发中');
 
-      currentRouter(tester).go('/tasks/$taskId/content?type=audio');
+      currentRouter(tester).go(
+        '${contentViewRoute.replaceFirst(':id', resourceId)}?type=audio',
+      );
       await pumpUntilFound(tester, find.text('处理中，请稍后'));
 
       expect(find.text('处理中，请稍后'), findsOneWidget);
@@ -482,14 +484,16 @@ void main() {
         filename: filename,
         mimeType: 'application/pdf',
       );
-      final taskId = upload['task_id'] as String;
+      final resourceId = upload['resource_id'] as String;
 
       await tester.pumpWidget(
         ProviderScope(key: UniqueKey(), child: const MKCApp()),
       );
       await pumpUntilPage(tester, '首页占位 — 功能开发中');
 
-      currentRouter(tester).go('/tasks/$taskId/content?type=pdf');
+      currentRouter(tester).go(
+        '${contentViewRoute.replaceFirst(':id', resourceId)}?type=pdf',
+      );
       await pumpUntilFound(tester, find.text('处理中，请稍后'));
 
       expect(find.text('处理中，请稍后'), findsOneWidget);

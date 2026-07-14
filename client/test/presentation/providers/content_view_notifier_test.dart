@@ -49,7 +49,7 @@ void main() {
       repository = FakeContentRepository();
       notifier = ContentViewNotifier(
         repository: repository,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
       );
     });
@@ -66,7 +66,7 @@ void main() {
       expect(notifier.state.isLoading, isFalse);
       expect(notifier.state.error, isNull);
       expect(notifier.state.content, isA<AudioContent>());
-      expect(repository.lastTaskId, 't1');
+      expect(repository.lastResourceId, 't1');
       expect(repository.lastContentType, ContentType.audio);
     });
 
@@ -244,7 +244,7 @@ void main() {
       repo.nextResult = Result.success(_sampleAudioContent());
       final n = ContentViewNotifier(
         repository: repo,
-        taskId: 't1',
+        resourceId: 't1',
         contentType: ContentType.audio,
       );
       await n.load();
