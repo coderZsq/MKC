@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/constants.dart';
 import '../../domain/entities/subtitle_segment.dart';
 import '../providers/content_view_provider.dart';
+import 'claude_layout.dart';
 import 'highlight_text.dart';
 
 /// Formats a duration as an SRT timecode `HH:mm:ss,fff`.
@@ -10,7 +11,8 @@ String formatSrtTimecode(Duration duration) {
   final hours = duration.inHours.toString().padLeft(2, '0');
   final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-  final millis = duration.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
+  final millis =
+      duration.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
   return '$hours:$minutes:$seconds,$millis';
 }
 
@@ -35,6 +37,7 @@ class _SegmentBucket {
 class SrtListView extends StatefulWidget {
   const SrtListView({
     required this.segments,
+    this.initialTimestamp,
     required this.matches,
     required this.currentMatchIndex,
     required this.showCleanedText,
@@ -44,6 +47,7 @@ class SrtListView extends StatefulWidget {
   });
 
   final List<SubtitleSegment> segments;
+  final Duration? initialTimestamp;
   final List<TextMatch> matches;
   final int currentMatchIndex;
   final bool showCleanedText;
@@ -59,6 +63,7 @@ class _SrtListViewState extends State<SrtListView> {
   final _bucketKeys = <int, GlobalKey>{};
   final _segmentKeys = <int, GlobalKey>{};
   final _expandedBucketIndices = <int>{0};
+  Duration? _lastScrolledInitialTimestamp;
 
   @override
   void initState() {
@@ -66,11 +71,18 @@ class _SrtListViewState extends State<SrtListView> {
     if (widget.segments.isEmpty) {
       _expandedBucketIndices.clear();
     }
+    _ensureBucketExpandedForInitialTimestamp();
+    _scrollToInitialTimestamp();
   }
 
   @override
   void didUpdateWidget(covariant SrtListView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTimestamp != widget.initialTimestamp ||
+        oldWidget.segments != widget.segments) {
+      _ensureBucketExpandedForInitialTimestamp();
+      _scrollToInitialTimestamp();
+    }
     if (oldWidget.currentMatchIndex != widget.currentMatchIndex) {
       _ensureBucketExpandedForCurrentMatch();
       _scrollToCurrentMatch();
@@ -113,6 +125,43 @@ class _SrtListViewState extends State<SrtListView> {
     return null;
   }
 
+  int? _segmentIndexForTimestamp(Duration? timestamp) {
+    if (timestamp == null) return null;
+    for (var i = 0; i < widget.segments.length; i++) {
+      final segment = widget.segments[i];
+      if (timestamp >= segment.start && timestamp <= segment.end) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  void _ensureBucketExpandedForInitialTimestamp() {
+    final segmentIndex = _segmentIndexForTimestamp(widget.initialTimestamp);
+    if (segmentIndex == null) return;
+    final bucketIndex = _bucketIndexForSegment(segmentIndex);
+    if (bucketIndex == null) return;
+    _expandedBucketIndices.add(bucketIndex);
+  }
+
+  void _scrollToInitialTimestamp() {
+    final timestamp = widget.initialTimestamp;
+    if (timestamp == null || _lastScrolledInitialTimestamp == timestamp) return;
+    final segmentIndex = _segmentIndexForTimestamp(timestamp);
+    if (segmentIndex == null) return;
+    _lastScrolledInitialTimestamp = timestamp;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _segmentKeys[segmentIndex];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 220),
+          alignment: 0.16,
+        );
+      }
+    });
+  }
+
   void _ensureBucketExpandedForCurrentMatch() {
     final index = widget.currentMatchIndex;
     if (index < 0 || index >= widget.matches.length) return;
@@ -146,6 +195,7 @@ class _SrtListViewState extends State<SrtListView> {
     final buckets = _buildBuckets();
     return ListView.builder(
       controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
       itemCount: buckets.length,
       itemBuilder: (context, index) {
         final bucket = buckets[index];
@@ -206,34 +256,37 @@ class _BucketTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(
-              '${formatSrtTimecode(bucket.start)} - ${formatSrtTimecode(bucket.end)}',
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: ClaudePanel(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            ListTile(
+              title: Text(
+                '${formatSrtTimecode(bucket.start)} - ${formatSrtTimecode(bucket.end)}',
+              ),
+              trailing: Icon(
+                isExpanded ? Icons.expand_less : Icons.expand_more,
+              ),
+              onTap: onToggle,
             ),
-            trailing: Icon(
-              isExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
-            onTap: onToggle,
-          ),
-          if (isExpanded)
-            ...bucket.segments.map((indexed) {
-              return _SegmentTile(
-                key: segmentKeyBuilder(indexed.globalIndex),
-                segment: indexed.segment,
-                showCleanedText: showCleanedText,
-                keyword: keyword,
-                highlightStart:
-                    _matchForSegment(indexed.globalIndex)?.startOffset ?? -1,
-                highlightEnd:
-                    _matchForSegment(indexed.globalIndex)?.endOffset ?? -1,
-                onTimestampTap: onTimestampTap,
-              );
-            }),
-        ],
+            if (isExpanded)
+              ...bucket.segments.map((indexed) {
+                return _SegmentTile(
+                  key: segmentKeyBuilder(indexed.globalIndex),
+                  segment: indexed.segment,
+                  showCleanedText: showCleanedText,
+                  keyword: keyword,
+                  highlightStart:
+                      _matchForSegment(indexed.globalIndex)?.startOffset ?? -1,
+                  highlightEnd:
+                      _matchForSegment(indexed.globalIndex)?.endOffset ?? -1,
+                  onTimestampTap: onTimestampTap,
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
@@ -273,7 +326,8 @@ class _SegmentTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
-            onTap: onTimestampTap == null ? null : () => onTimestampTap!(segment),
+            onTap:
+                onTimestampTap == null ? null : () => onTimestampTap!(segment),
             child: Text(
               '${formatSrtTimecode(segment.start)} --> ${formatSrtTimecode(segment.end)}',
               style: TextStyle(

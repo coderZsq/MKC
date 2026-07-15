@@ -134,6 +134,19 @@ void main() {
         'message_id': 'm-6',
         'conversation_id': 'c-1',
         'content': 'answer',
+        'reasoning': 'thinking',
+        'citations': [
+          {
+            'index': 2,
+            'chunk_id': 'chunk-2',
+            'resource_id': 'r-1',
+            'resource_name': 'Paper',
+            'resource_type': 'pdf',
+            'page': 6,
+            'snippet': 'quoted text',
+            'score': 0.91,
+          }
+        ],
         'created_at': 1700000000,
         'is_streaming': false,
       });
@@ -141,6 +154,12 @@ void main() {
       expect(message.id, 'm-6');
       expect(message.conversationId, 'c-1');
       expect(message.content, 'answer');
+      expect(message.reasoning, 'thinking');
+      expect(message.citations, hasLength(1));
+      expect(message.citations.first.index, 2);
+      expect(message.citations.first.chunkId, 'chunk-2');
+      expect(message.citations.first.page, '6');
+      expect(message.citations.first.snippet, 'quoted text');
       expect(message.isStreaming, false);
     });
 

@@ -80,14 +80,17 @@ class ContentViewNotifier extends StateNotifier<ContentViewState> {
     required ContentRepository repository,
     required String resourceId,
     required ContentType contentType,
+    int? initialPage,
   })  : _repository = repository,
         _resourceId = resourceId,
         _contentType = contentType,
+        _initialPage = initialPage,
         super(const ContentViewState());
 
   final ContentRepository _repository;
   final String _resourceId;
   final ContentType _contentType;
+  final int? _initialPage;
   Timer? _debounceTimer;
 
   Future<void> load() async {
@@ -97,7 +100,13 @@ class ContentViewNotifier extends StateNotifier<ContentViewState> {
       success: (content) {
         final expanded = <int>{};
         if (content is PdfContent && content.pages.isNotEmpty) {
-          expanded.add(content.pages.first.pageNumber);
+          final pageNumbers = content.pages.map((page) => page.pageNumber);
+          final targetPage = _initialPage;
+          expanded.add(
+            targetPage != null && pageNumbers.contains(targetPage)
+                ? targetPage
+                : content.pages.first.pageNumber,
+          );
         }
         return state.copyWith(
           isLoading: false,
@@ -159,7 +168,8 @@ class ContentViewNotifier extends StateNotifier<ContentViewState> {
     switch (content) {
       case AudioContent(:final segments):
         for (var i = 0; i < segments.length; i++) {
-          final text = segments[i].displayText(showCleaned: state.showCleanedText);
+          final text =
+              segments[i].displayText(showCleaned: state.showCleanedText);
           matches.addAll(_findMatchesInText(i, text, lowerKeyword));
           if (matches.length >= ContentViewConfig.maxHighlightMatches) break;
         }
@@ -208,8 +218,8 @@ class ContentViewNotifier extends StateNotifier<ContentViewState> {
 
   void jumpToPreviousMatch() {
     if (state.matches.isEmpty) return;
-    final previous =
-        (state.currentMatchIndex - 1 + state.matches.length) % state.matches.length;
+    final previous = (state.currentMatchIndex - 1 + state.matches.length) %
+        state.matches.length;
     state = state.copyWith(
       currentMatchIndex: previous,
       expandedPageNumbers: _expandedForMatch(state.matches, previous),
@@ -246,22 +256,26 @@ class ContentViewRouteArgs {
   const ContentViewRouteArgs({
     required this.resourceId,
     required this.contentType,
+    this.initialPage,
   });
 
   final String resourceId;
   final ContentType contentType;
+  final int? initialPage;
 
   @override
   bool operator ==(Object other) =>
       other is ContentViewRouteArgs &&
       other.resourceId == resourceId &&
-      other.contentType == contentType;
+      other.contentType == contentType &&
+      other.initialPage == initialPage;
 
   @override
-  int get hashCode => Object.hash(resourceId, contentType);
+  int get hashCode => Object.hash(resourceId, contentType, initialPage);
 }
 
-final contentRemoteDataSourceProvider = Provider<ContentRemoteDataSource>((ref) {
+final contentRemoteDataSourceProvider =
+    Provider<ContentRemoteDataSource>((ref) {
   return ContentRemoteDataSource();
 });
 
@@ -278,5 +292,6 @@ final contentViewNotifierProvider = StateNotifierProvider.autoDispose
     repository: ref.watch(contentRepositoryProvider),
     resourceId: args.resourceId,
     contentType: args.contentType,
+    initialPage: args.initialPage,
   ),
 );

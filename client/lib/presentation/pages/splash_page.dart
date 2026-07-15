@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/constants.dart';
+import '../../config/theme.dart';
 import '../providers/auth_provider.dart';
 import '../routes/app_routes.dart';
 
@@ -31,22 +32,44 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 24),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: ClaudeColors.terracotta,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text(
+                  'M',
+                  style: TextStyle(
+                    color: ClaudeColors.ivory,
+                    fontFamily: ClaudeFonts.serif,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
               Constants.appName,
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineLarge,
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               Constants.appSubtitle,
-              style: TextStyle(fontSize: 14),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: ClaudeColors.oliveGray,
+                  ),
             ),
+            const SizedBox(height: 28),
+            const CircularProgressIndicator(),
           ],
         ),
       ),

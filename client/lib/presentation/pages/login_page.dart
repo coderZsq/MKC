@@ -6,6 +6,7 @@ import '../../shared/errors/error_mapper.dart';
 import '../../shared/validators.dart';
 import '../providers/auth_provider.dart';
 import '../routes/app_routes.dart';
+import '../widgets/claude_layout.dart';
 
 /// Login screen with email/password form.
 class LoginPage extends ConsumerStatefulWidget {
@@ -48,29 +49,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Spacer(),
-                        _buildHeader(),
-                        const SizedBox(height: 48),
-                        _buildForm(state),
-                        const SizedBox(height: 16),
-                        if (state.error != null)
-                          Text(
-                            mapAuthErrorToMessage(state.error),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        const SizedBox(height: 16),
-                        _buildSubmitButton(state),
-                        const SizedBox(height: 16),
-                        _buildRegisterLink(),
-                        const Spacer(),
-                      ],
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: ClaudePanel(
+                        padding: const EdgeInsets.all(28),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildHeader(),
+                            const SizedBox(height: 32),
+                            _buildForm(state),
+                            const SizedBox(height: 16),
+                            if (state.error != null)
+                              Text(
+                                mapAuthErrorToMessage(state.error),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            const SizedBox(height: 16),
+                            _buildSubmitButton(state),
+                            const SizedBox(height: 12),
+                            _buildRegisterLink(),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -85,15 +93,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget _buildHeader() {
     return Column(
       children: [
-        Icon(
-          Icons.lock_outline,
-          size: 64,
-          color: Theme.of(context).colorScheme.primary,
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.lock_outline,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
         ),
         const SizedBox(height: 16),
+        const ClaudeEyebrow('Welcome back'),
+        const SizedBox(height: 8),
         Text(
           '登录 MKC',
-          style: Theme.of(context).textTheme.headlineSmall,
+          style: Theme.of(context).textTheme.headlineMedium,
         ),
       ],
     );

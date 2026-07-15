@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mkc_client/domain/entities/message.dart';
 import 'package:mkc_client/presentation/widgets/citation_card.dart';
 
@@ -69,6 +70,42 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('quoted source text'), findsOneWidget);
       await gesture.up();
+    });
+
+    testWidgets('navigates with page and timestamp query parameters',
+        (tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => const Scaffold(
+              body: CitationCard(
+                citation: Citation(
+                  resourceId: 'res-4',
+                  resourceName: 'doc.pdf',
+                  score: 0.8,
+                  page: '6',
+                  timestamp: Duration(seconds: 75),
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/resources/:id/content',
+            builder: (_, state) => Text(state.uri.toString()),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+      await tester.tap(find.byType(ActionChip));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('/resources/res-4/content?type=pdf&page=6&timestamp=75000'),
+        findsOneWidget,
+      );
     });
   });
 }

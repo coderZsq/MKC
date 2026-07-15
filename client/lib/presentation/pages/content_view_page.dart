@@ -15,12 +15,16 @@ class ContentViewPage extends ConsumerStatefulWidget {
   const ContentViewPage({
     required this.resourceId,
     required this.contentType,
+    this.initialPage,
+    this.initialTimestamp,
     this.audioSeekService,
     super.key,
   });
 
   final String resourceId;
   final ContentType contentType;
+  final int? initialPage;
+  final Duration? initialTimestamp;
   final AudioSeekService? audioSeekService;
 
   @override
@@ -42,14 +46,14 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
   ContentViewRouteArgs get _args => ContentViewRouteArgs(
         resourceId: widget.resourceId,
         contentType: widget.contentType,
+        initialPage: widget.initialPage,
       );
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(_provider);
-    final audioSeekService =
-        (widget.audioSeekService ?? ref.watch(audioSeekServiceProvider))
-            as AudioSeekService;
+    final audioSeekService = (widget.audioSeekService ??
+        ref.watch(audioSeekServiceProvider)) as AudioSeekService;
 
     return Scaffold(
       appBar: AppBar(
@@ -68,8 +72,10 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
             keyword: state.keyword,
             matchCount: state.matches.length,
             currentIndex: state.currentMatchIndex,
-            onChanged: (value) => ref.read(_provider.notifier).onSearchChanged(value),
-            onPrevious: () => ref.read(_provider.notifier).jumpToPreviousMatch(),
+            onChanged: (value) =>
+                ref.read(_provider.notifier).onSearchChanged(value),
+            onPrevious: () =>
+                ref.read(_provider.notifier).jumpToPreviousMatch(),
             onNext: () => ref.read(_provider.notifier).jumpToNextMatch(),
           ),
           Expanded(child: _buildBody(context, state, audioSeekService)),
@@ -86,24 +92,30 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
     };
   }
 
-  Widget _buildBody(BuildContext context, ContentViewState state, AudioSeekService audioSeekService) {
+  Widget _buildBody(BuildContext context, ContentViewState state,
+      AudioSeekService audioSeekService) {
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final error = state.error;
     if (error != null) {
-      return _ErrorView(error: error, onRetry: () => ref.read(_provider.notifier).retry());
+      return _ErrorView(
+          error: error, onRetry: () => ref.read(_provider.notifier).retry());
     }
 
     final content = state.content;
     if (content == null) {
-      return const Center(child: Text('暂无内容'));
+      return const _CompactState(
+        message: '暂无内容',
+        icon: Icons.article_outlined,
+      );
     }
 
     return switch (content) {
       AudioContent(:final segments) => SrtListView(
           segments: segments,
+          initialTimestamp: widget.initialTimestamp,
           matches: state.matches,
           currentMatchIndex: state.currentMatchIndex,
           showCleanedText: state.showCleanedText,
@@ -112,6 +124,7 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
         ),
       PdfContent(:final pages) => PdfTextView(
           pages: pages,
+          initialPage: widget.initialPage,
           expandedPageNumbers: state.expandedPageNumbers,
           matches: state.matches,
           currentMatchIndex: state.currentMatchIndex,
@@ -134,16 +147,64 @@ class _ErrorView extends StatelessWidget {
     final isNotCompleted = error is TaskNotCompletedException;
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(error.message),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: Text(isNotCompleted ? '刷新' : '重试'),
-          ),
-        ],
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 360),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border:
+              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isNotCompleted ? Icons.hourglass_empty : Icons.wifi_off_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(error.message),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: Text(isNotCompleted ? '刷新' : '重试'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactState extends StatelessWidget {
+  const _CompactState({required this.message, required this.icon});
+
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border:
+              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }

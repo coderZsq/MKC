@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/upload_provider.dart';
 import '../routes/app_routes.dart';
+import '../widgets/claude_layout.dart';
 import '../widgets/upload_progress_bar.dart';
 
 /// Page for selecting and uploading a file.
@@ -17,27 +18,35 @@ class UploadPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('上传文件')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildFileSelector(context, state, notifier),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('生成摘要'),
-              value: state.autoSummary,
-              onChanged: state.isUploading ? null : notifier.setAutoSummary,
-            ),
-            const SizedBox(height: 24),
-            if (state.isUploading || state.progress > 0 && !state.isSuccess)
-              UploadProgressBar(progress: state.progress),
-            if (state.hasError) _buildError(context, state.errorMessage!),
-            if (state.isSuccess)
-              _buildSuccess(context, state.response!.taskId, notifier),
-            if (state.isCancelled) _buildCancelled(context, notifier),
-          ],
-        ),
+      body: ClaudePage(
+        maxWidth: 720,
+        children: [
+          const ClaudeSectionHeader(
+            label: 'Upload',
+            title: '上传文件',
+            description: '选择音频、PDF 或文档，进入解析与摘要流程。',
+          ),
+          const SizedBox(height: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildFileSelector(context, state, notifier),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('生成摘要'),
+                value: state.autoSummary,
+                onChanged: state.isUploading ? null : notifier.setAutoSummary,
+              ),
+              const SizedBox(height: 24),
+              if (state.isUploading || state.progress > 0 && !state.isSuccess)
+                UploadProgressBar(progress: state.progress),
+              if (state.hasError) _buildError(context, state.errorMessage!),
+              if (state.isSuccess)
+                _buildSuccess(context, state.response!.taskId, notifier),
+              if (state.isCancelled) _buildCancelled(context, notifier),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -49,54 +58,52 @@ class UploadPage extends ConsumerWidget {
   ) {
     final selected = state.selectedFile;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (selected == null)
-              const Text('请选择要上传的文件', textAlign: TextAlign.center)
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(selected.name,
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  Text('大小: ${_formatBytes(selected.size)}'),
-                  if (selected.extension != null)
-                    Text('格式: ${selected.extension}'),
-                ],
-              ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return ClaudePanel(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (selected == null)
+            const Text('请选择要上传的文件', textAlign: TextAlign.center)
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton.icon(
-                  onPressed: state.isUploading ? null : notifier.pickFile,
-                  icon: const Icon(Icons.folder_open),
-                  label: Text(selected == null ? '选择文件' : '重新选择'),
-                ),
-                if (selected != null) ...[
-                  const SizedBox(width: 12),
-                  if (state.isUploading)
-                    OutlinedButton.icon(
-                      onPressed: notifier.cancel,
-                      icon: const Icon(Icons.cancel),
-                      label: const Text('取消'),
-                    )
-                  else if (state.canUpload)
-                    ElevatedButton.icon(
-                      onPressed: notifier.upload,
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('开始上传'),
-                    ),
-                ],
+                Text(selected.name,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text('大小: ${_formatBytes(selected.size)}'),
+                if (selected.extension != null)
+                  Text('格式: ${selected.extension}'),
               ],
             ),
-          ],
-        ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: state.isUploading ? null : notifier.pickFile,
+                icon: const Icon(Icons.folder_open),
+                label: Text(selected == null ? '选择文件' : '重新选择'),
+              ),
+              if (selected != null) ...[
+                const SizedBox(width: 12),
+                if (state.isUploading)
+                  OutlinedButton.icon(
+                    onPressed: notifier.cancel,
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('取消'),
+                  )
+                else if (state.canUpload)
+                  ElevatedButton.icon(
+                    onPressed: notifier.upload,
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('开始上传'),
+                  ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }

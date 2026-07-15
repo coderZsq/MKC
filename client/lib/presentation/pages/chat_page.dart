@@ -6,6 +6,7 @@ import '../providers/chat_provider.dart';
 import '../routes/app_routes.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input_bar.dart';
+import '../widgets/claude_layout.dart';
 import '../widgets/streaming_indicator.dart';
 import '../../shared/validators.dart';
 
@@ -74,7 +75,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       chatProvider(widget.conversationId),
       (_, next) {
         if (!next.isSending) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _scrollToBottom());
         }
       },
     );
@@ -92,17 +94,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ],
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: _buildMessageList(state),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: _buildMessageList(state),
+              ),
+              ChatInputBar(
+                enabled: !state.isSending,
+                onSend: (question) => _send(question),
+                onCancel: () => _cancel(),
+              ),
+            ],
           ),
-          ChatInputBar(
-            enabled: !state.isSending,
-            onSend: (question) => _send(question),
-            onCancel: () => _cancel(),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -125,14 +133,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     if (state.messages.isEmpty) {
-      return const Center(
-        child: Text('Send a message to start the conversation'),
+      return const ClaudeEmptyState(
+        title: 'Send a message to start the conversation',
+        message: 'Ask a question about your uploaded resources.',
+        icon: Icons.chat_bubble_outline,
       );
     }
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
       itemCount: state.messages.length + (state.isSending ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == state.messages.length) {
