@@ -44,3 +44,19 @@ def test_service_returns_empty_citations_without_markers() -> None:
     result = service.build_citations("Answer without markers.", [chunk], {"res-1"})
 
     assert result.citations == []
+
+
+def test_service_allows_citations_when_authorized_scope_is_empty() -> None:
+    service = CitationService(CitationFormatter(), CitationValidator(log_dropped=False))
+    chunk = RetrievalChunk(
+        chunk_id="c-1",
+        resource_id="res-1",
+        text="source",
+        score=0.88,
+        metadata={},
+    )
+
+    result = service.build_citations("Answer [^1].", [chunk], set())
+
+    assert len(result.citations) == 1
+    assert result.citations[0].resource_id == "res-1"

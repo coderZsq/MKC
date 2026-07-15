@@ -40,6 +40,31 @@ void main() {
       expect(repository.lastConversationId, 'conv-1');
     });
 
+    test('syncs loaded message markers with citation indexes', () async {
+      repository.nextMessagesResult = Result.success([
+        Message.assistant(
+          id: 'm2',
+          conversationId: 'conv-1',
+          content: 'Answer [^3]',
+          reasoning: 'Thinking [^3]',
+          citations: const [
+            Citation(
+              resourceId: 'res-1',
+              resourceName: 'doc.pdf',
+              index: 1,
+              originalIndex: 3,
+              score: 0.9,
+            ),
+          ],
+        ),
+      ]);
+
+      await notifier.loadMessages();
+
+      expect(notifier.state.messages.single.content, 'Answer [^1]');
+      expect(notifier.state.messages.single.reasoning, 'Thinking [^1]');
+    });
+
     test('sets error on failure', () async {
       repository.nextMessagesResult = const Result.failure(NetworkException());
 
@@ -133,6 +158,39 @@ void main() {
       expect(assistant.citations.first.page, '4');
       expect(assistant.citations.first.snippet, 'source');
       expect(assistant.citations.first.contentType.name, 'pdf');
+    });
+
+    test('syncs streamed answer and reasoning markers with citation indexes',
+        () async {
+      repository.events = const [
+        ChatEvent(
+          type: 'reasoning',
+          messageId: 'a1',
+          reasoningDelta: 'thinking [^3]',
+        ),
+        ChatEvent(type: 'chunk', messageId: 'a1', delta: 'answer [^3]'),
+        ChatEvent(
+          type: 'citation',
+          messageId: 'a1',
+          citation: CitationData(
+            resourceId: 'res-1',
+            index: 1,
+            originalIndex: 3,
+            resourceName: 'doc.pdf',
+            score: 0.9,
+            page: '4',
+            contentType: 'pdf',
+          ),
+        ),
+      ];
+
+      await notifier.send('Question');
+      await Future.delayed(Duration.zero);
+
+      final assistant = notifier.state.messages[1];
+      expect(assistant.reasoning, 'thinking [^1]');
+      expect(assistant.content, 'answer [^1]');
+      expect(assistant.citations.first.index, 1);
     });
 
     test('sets error on SSE error event', () async {

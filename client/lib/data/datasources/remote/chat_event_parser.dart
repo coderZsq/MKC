@@ -68,20 +68,27 @@ class ChatEventParser {
     return CitationData(
       resourceId: resourceId,
       index: _parseInt(json['index']),
+      originalIndex: _parseInt(json['original_index']),
       chunkId: json['chunk_id'] as String?,
       resourceName: json['resource_name'] as String? ?? '',
       page: (json['page'] ?? metadata['page'])?.toString(),
       timestamp: _parseDuration(
         json['timestamp_start'] ??
+            json['start_time'] ??
             metadata['timestamp_start'] ??
+            metadata['start_time'] ??
             metadata['timestamp'],
       ),
       timestampEnd: _parseDuration(
-        json['timestamp_end'] ?? metadata['timestamp_end'],
+        json['timestamp_end'] ??
+            json['end_time'] ??
+            metadata['timestamp_end'] ??
+            metadata['end_time'],
       ),
       snippet: json['snippet'] as String? ?? metadata['snippet'] as String?,
       score: (json['score'] as num?)?.toDouble() ?? 0.0,
       contentType: json['resource_type'] as String? ??
+          json['source_type'] as String? ??
           metadata['content_type'] as String?,
     );
   }
@@ -125,12 +132,17 @@ class ChatEventParser {
             page: (json['page'] ?? metadata['page'])?.toString(),
             timestamp: _parseDuration(
               json['timestamp_start'] ??
+                  json['start_time'] ??
                   json['timestamp'] ??
                   metadata['timestamp_start'] ??
+                  metadata['start_time'] ??
                   metadata['timestamp'],
             ),
             timestampEnd: _parseDuration(
-              json['timestamp_end'] ?? metadata['timestamp_end'],
+              json['timestamp_end'] ??
+                  json['end_time'] ??
+                  metadata['timestamp_end'] ??
+                  metadata['end_time'],
             ),
             snippet:
                 json['snippet'] as String? ?? metadata['snippet'] as String?,
@@ -138,6 +150,8 @@ class ChatEventParser {
             contentType: ContentType.fromParam(
               json['resource_type'] as String? ??
                   json['content_type'] as String? ??
+                  json['source_type'] as String? ??
+                  metadata['source_type'] as String? ??
                   metadata['content_type'] as String?,
             ),
           );

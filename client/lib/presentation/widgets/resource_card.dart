@@ -11,12 +11,16 @@ class ResourceCard extends StatelessWidget {
     required this.resource,
     required this.onTap,
     required this.onTagTap,
+    this.onAskTap,
+    this.isAskLoading = false,
     super.key,
   });
 
   final Resource resource;
   final VoidCallback? onTap;
+  final VoidCallback? onAskTap;
   final ValueChanged<String> onTagTap;
+  final bool isAskLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -24,24 +28,44 @@ class ResourceCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: ClaudePanel(
-        onTap: onTap,
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    resource.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      resource.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                _ResourceStatusChip(status: resource.status),
-              ],
+                  const SizedBox(width: 12),
+                  _ResourceStatusChip(status: resource.status),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: resource.status == 'completed' && !isAskLoading
+                    ? onAskTap
+                    : null,
+                icon: isAskLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.chat_bubble_outline, size: 18),
+                label: const Text('问答'),
+              ),
             ),
             const SizedBox(height: 10),
             ResourceSummaryText(

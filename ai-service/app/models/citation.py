@@ -9,6 +9,7 @@ class Citation(BaseModel):
     """A traceable source citation mapped from an answer footnote marker."""
 
     index: int = Field(..., ge=1)
+    original_index: int | None = Field(default=None, ge=1)
     chunk_id: str
     resource_id: str
     resource_type: Literal["audio", "pdf"] = "pdf"

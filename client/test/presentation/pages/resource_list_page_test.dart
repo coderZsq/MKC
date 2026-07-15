@@ -1,28 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mkc_client/presentation/pages/resource_list_page.dart';
+import 'package:mkc_client/presentation/providers/conversation_list_provider.dart';
 import 'package:mkc_client/presentation/providers/resource_list_provider.dart';
 import 'package:mkc_client/shared/errors/app_exception.dart';
 import 'package:mkc_client/shared/result.dart';
 
+import '../../shared/chat_test_helpers.dart';
 import '../../shared/resource_test_helpers.dart';
 
 void main() {
   group('ResourceListPage', () {
     late FakeResourceRepository repository;
+    late FakeConversationRepository conversationRepository;
 
     setUp(() {
       repository = FakeResourceRepository();
+      conversationRepository = FakeConversationRepository();
     });
 
     Future<void> pumpPage(WidgetTester tester) async {
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => const ResourceListPage(),
+          ),
+          GoRoute(
+            path: '/conversation/:id',
+            builder: (_, state) => Scaffold(
+              body: Text('conversation ${state.pathParameters['id']}'),
+            ),
+          ),
+          GoRoute(
+            path: '/resources/:id/content',
+            builder: (_, state) => Scaffold(
+              body: Text('content ${state.pathParameters['id']}'),
+            ),
+          ),
+        ],
+      );
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             resourceRepositoryProvider.overrideWithValue(repository),
+            conversationRepositoryProvider
+                .overrideWithValue(conversationRepository),
           ],
-          child: const MaterialApp(home: ResourceListPage()),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
       await tester.pumpAndSettle();
@@ -109,6 +137,29 @@ void main() {
 
       expect(find.text('old.pdf'), findsOneWidget);
       expect(find.text('筛选失败，请重试'), findsOneWidget);
+    });
+
+    testWidgets('creates resource-scoped conversation from ask button',
+        (tester) async {
+      repository.nextResourcesResult = Result.success([
+        createResource(
+          id: 'audio-res',
+          name: 'lesson.mp3',
+          type: 'media_parse',
+          status: 'completed',
+        ),
+      ]);
+      conversationRepository.nextCreateResult = Result.success(
+        makeConversation(id: 'conv-audio', resourceIds: const ['audio-res']),
+      );
+
+      await pumpPage(tester);
+      await tester.tap(find.text('问答'));
+      await tester.pumpAndSettle();
+
+      expect(conversationRepository.lastCreateTitle, 'lesson.mp3');
+      expect(conversationRepository.lastCreateResourceIds, ['audio-res']);
+      expect(find.text('conversation conv-audio'), findsOneWidget);
     });
   });
 }

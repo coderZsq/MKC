@@ -19,6 +19,7 @@ class Citation {
     required this.resourceId,
     required this.resourceName,
     this.index,
+    this.originalIndex,
     this.chunkId,
     this.page,
     this.timestamp,
@@ -31,6 +32,7 @@ class Citation {
   final String resourceId;
   final String resourceName;
   final int? index;
+  final int? originalIndex;
   final String? chunkId;
   final String? page;
   final Duration? timestamp;
@@ -43,6 +45,7 @@ class Citation {
     String? resourceId,
     String? resourceName,
     int? index,
+    int? originalIndex,
     String? chunkId,
     String? page,
     Duration? timestamp,
@@ -55,6 +58,7 @@ class Citation {
       resourceId: resourceId ?? this.resourceId,
       resourceName: resourceName ?? this.resourceName,
       index: index ?? this.index,
+      originalIndex: originalIndex ?? this.originalIndex,
       chunkId: chunkId ?? this.chunkId,
       page: page ?? this.page,
       timestamp: timestamp ?? this.timestamp,
@@ -145,4 +149,34 @@ class Message {
       isStreaming: isStreaming ?? this.isStreaming,
     );
   }
+
+  Message withCitationMarkersSynced() {
+    if (citations.isEmpty) return this;
+    final markerMap = <int, int>{};
+    for (final citation in citations) {
+      final original = citation.originalIndex;
+      final current = citation.index;
+      if (original == null || current == null || original == current) {
+        continue;
+      }
+      markerMap[original] = current;
+    }
+    if (markerMap.isEmpty) return this;
+    return copyWith(
+      content: _syncCitationMarkers(content, markerMap),
+      reasoning: _syncCitationMarkers(reasoning, markerMap),
+    );
+  }
+}
+
+final RegExp _citationMarkerPattern = RegExp(r'\[\^(\d+)\]');
+
+String _syncCitationMarkers(String text, Map<int, int> markerMap) {
+  if (text.isEmpty) return text;
+  return text.replaceAllMapped(_citationMarkerPattern, (match) {
+    final original = int.tryParse(match.group(1) ?? '');
+    final current = original == null ? null : markerMap[original];
+    if (current == null) return match.group(0)!;
+    return '[^$current]';
+  });
 }
