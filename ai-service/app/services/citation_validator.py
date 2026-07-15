@@ -21,7 +21,7 @@ class CitationValidator:
     ) -> list[Citation]:
         valid: list[Citation] = []
         for citation in citations:
-            if citation.resource_id not in authorized_resource_ids:
+            if authorized_resource_ids and citation.resource_id not in authorized_resource_ids:
                 self._log_drop("unauthorized", citation)
                 continue
             valid.append(citation)

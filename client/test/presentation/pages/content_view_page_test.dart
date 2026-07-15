@@ -30,6 +30,26 @@ AudioContent _sampleAudioContent() {
   );
 }
 
+AudioContent _multiBucketAudioContent() {
+  return const AudioContent(
+    taskId: 't1',
+    segments: [
+      SubtitleSegment(
+        index: 1,
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 4),
+        text: 'Opening subtitle',
+      ),
+      SubtitleSegment(
+        index: 2,
+        start: Duration(minutes: 5, seconds: 30),
+        end: Duration(minutes: 5, seconds: 40),
+        text: 'Target subtitle after a timestamp gap',
+      ),
+    ],
+  );
+}
+
 PdfContent _samplePdfContent() {
   return const PdfContent(
     taskId: 't1',
@@ -55,6 +75,7 @@ Future<void> _pumpContentViewPage(
   required ContentType contentType,
   FakeContentRepository? repository,
   AudioSeekService? audioSeekService,
+  Duration? initialTimestamp,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -67,6 +88,7 @@ Future<void> _pumpContentViewPage(
         home: ContentViewPage(
           resourceId: resourceId,
           contentType: contentType,
+          initialTimestamp: initialTimestamp,
           audioSeekService: audioSeekService,
         ),
       ),
@@ -166,7 +188,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(const TaskNotCompletedException().message), findsOneWidget);
+      expect(
+          find.text(const TaskNotCompletedException().message), findsOneWidget);
       expect(find.text('刷新'), findsOneWidget);
     });
 
@@ -233,6 +256,25 @@ void main() {
       await tester.pump();
 
       expect(seekService.lastPosition, const Duration(seconds: 1));
+    });
+
+    testWidgets('initial timestamp opens and scrolls to nearest subtitle', (
+      WidgetTester tester,
+    ) async {
+      final repository = FakeContentRepository();
+      repository.nextResult = Result.success(_multiBucketAudioContent());
+
+      await _pumpContentViewPage(
+        tester,
+        resourceId: 't1',
+        contentType: ContentType.audio,
+        repository: repository,
+        initialTimestamp: const Duration(minutes: 5, seconds: 20),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text('Target subtitle after a timestamp gap'), findsOneWidget);
     });
 
     testWidgets('text mode toggle switches between cleaned and original', (

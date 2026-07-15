@@ -118,23 +118,26 @@ class ClaudePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Container(
+    final paddedChild = Padding(padding: padding, child: child);
+    final panelChild = onTap == null
+        ? paddedChild
+        : Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(8),
+              child: paddedChild,
+            ),
+          );
+    return Container(
       margin: margin,
       decoration: BoxDecoration(
         color: ClaudeColors.ivory,
         border: Border.all(color: ClaudeColors.borderCream),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(padding: padding, child: child),
-        ),
-      ),
+      child: panelChild,
     );
-    return content;
   }
 }
 

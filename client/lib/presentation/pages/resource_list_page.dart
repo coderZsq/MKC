@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/entities/resource.dart';
+import '../providers/conversation_list_provider.dart';
 import '../providers/resource_list_provider.dart';
 import '../routes/app_routes.dart';
 import '../widgets/claude_layout.dart';
@@ -16,6 +18,8 @@ class ResourceListPage extends ConsumerStatefulWidget {
 }
 
 class _ResourceListPageState extends ConsumerState<ResourceListPage> {
+  String? _creatingConversationResourceId;
+
   @override
   void initState() {
     super.initState();
@@ -114,10 +118,31 @@ class _ResourceListPageState extends ConsumerState<ResourceListPage> {
             onTap: () => context.push(
               '${contentViewRoute.replaceFirst(':id', resource.id)}?type=${_contentTypeParam(resource.type)}',
             ),
+            isAskLoading: _creatingConversationResourceId == resource.id,
+            onAskTap: () => _createResourceConversation(resource),
             onTagTap:
                 ref.read(resourceListNotifierProvider.notifier).filterByTag,
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _createResourceConversation(Resource resource) async {
+    if (_creatingConversationResourceId != null) return;
+    setState(() => _creatingConversationResourceId = resource.id);
+    final result =
+        await ref.read(conversationRepositoryProvider).createConversation(
+      title: resource.name,
+      resourceIds: [resource.id],
+    );
+    if (!mounted) return;
+    setState(() => _creatingConversationResourceId = null);
+    result.when(
+      success: (conversation) =>
+          context.push(conversationRoute.replaceFirst(':id', conversation.id)),
+      failure: (_) => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('创建问答会话失败，请重试')),
       ),
     );
   }

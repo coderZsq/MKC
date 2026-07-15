@@ -133,6 +133,14 @@ class _SrtListViewState extends State<SrtListView> {
         return i;
       }
     }
+    for (var i = 0; i < widget.segments.length; i++) {
+      if (timestamp <= widget.segments[i].end) {
+        return i;
+      }
+    }
+    if (widget.segments.isNotEmpty) {
+      return widget.segments.length - 1;
+    }
     return null;
   }
 

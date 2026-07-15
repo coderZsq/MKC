@@ -28,6 +28,7 @@ void main() {
     test('parses citation event', () {
       final json = jsonEncode({
         'index': 1,
+        'original_index': 3,
         'chunk_id': 'chunk-1',
         'resource_id': 'r-1',
         'resource_name': 'Paper',
@@ -43,6 +44,7 @@ void main() {
       expect(event.citation, isNotNull);
       expect(event.citation!.resourceId, 'r-1');
       expect(event.citation!.index, 1);
+      expect(event.citation!.originalIndex, 3);
       expect(event.citation!.chunkId, 'chunk-1');
       expect(event.citation!.resourceName, 'Paper');
       expect(event.citation!.page, '12');
@@ -64,6 +66,22 @@ void main() {
       expect(event, isNotNull);
       expect(event!.citation!.timestamp, const Duration(milliseconds: 75500));
       expect(event.citation!.timestampEnd, const Duration(seconds: 90));
+      expect(event.citation!.contentType, 'audio');
+    });
+
+    test('parses audio citation legacy source and time fields', () {
+      final json = jsonEncode({
+        'resource_id': 'r-legacy-audio',
+        'source_type': 'audio',
+        'start_time': 12.25,
+        'end_time': 18,
+        'score': 0.76,
+      });
+      final event =
+          ChatEventParser.parseEvent('event: citation\ndata: $json\n');
+      expect(event, isNotNull);
+      expect(event!.citation!.timestamp, const Duration(milliseconds: 12250));
+      expect(event.citation!.timestampEnd, const Duration(seconds: 18));
       expect(event.citation!.contentType, 'audio');
     });
 
@@ -168,6 +186,27 @@ void main() {
         'message_id': 'm-7',
       });
       expect(message.createdAt, isA<DateTime>());
+    });
+
+    test('parses persisted audio citation legacy source and time fields', () {
+      final message = ChatEventParser.parseAssistantMessage({
+        'message_id': 'm-8',
+        'conversation_id': 'c-1',
+        'citations': [
+          {
+            'resource_id': 'r-legacy-audio',
+            'source_type': 'audio',
+            'start_time': 12.25,
+            'end_time': 18,
+          }
+        ],
+      });
+
+      expect(message.citations, hasLength(1));
+      expect(message.citations.first.contentType.name, 'audio');
+      expect(message.citations.first.timestamp,
+          const Duration(milliseconds: 12250));
+      expect(message.citations.first.timestampEnd, const Duration(seconds: 18));
     });
   });
 }

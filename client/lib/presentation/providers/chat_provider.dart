@@ -65,7 +65,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = result.when(
       success: (messages) => state.copyWith(
         isLoading: false,
-        messages: messages,
+        messages: messages
+            .map((message) => message.withCitationMarkersSynced())
+            .toList(),
       ),
       failure: (error) => state.copyWith(isLoading: false, error: error),
     );
@@ -172,6 +174,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       resourceId: data.resourceId,
       resourceName: data.resourceName ?? '',
       index: data.index,
+      originalIndex: data.originalIndex,
       chunkId: data.chunkId,
       page: data.page,
       timestamp: data.timestamp,
@@ -186,7 +189,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return message.copyWith(
         id: message.id.isEmpty ? event.messageId : message.id,
         citations: <Citation>[...message.citations, citation],
-      );
+      ).withCitationMarkersSynced();
     }).toList();
     state = state.copyWith(messages: updated);
   }

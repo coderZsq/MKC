@@ -70,6 +70,7 @@ class CitationModel {
     required this.resourceId,
     required this.resourceName,
     this.index,
+    this.originalIndex,
     this.chunkId,
     this.page,
     this.timestamp,
@@ -82,6 +83,7 @@ class CitationModel {
   final String resourceId;
   final String resourceName;
   final int? index;
+  final int? originalIndex;
   final String? chunkId;
   final String? page;
   final Duration? timestamp;
@@ -96,6 +98,8 @@ class CitationModel {
       resourceId: json['resource_id'] as String? ?? '',
       resourceName: json['resource_name'] as String? ?? '',
       index: _parseInt(json['index'] ?? metadata['index']),
+      originalIndex:
+          _parseInt(json['original_index'] ?? metadata['original_index']),
       chunkId: json['chunk_id'] as String? ?? metadata['chunk_id'] as String?,
       page: (json['page'] ?? metadata['page'])?.toString(),
       timestamp: _parseTimestamp(
@@ -120,6 +124,7 @@ class CitationModel {
       resourceId: resourceId,
       resourceName: resourceName,
       index: index,
+      originalIndex: originalIndex,
       chunkId: chunkId,
       page: page,
       timestamp: timestamp,

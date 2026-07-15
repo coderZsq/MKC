@@ -30,6 +30,7 @@ class CitationData {
   const CitationData({
     required this.resourceId,
     this.index,
+    this.originalIndex,
     this.chunkId,
     this.resourceName,
     this.page,
@@ -42,6 +43,7 @@ class CitationData {
 
   final String resourceId;
   final int? index;
+  final int? originalIndex;
   final String? chunkId;
   final String? resourceName;
   final String? page;

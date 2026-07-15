@@ -24,6 +24,47 @@ void main() {
     expect(find.text('核心摘要'), findsOneWidget);
     expect(find.text('AI'), findsOneWidget);
     expect(find.text('数据集'), findsOneWidget);
+    expect(find.text('问答'), findsOneWidget);
+  });
+
+  testWidgets('ask button triggers callback for completed resource',
+      (tester) async {
+    var tapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ResourceCard(
+            resource: createResource(status: 'completed'),
+            onTap: () {},
+            onAskTap: () => tapped = true,
+            onTagTap: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('问答'));
+    expect(tapped, isTrue);
+  });
+
+  testWidgets('ask button is disabled until resource is completed',
+      (tester) async {
+    var tapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ResourceCard(
+            resource: createResource(status: 'processing'),
+            onTap: () {},
+            onAskTap: () => tapped = true,
+            onTagTap: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('问答'));
+    expect(tapped, isFalse);
   });
 
   testWidgets('card renders empty summary and tag placeholders',
