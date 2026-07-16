@@ -30,9 +30,15 @@ def _fallback_tool(name: str) -> Callable[[Callable[..., Any]], Callable[..., An
 try:
     from langchain_core.tools import tool as _imported_tool
 except ModuleNotFoundError:
-    _tool_decorator = _fallback_tool
+    _imported_tool = None
 else:
-    _tool_decorator = _imported_tool
+    _imported_tool = cast(Any, _imported_tool)
+
+
+def _make_tool(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    if _imported_tool is None:
+        return _fallback_tool(name)
+    return cast(Callable[[Callable[..., Any]], Callable[..., Any]], _imported_tool(name))
 
 
 class RateLimitExceededError(Exception):
@@ -76,7 +82,7 @@ class WebSearchTool:
             response = await self.invoke(query=query, top_k=top_k)
             return response.model_dump()
 
-        self.web_search = _tool_decorator("web_search")(_web_search)
+        self.web_search = _make_tool("web_search")(_web_search)
 
     async def invoke(self, query: str, top_k: int | None = None) -> WebSearchResponse:
         request = WebSearchRequest(
