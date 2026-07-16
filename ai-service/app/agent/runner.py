@@ -26,7 +26,7 @@ class AgentConfig:
     max_iterations: int = 3
     default_intent: str = "qa"
     enable_dynamic_intent: bool = False
-    enable_web_search: bool = False
+    enable_web_search: bool = True
     compare_concurrency: int = 3
     fallback_message: str = "抱歉，暂无法生成答案，请稍后重试"
     emit_node_events: bool = True
@@ -41,7 +41,7 @@ class AgentConfig:
             max_iterations=int(raw.get("max_iterations", 3)),
             default_intent=str(raw.get("default_intent", "qa")),
             enable_dynamic_intent=bool(raw.get("enable_dynamic_intent", False)),
-            enable_web_search=bool(raw.get("enable_web_search", False)),
+            enable_web_search=bool(raw.get("enable_web_search", True)),
             compare_concurrency=int(raw.get("compare_concurrency", 3)),
             fallback_message=str(raw.get("fallback_message", "抱歉，暂无法生成答案，请稍后重试")),
             emit_node_events=bool(sse.get("emit_node_events", True)),
