@@ -27,18 +27,12 @@ def _fallback_tool(name: str) -> Callable[[Callable[..., Any]], Callable[..., An
     return _decorate
 
 
-try:
-    from langchain_core.tools import tool as _imported_tool
-except ModuleNotFoundError:
-    _imported_tool = None
-else:
-    _imported_tool = cast(Any, _imported_tool)
-
-
 def _make_tool(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    if _imported_tool is None:
+    try:
+        from langchain_core.tools import tool as imported_tool
+    except ModuleNotFoundError:
         return _fallback_tool(name)
-    return cast(Callable[[Callable[..., Any]], Callable[..., Any]], _imported_tool(name))
+    return cast(Callable[[Callable[..., Any]], Callable[..., Any]], imported_tool(name))
 
 
 class RateLimitExceededError(Exception):
