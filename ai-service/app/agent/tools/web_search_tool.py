@@ -19,10 +19,10 @@ from app.services.llm.models import LLMRequest, Message
 logger = logging.getLogger(__name__)
 
 try:
-    from langchain_core.tools import tool
+    from langchain_core.tools import tool as _lc_tool
 except ModuleNotFoundError:
 
-    def tool(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def _lc_tool(name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def _decorate(func: Callable[..., Any]) -> Callable[..., Any]:
             cast(Any, func).name = name
             return func
@@ -71,7 +71,7 @@ class WebSearchTool:
             response = await self.invoke(query=query, top_k=top_k)
             return response.model_dump()
 
-        self.web_search = tool("web_search")(_web_search)
+        self.web_search = _lc_tool("web_search")(_web_search)
 
     async def invoke(self, query: str, top_k: int | None = None) -> WebSearchResponse:
         request = WebSearchRequest(
