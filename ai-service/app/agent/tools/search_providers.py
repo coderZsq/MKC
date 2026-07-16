@@ -32,7 +32,9 @@ class CurlSearchProvider(BaseSearchProvider):
             {"q": request.query, "format": "json", "no_html": "1", "skip_disambig": "1"}
         )
         url = f"{self._provider_config.base_url.rstrip('/')}?{query}"
-        raw = await _curl_json(["curl", "-sS", "--max-time", str(self._provider_config.timeout), url])
+        raw = await _curl_json(
+            ["curl", "-sS", "--max-time", str(self._provider_config.timeout), url]
+        )
         return self.parse_response(raw, request.top_k)
 
     def parse_response(self, raw: dict[str, Any], top_k: int) -> list[WebSearchResult]:
@@ -106,7 +108,9 @@ class SerperProvider(BaseSearchProvider):
                 WebSearchResult(
                     title=title,
                     url=url,
-                    snippet=_truncate(str(item.get("snippet") or ""), self._config.snippet_max_length),
+                    snippet=_truncate(
+                        str(item.get("snippet") or ""), self._config.snippet_max_length
+                    ),
                 )
             )
         return results
@@ -148,7 +152,9 @@ class BingProvider(BaseSearchProvider):
                 WebSearchResult(
                     title=title,
                     url=url,
-                    snippet=_truncate(str(item.get("snippet") or ""), self._config.snippet_max_length),
+                    snippet=_truncate(
+                        str(item.get("snippet") or ""), self._config.snippet_max_length
+                    ),
                 )
             )
         return results

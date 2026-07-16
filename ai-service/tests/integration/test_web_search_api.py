@@ -16,9 +16,7 @@ INTERNAL_API_KEY = "test-internal-key"
 def test_web_search_endpoint_returns_results(app: Flask, client: FlaskClient) -> None:
     # MKC-TC-S4-8-012: internal test endpoint returns web search results.
     app.extensions["web_search_tool"] = WebSearchTool(
-        provider=_Provider(
-            [WebSearchResult(title="T", url="https://example.com", snippet="S")]
-        ),
+        provider=_Provider([WebSearchResult(title="T", url="https://example.com", snippet="S")]),
         config=WebSearchConfig(provider="mock"),
     )
 
