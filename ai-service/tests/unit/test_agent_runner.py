@@ -20,6 +20,19 @@ async def _stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
     yield LLMStreamChunk(delta="", finish_reason="stop")
 
 
+def test_web_search_defaults_enabled() -> None:
+    request = AgentRunRequest(
+        question="what?",
+        conversation_id="conv-1",
+        message_id="msg-1",
+        user_id="user-1",
+    )
+
+    assert request.enable_web_search is True
+    assert AgentConfig().enable_web_search is True
+    assert AgentConfig.from_dict({}).enable_web_search is True
+
+
 def test_runner_streams_node_chunk_citation_done_events() -> None:
     retrieval = MagicMock()
     retrieval.retrieve.return_value = RetrievalResult(

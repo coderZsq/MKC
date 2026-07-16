@@ -11,6 +11,7 @@ from app.agent.runner import AgentConfig
 from app.agent.state import REQUIRED_AGENT_STATE_FIELDS
 from app.core.exceptions import RetrievalForbiddenError, RetrievalUnavailableError
 from app.models.retrieval import RetrievalChunk, RetrievalResult
+from app.models.web_search import WebSearchResponse, WebSearchResult
 from app.services.llm.models import LLMResponse, LLMStreamChunk, Usage
 
 
@@ -48,6 +49,23 @@ def _nodes() -> tuple[AgentNodes, MagicMock, MagicMock]:
         usage=Usage(),
     )
     return AgentNodes(retrieval, llm, config=AgentConfig()), retrieval, llm
+
+
+class _WebSearchTool:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def invoke(self, query: str) -> WebSearchResponse:
+        self.calls.append(query)
+        return WebSearchResponse(
+            results=[
+                WebSearchResult(
+                    title="Web title",
+                    url="https://example.com/web",
+                    snippet="Fresh web context",
+                )
+            ]
+        )
 
 
 def test_agent_state_required_fields_are_declared() -> None:
@@ -126,6 +144,9 @@ def test_qa_generate_and_validate_nodes() -> None:
     assert update["draft_answer"] == "hello world"
     assert llm.stream_complete.called
     passed_request = llm.stream_complete.call_args.args[0]
+    assert passed_request.messages[0].role == "system"
+    assert "你是 MKC 知识库助手" in passed_request.messages[0].content
+    assert "不得引用未提供的片段" in passed_request.messages[0].content
     assert passed_request.messages[-1].role == "user"
     assert "[^1] resource=res-1" in passed_request.messages[-1].content
 
@@ -149,6 +170,47 @@ def test_validate_marks_low_confidence_at_limit() -> None:
     )
     assert update["validation_passed"] is True
     assert update["low_confidence"] is True
+
+
+def test_generate_injects_web_search_summary_when_enabled() -> None:
+    # MKC-TC-S4-8-008 and MKC-TC-S4-8-010: web context is injected separately, not as citation.
+    retrieval = MagicMock()
+    llm = MagicMock()
+    llm.complete.return_value = LLMResponse(
+        content="网络摘要",
+        model="mock",
+        finish_reason="stop",
+        usage=Usage(),
+    )
+    llm.stream_complete.side_effect = lambda _request: _stream(["answer"])
+    web_search = _WebSearchTool()
+    nodes = AgentNodes(
+        retrieval,
+        llm,
+        config=AgentConfig(enable_web_search=True),
+        web_search_tool=web_search,  # type: ignore[arg-type]
+    )
+
+    update = _run(
+        nodes.generate_node(
+            {
+                "question": "需要最新信息",
+                "enable_web_search": True,
+                "retrieved_chunks": [],
+                "citations": [],
+            }
+        )
+    )
+
+    assert update == {"draft_answer": "answer"}
+    assert web_search.calls == ["需要最新信息"]
+    messages = llm.stream_complete.call_args.args[0].messages
+    assert messages[0].role == "system"
+    assert "你是 MKC 知识库助手" in messages[0].content
+    assert "网络搜索结果不能作为资料引用" in messages[0].content
+    prompt = messages[-1].content
+    assert "【网络来源】网络摘要" in prompt
+    assert "[^1]" not in prompt
 
 
 @pytest.mark.parametrize("node_name", ["compare", "generate"])

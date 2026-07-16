@@ -21,7 +21,7 @@ class AgentRunRequest(BaseModel):
     resource_ids: list[str] = Field(default_factory=list, max_length=100)
     history: list[ChatMessage] = Field(default_factory=list)
     intent: AgentIntent | None = None
-    enable_web_search: bool = False
+    enable_web_search: bool = True
     top_k: int | None = Field(default=None, ge=1, le=100)
     score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     max_context_tokens: int | None = Field(default=None, ge=1)

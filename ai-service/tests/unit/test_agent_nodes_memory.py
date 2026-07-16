@@ -88,18 +88,21 @@ def test_generate_node_includes_memory_context_but_no_citation_rules() -> None:
     _run(nodes.generate_node(state))
     passed_request = nodes._llm.stream_complete.call_args.args[0]
     assert passed_request.messages[0].role == "system"
+    assert "你是 MKC 知识库助手" in passed_request.messages[0].content
     assert "memory snippet" in passed_request.messages[0].content
-    assert "引用上下文片段" not in passed_request.messages[0].content
+    assert "引用上下文片段时，请在句末使用" not in passed_request.messages[0].content
 
 
-def test_generate_node_without_memory_has_single_user_message() -> None:
+def test_generate_node_without_memory_has_base_system_message() -> None:
     nodes = _nodes()
     state = {"question": "hello", "retrieved_chunks": []}
     _run(nodes.generate_node(state))
     passed_request = nodes._llm.stream_complete.call_args.args[0]
-    assert len(passed_request.messages) == 1
-    assert passed_request.messages[0].role == "user"
-    assert passed_request.messages[0].content == "hello"
+    assert len(passed_request.messages) == 2
+    assert passed_request.messages[0].role == "system"
+    assert "你是 MKC 知识库助手" in passed_request.messages[0].content
+    assert passed_request.messages[1].role == "user"
+    assert passed_request.messages[1].content == "hello"
 
 
 def test_stream_generation_passes_history() -> None:

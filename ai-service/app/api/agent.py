@@ -72,6 +72,7 @@ def _build_runner() -> AgentRunner:
         current_app.extensions["retrieval"],
         current_app.extensions["llm"],
         config=agent_cfg,
+        web_search_tool=current_app.extensions.get("web_search_tool"),
     )
     graph = AgentGraph(nodes, checkpointer)
     return AgentRunner(

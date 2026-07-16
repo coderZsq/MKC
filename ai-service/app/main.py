@@ -1,5 +1,7 @@
 from flask import Flask, Response
 
+from app.agent.tools import WebSearchTool
+from app.agent.tools.web_search_config import build_web_search_config
 from app.api.agent import agent_bp
 from app.api.asr import asr_bp
 from app.api.chunking import chunking_bp
@@ -14,6 +16,7 @@ from app.api.qa import qa_bp
 from app.api.retrieval import retrieval_bp
 from app.api.summary import summary_bp
 from app.api.vectors import vectors_bp
+from app.api.web_search import web_search_bp
 from app.core.config import settings
 from app.core.exceptions import APIException
 from app.core.response import make_response
@@ -166,6 +169,10 @@ def init_extensions(
         config=extraction_cfg,
     )
 
+    app.extensions["web_search_tool"] = WebSearchTool(
+        config=build_web_search_config((settings.ai_config or {}).get("web_search", {}))
+    )
+
     celery_app.conf.update(
         broker_url=settings.celery_broker_url,
         result_backend=settings.celery_result_backend,
@@ -189,6 +196,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(llm_bp, url_prefix="/ai/v1")
     app.register_blueprint(qa_bp, url_prefix="/ai/v1")
     app.register_blueprint(agent_bp, url_prefix="/ai/v1")
+    app.register_blueprint(web_search_bp, url_prefix="/ai/v1")
 
 
 def register_error_handlers(app: Flask) -> None:
