@@ -14,6 +14,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +25,7 @@ func InitTracer(ctx context.Context, cfg config.TracingConfig, logger *zap.Logge
 	}
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	if !cfg.Enabled {
-		provider := trace.NewNoopTracerProvider()
+		provider := noop.NewTracerProvider()
 		otel.SetTracerProvider(provider)
 		return func(context.Context) error { return nil }, provider.Tracer(cfg.ServiceName)
 	}
@@ -32,7 +33,7 @@ func InitTracer(ctx context.Context, cfg config.TracingConfig, logger *zap.Logge
 	exporter, err := buildExporter(ctx, cfg)
 	if err != nil {
 		logger.Warn("tracing exporter init failed; falling back to noop", zap.Error(err))
-		provider := trace.NewNoopTracerProvider()
+		provider := noop.NewTracerProvider()
 		otel.SetTracerProvider(provider)
 		return func(context.Context) error { return nil }, provider.Tracer(cfg.ServiceName)
 	}

@@ -8,18 +8,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const TraceIDKey = "trace_id"
 
 // Middleware creates a server span for each HTTP request.
-func Middleware(tracer trace.Tracer, logger *zap.Logger) gin.HandlerFunc {
+func Middleware(tracer trace.Tracer) gin.HandlerFunc {
 	if tracer == nil {
-		tracer = trace.NewNoopTracerProvider().Tracer("noop")
-	}
-	if logger == nil {
-		logger = zap.NewNop()
+		tracer = noop.NewTracerProvider().Tracer("noop")
 	}
 	return func(c *gin.Context) {
 		start := time.Now()

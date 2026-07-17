@@ -26,7 +26,7 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 
 	r.Use(
 		middleware.RequestID(),
-		gatewaytracing.Middleware(otel.Tracer(cfg.Observability.Tracing.ServiceName), logger),
+		gatewaytracing.Middleware(otel.Tracer(cfg.Observability.Tracing.ServiceName)),
 		middleware.Recovery(logger),
 		middleware.RequestLogger(logger),
 		middleware.ErrorHandler(),

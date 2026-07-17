@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.uber.org/zap"
 )
 
 func TestTracingMiddlewareCreatesRootSpan(t *testing.T) {
@@ -25,7 +24,7 @@ func TestTracingMiddlewareCreatesRootSpan(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.Use(Middleware(provider.Tracer("test-gateway"), zap.NewNop()))
+	r.Use(Middleware(provider.Tracer("test-gateway")))
 	r.GET("/test", func(c *gin.Context) { c.Status(http.StatusAccepted) })
 
 	w := httptest.NewRecorder()
@@ -47,7 +46,7 @@ func TestTracingMiddlewareMarksErrorSpan(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.Use(Middleware(provider.Tracer("test-gateway"), zap.NewNop()))
+	r.Use(Middleware(provider.Tracer("test-gateway")))
 	r.GET("/boom", func(c *gin.Context) { c.Status(http.StatusInternalServerError) })
 
 	w := httptest.NewRecorder()
