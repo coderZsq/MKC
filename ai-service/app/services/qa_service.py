@@ -11,6 +11,7 @@ from app.core.exceptions import (
 )
 from app.models.qa import QARequest, QAStreamEvent, format_sse_event
 from app.models.retrieval import RetrievalChunk, RetrievalRequest
+from app.observability.tracing import start_span
 from app.services.citation_service import CitationService, citation_to_event_data
 from app.services.llm.llm_client import LLMClient
 from app.services.llm.models import LLMRequest, Message
@@ -53,18 +54,27 @@ class QAService:
         prompt = request.question
         if request.resource_ids:
             try:
-                retrieval_kwargs: dict[str, Any] = {
-                    "question": request.question,
-                    "user_id": request.user_id,
-                    "resource_ids": request.resource_ids,
-                    "max_context_tokens": request.max_context_tokens,
-                }
-                if request.top_k is not None:
-                    retrieval_kwargs["top_k"] = request.top_k
-                if request.score_threshold is not None:
-                    retrieval_kwargs["score_threshold"] = request.score_threshold
-                retrieval_result = self._retrieval.retrieve(RetrievalRequest(**retrieval_kwargs))
-                prompt = retrieval_result.prompt
+                with start_span(
+                    "rag.retrieve",
+                    {
+                        "resource.count": len(request.resource_ids),
+                        "retrieval.top_k": request.top_k or 0,
+                    },
+                ):
+                    retrieval_kwargs: dict[str, Any] = {
+                        "question": request.question,
+                        "user_id": request.user_id,
+                        "resource_ids": request.resource_ids,
+                        "max_context_tokens": request.max_context_tokens,
+                    }
+                    if request.top_k is not None:
+                        retrieval_kwargs["top_k"] = request.top_k
+                    if request.score_threshold is not None:
+                        retrieval_kwargs["score_threshold"] = request.score_threshold
+                    retrieval_result = self._retrieval.retrieve(
+                        RetrievalRequest(**retrieval_kwargs)
+                    )
+                    prompt = retrieval_result.prompt
             except APIException as exc:
                 yield self._error_event(request, exc.code, exc.message)
                 return
@@ -85,20 +95,21 @@ class QAService:
             reasoning_index = 0
             answer_parts: list[str] = []
             reasoning_parts: list[str] = []
-            async for chunk in self._llm.stream_complete(llm_request):
-                if chunk.delta:
-                    answer_parts.append(chunk.delta)
-                    yield self._chunk_event(request, chunk.delta, chunk_index)
-                    chunk_index += 1
-                if chunk.reasoning_delta:
-                    reasoning_parts.append(chunk.reasoning_delta)
-                    yield self._reasoning_event(request, chunk.reasoning_delta, reasoning_index)
-                    reasoning_index += 1
-                if chunk.finish_reason == "error":
-                    yield self._error_event(request, "LLM_TIMEOUT", "生成超时")
-                    return
-                if chunk.finish_reason == "stop":
-                    break
+            with start_span("llm.stream", {"llm.temperature": llm_request.temperature}):
+                async for chunk in self._llm.stream_complete(llm_request):
+                    if chunk.delta:
+                        answer_parts.append(chunk.delta)
+                        yield self._chunk_event(request, chunk.delta, chunk_index)
+                        chunk_index += 1
+                    if chunk.reasoning_delta:
+                        reasoning_parts.append(chunk.reasoning_delta)
+                        yield self._reasoning_event(request, chunk.reasoning_delta, reasoning_index)
+                        reasoning_index += 1
+                    if chunk.finish_reason == "error":
+                        yield self._error_event(request, "LLM_TIMEOUT", "生成超时")
+                        return
+                    if chunk.finish_reason == "stop":
+                        break
             citations = self._build_citations(
                 request,
                 "".join(answer_parts),

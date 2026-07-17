@@ -15,6 +15,7 @@ func Recovery(logger *zap.Logger) gin.HandlerFunc {
 					zap.Any("error", r),
 					zap.String("path", c.Request.URL.Path),
 					zap.String("request_id", c.GetString(requestIDKey)),
+					zap.String("trace_id", c.GetString("trace_id")),
 				)
 				response.InternalError(c)
 				c.Abort()

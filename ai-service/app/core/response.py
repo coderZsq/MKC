@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from flask import Response
+from flask import Response, g, has_request_context
 
 
 def make_response(
@@ -18,6 +18,9 @@ def make_response(
         "error": error,
         "meta": meta or {"timestamp": datetime.now(UTC).isoformat()},
     }
+    trace_id = getattr(g, "trace_id", "") if has_request_context() else ""
+    if trace_id:
+        payload["trace_id"] = trace_id
     response = Response(
         json.dumps(payload, ensure_ascii=False, default=str),
         status=status,

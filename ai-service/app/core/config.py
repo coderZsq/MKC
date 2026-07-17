@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     zhipu_api_key: str = ""
     # ZHIPU_API_KEY can also be set via the environment variable.
 
+    tracing_enabled: bool = True
+    tracing_exporter: str = "noop"
+    tracing_endpoint: str = ""
+    tracing_sample_ratio: float = 0.1
+    tracing_service_name: str = "mkc-ai-service"
+
     @property
     def ai_config(self) -> dict[str, Any]:
         return load_yaml_config(self.ai_config_path)

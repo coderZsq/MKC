@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
+	gatewaytracing "github.com/zhushuangquan/mkc/gateway/internal/observability/tracing"
 	apperrors "github.com/zhushuangquan/mkc/gateway/pkg/errors"
 )
 
@@ -93,6 +94,7 @@ func (c *HTTPAIClient) StreamQA(ctx context.Context, req QARequest) (<-chan SSEE
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Internal-Key", c.internalKey)
+	gatewaytracing.InjectTraceContext(ctx, httpReq)
 
 	resp, err := c.client.Do(httpReq)
 	if err != nil {

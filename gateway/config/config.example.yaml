@@ -47,6 +47,18 @@ task:
   dispatch_timeout: 30s
   auto_summary: true
 
+qa:
+  timeout: 120s
+  max_sse_connections: 10
+
+observability:
+  tracing:
+    enabled: false
+    service_name: mkc-gateway
+    exporter: noop
+    endpoint: ""
+    sample_ratio: 0.1
+
 conversation:
   default_title: 新会话
   max_context_messages: 20

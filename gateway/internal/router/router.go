@@ -7,7 +7,9 @@ import (
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/internal/handler"
 	"github.com/zhushuangquan/mkc/gateway/internal/middleware"
+	gatewaytracing "github.com/zhushuangquan/mkc/gateway/internal/observability/tracing"
 	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
 
@@ -24,6 +26,7 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 
 	r.Use(
 		middleware.RequestID(),
+		gatewaytracing.Middleware(otel.Tracer(cfg.Observability.Tracing.ServiceName)),
 		middleware.Recovery(logger),
 		middleware.RequestLogger(logger),
 		middleware.ErrorHandler(),

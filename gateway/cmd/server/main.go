@@ -12,6 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/internal/handler"
+	gatewaytracing "github.com/zhushuangquan/mkc/gateway/internal/observability/tracing"
 	"github.com/zhushuangquan/mkc/gateway/internal/repository"
 	"github.com/zhushuangquan/mkc/gateway/internal/router"
 	"github.com/zhushuangquan/mkc/gateway/internal/service"
@@ -40,6 +41,15 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = appLogger.Sync() }()
+
+	shutdownTracing, _ := gatewaytracing.InitTracer(context.Background(), cfg.Observability.Tracing, appLogger)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracing(ctx); err != nil {
+			appLogger.Warn("tracing shutdown failed", zap.Error(err))
+		}
+	}()
 
 	deps, db, redisClient := buildDependencies(cfg, appLogger)
 	healthSvc := service.NewHealthService(cfg.App.Version, deps...)
