@@ -11,6 +11,7 @@ from app.core.exceptions import (
 )
 from app.models.qa import QARequest, QAStreamEvent, format_sse_event
 from app.models.retrieval import RetrievalChunk, RetrievalRequest
+from app.observability.metrics import get_metrics
 from app.observability.tracing import start_span
 from app.services.citation_service import CitationService, citation_to_event_data
 from app.services.llm.llm_client import LLMClient
@@ -75,10 +76,19 @@ class QAService:
                         RetrievalRequest(**retrieval_kwargs)
                     )
                     prompt = retrieval_result.prompt
+                    metrics = get_metrics()
+                    if metrics is not None:
+                        metrics.record_retrieval("rag.retrieve", "success")
             except APIException as exc:
+                metrics = get_metrics()
+                if metrics is not None:
+                    metrics.record_retrieval("rag.retrieve", "error")
                 yield self._error_event(request, exc.code, exc.message)
                 return
             except Exception:
+                metrics = get_metrics()
+                if metrics is not None:
+                    metrics.record_retrieval("rag.retrieve", "error")
                 logger.exception("Retrieval failed for question %s", request.question)
                 yield self._error_event(request, "RETRIEVAL_UNAVAILABLE", "检索不可用")
                 return
@@ -106,10 +116,16 @@ class QAService:
                         yield self._reasoning_event(request, chunk.reasoning_delta, reasoning_index)
                         reasoning_index += 1
                     if chunk.finish_reason == "error":
+                        metrics = get_metrics()
+                        if metrics is not None:
+                            metrics.record_llm("mock", "stream", "error")
                         yield self._error_event(request, "LLM_TIMEOUT", "生成超时")
                         return
                     if chunk.finish_reason == "stop":
                         break
+            metrics = get_metrics()
+            if metrics is not None:
+                metrics.record_llm("mock", "stream", "success")
             citations = self._build_citations(
                 request,
                 "".join(answer_parts),

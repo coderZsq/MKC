@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     tracing_endpoint: str = ""
     tracing_sample_ratio: float = 0.1
     tracing_service_name: str = "mkc-ai-service"
+    metrics_enabled: bool = True
+    metrics_path: str = "/metrics"
+    metrics_namespace: str = "mkc"
 
     @property
     def ai_config(self) -> dict[str, Any]:

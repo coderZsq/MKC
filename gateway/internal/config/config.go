@@ -79,6 +79,7 @@ type QAConfig struct {
 // ObservabilityConfig holds tracing and telemetry options.
 type ObservabilityConfig struct {
 	Tracing TracingConfig `mapstructure:"tracing"`
+	Metrics MetricsConfig `mapstructure:"metrics"`
 }
 
 // TracingConfig holds OpenTelemetry tracing options.
@@ -88,6 +89,13 @@ type TracingConfig struct {
 	Exporter    string  `mapstructure:"exporter"`
 	Endpoint    string  `mapstructure:"endpoint"`
 	SampleRatio float64 `mapstructure:"sample_ratio"`
+}
+
+// MetricsConfig holds Prometheus metrics options.
+type MetricsConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`
+	Path      string `mapstructure:"path"`
+	Namespace string `mapstructure:"namespace"`
 }
 
 // ConversationConfig holds conversation and context-window options.
@@ -210,6 +218,12 @@ func (c *Config) validate() error {
 	}
 	if c.Observability.Tracing.SampleRatio <= 0 || c.Observability.Tracing.SampleRatio > 1 {
 		c.Observability.Tracing.SampleRatio = 0.1
+	}
+	if c.Observability.Metrics.Path == "" {
+		c.Observability.Metrics.Path = "/metrics"
+	}
+	if c.Observability.Metrics.Namespace == "" {
+		c.Observability.Metrics.Namespace = "mkc"
 	}
 	if c.Conversation.DefaultTitle == "" {
 		c.Conversation.DefaultTitle = "新会话"
