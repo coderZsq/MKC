@@ -76,6 +76,20 @@ type QAConfig struct {
 	MaxSSEConnections int           `mapstructure:"max_sse_connections"`
 }
 
+// ObservabilityConfig holds tracing and telemetry options.
+type ObservabilityConfig struct {
+	Tracing TracingConfig `mapstructure:"tracing"`
+}
+
+// TracingConfig holds OpenTelemetry tracing options.
+type TracingConfig struct {
+	Enabled     bool    `mapstructure:"enabled"`
+	ServiceName string  `mapstructure:"service_name"`
+	Exporter    string  `mapstructure:"exporter"`
+	Endpoint    string  `mapstructure:"endpoint"`
+	SampleRatio float64 `mapstructure:"sample_ratio"`
+}
+
 // ConversationConfig holds conversation and context-window options.
 type ConversationConfig struct {
 	DefaultTitle       string `mapstructure:"default_title"`
@@ -97,17 +111,18 @@ type MinIOConfig struct {
 
 // Config is the top-level configuration container.
 type Config struct {
-	App          AppConfig          `mapstructure:"app"`
-	Server       ServerConfig       `mapstructure:"server"`
-	Log          LogConfig          `mapstructure:"log"`
-	MySQL        MySQLConfig        `mapstructure:"mysql"`
-	Redis        RedisConfig        `mapstructure:"redis"`
-	JWT          JWTConfig          `mapstructure:"jwt"`
-	AIService    AIServiceConfig    `mapstructure:"ai_service"`
-	Task         TaskConfig         `mapstructure:"task"`
-	QA           QAConfig           `mapstructure:"qa"`
-	Conversation ConversationConfig `mapstructure:"conversation"`
-	MinIO        MinIOConfig        `mapstructure:"minio"`
+	App           AppConfig           `mapstructure:"app"`
+	Server        ServerConfig        `mapstructure:"server"`
+	Log           LogConfig           `mapstructure:"log"`
+	MySQL         MySQLConfig         `mapstructure:"mysql"`
+	Redis         RedisConfig         `mapstructure:"redis"`
+	JWT           JWTConfig           `mapstructure:"jwt"`
+	AIService     AIServiceConfig     `mapstructure:"ai_service"`
+	Task          TaskConfig          `mapstructure:"task"`
+	QA            QAConfig            `mapstructure:"qa"`
+	Observability ObservabilityConfig `mapstructure:"observability"`
+	Conversation  ConversationConfig  `mapstructure:"conversation"`
+	MinIO         MinIOConfig         `mapstructure:"minio"`
 }
 
 // Load reads configuration from the given YAML file and environment variables.
@@ -186,6 +201,15 @@ func (c *Config) validate() error {
 	}
 	if c.QA.MaxSSEConnections <= 0 {
 		c.QA.MaxSSEConnections = 10
+	}
+	if c.Observability.Tracing.ServiceName == "" {
+		c.Observability.Tracing.ServiceName = c.App.Name
+	}
+	if c.Observability.Tracing.Exporter == "" {
+		c.Observability.Tracing.Exporter = "noop"
+	}
+	if c.Observability.Tracing.SampleRatio <= 0 || c.Observability.Tracing.SampleRatio > 1 {
+		c.Observability.Tracing.SampleRatio = 0.1
 	}
 	if c.Conversation.DefaultTitle == "" {
 		c.Conversation.DefaultTitle = "新会话"

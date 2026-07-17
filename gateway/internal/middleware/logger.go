@@ -20,6 +20,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 			zap.Duration("duration", time.Since(start)),
 			zap.String("client_ip", c.ClientIP()),
 			zap.String("request_id", c.GetString(requestIDKey)),
+			zap.String("trace_id", c.GetString("trace_id")),
 		)
 	}
 }

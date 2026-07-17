@@ -10,13 +10,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestAIClient_StreamQA_Success(t *testing.T) {
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+	defer func() { _ = provider.Shutdown(context.Background()) }()
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	ctx, span := provider.Tracer("test").Start(context.Background(), "parent")
+	defer span.End()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/ai/v1/agent/run", r.URL.Path)
 		assert.Equal(t, "secret", r.Header.Get("X-Internal-Key"))
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		assert.Contains(t, r.Header.Get("traceparent"), span.SpanContext().TraceID().String())
 
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
@@ -33,7 +43,7 @@ func TestAIClient_StreamQA_Success(t *testing.T) {
 		QA:        config.QAConfig{Timeout: 10 * time.Second},
 	})
 
-	events, err := client.StreamQA(context.Background(), QARequest{Question: "q"})
+	events, err := client.StreamQA(ctx, QARequest{Question: "q"})
 	require.NoError(t, err)
 
 	var collected []SSEEvent

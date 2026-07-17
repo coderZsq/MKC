@@ -22,6 +22,7 @@ from app.core.exceptions import APIException
 from app.core.response import make_response
 from app.middleware.logging import init_request_logging
 from app.middleware.request_id import init_request_id
+from app.observability.tracing import init_tracing
 from app.services.citation_formatter import CitationFormatter
 from app.services.citation_service import CitationService
 from app.services.citation_validator import CitationValidator
@@ -78,6 +79,7 @@ def create_app(
         llm_client=llm_client,
         memory_service=memory_service,
     )
+    init_tracing(app)
     init_request_id(app)
     init_request_logging(app)
     register_blueprints(app)

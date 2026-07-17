@@ -58,6 +58,9 @@ ai_service:
 	assert.Equal(t, "debug", cfg.Log.Level)
 	assert.Equal(t, "console", cfg.Log.Format)
 	assert.Equal(t, "localhost:6379", cfg.Redis.Addr)
+	assert.Equal(t, "test-gateway", cfg.Observability.Tracing.ServiceName)
+	assert.Equal(t, "noop", cfg.Observability.Tracing.Exporter)
+	assert.Equal(t, 0.1, cfg.Observability.Tracing.SampleRatio)
 }
 
 func TestLoad_EnvOverride(t *testing.T) {

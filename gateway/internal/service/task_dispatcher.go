@@ -13,6 +13,7 @@ import (
 
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/internal/model"
+	gatewaytracing "github.com/zhushuangquan/mkc/gateway/internal/observability/tracing"
 	apperrors "github.com/zhushuangquan/mkc/gateway/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -83,6 +84,7 @@ func (d *HTTPTaskDispatcher) Dispatch(ctx context.Context, task *model.Task, res
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Internal-Key", d.internalKey)
+	gatewaytracing.InjectTraceContext(ctx, req)
 
 	resp, err := d.client.Do(req)
 	if err != nil {
@@ -129,6 +131,7 @@ func (d *HTTPTaskDispatcher) DispatchSummary(ctx context.Context, resource *mode
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Internal-Key", d.internalKey)
+	gatewaytracing.InjectTraceContext(ctx, req)
 
 	resp, err := d.client.Do(req)
 	if err != nil {
@@ -175,6 +178,7 @@ func (d *HTTPTaskDispatcher) DispatchExtraction(ctx context.Context, resource *m
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Internal-Key", d.internalKey)
+	gatewaytracing.InjectTraceContext(ctx, req)
 
 	resp, err := d.client.Do(req)
 	if err != nil {
