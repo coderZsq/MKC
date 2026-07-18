@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, TypeVar, cast
 
 from pymilvus import DataType, MilvusClient, MilvusException
@@ -178,7 +179,7 @@ class MilvusStore:
             return
 
         schema = self._build_schema()
-        index_params = self._build_index_params()
+        index_params = self._build_index_params(index_type=self._default_index_type())
 
         try:
             self._client.create_collection(
@@ -244,6 +245,11 @@ class MilvusStore:
             params={"M": 16, "efConstruction": 200},
         )
         return params
+
+    def _default_index_type(self) -> str:
+        if _is_local_milvus_uri(self._config.uri):
+            return "AUTOINDEX"
+        return "HNSW"
 
     def _validate_collection_dimension(self) -> None:
         description = self._client.describe_collection(self._collection_name)
@@ -333,6 +339,13 @@ def _resource_id_filter(resource_ids: Any) -> str:
 
 def _escape_expr(value: str) -> str:
     return value.replace("'", "''")
+
+
+def _is_local_milvus_uri(uri: str) -> bool:
+    if uri.startswith(("http://", "https://", "tcp://", "unix://")):
+        return False
+    path = Path(uri)
+    return path.suffix == ".db" or not path.is_absolute()
 
 
 def _hit_to_result(hit: dict[str, Any], metric_type: str) -> VectorSearchResult:
