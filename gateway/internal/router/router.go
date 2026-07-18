@@ -7,6 +7,7 @@ import (
 	"github.com/zhushuangquan/mkc/gateway/internal/config"
 	"github.com/zhushuangquan/mkc/gateway/internal/handler"
 	"github.com/zhushuangquan/mkc/gateway/internal/middleware"
+	gatewaymetrics "github.com/zhushuangquan/mkc/gateway/internal/observability/metrics"
 	gatewaytracing "github.com/zhushuangquan/mkc/gateway/internal/observability/tracing"
 	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
 	"go.opentelemetry.io/otel"
@@ -24,13 +25,32 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 	r := gin.New()
 	r.MaxMultipartMemory = 32 << 20 // 32 MB
 
-	r.Use(
+	var metricsCollector *gatewaymetrics.Metrics
+	if cfg.Observability.Metrics.Enabled {
+		var err error
+		metricsCollector, err = gatewaymetrics.New(cfg.Observability.Metrics.Namespace)
+		if err == nil {
+			r.GET(cfg.Observability.Metrics.Path, metricsCollector.Handler())
+		} else {
+			logger.Warn("metrics registry init failed", zap.Error(err))
+		}
+	}
+
+	middlewares := []gin.HandlerFunc{
 		middleware.RequestID(),
 		gatewaytracing.Middleware(otel.Tracer(cfg.Observability.Tracing.ServiceName)),
+	}
+	if metricsCollector != nil {
+		middlewares = append(middlewares, metricsCollector.Middleware())
+	}
+	middlewares = append(middlewares,
 		middleware.Recovery(logger),
 		middleware.RequestLogger(logger),
 		middleware.ErrorHandler(),
 		middleware.CORS(),
+	)
+	r.Use(
+		middlewares...,
 	)
 
 	r.GET("/health", health.Health)
