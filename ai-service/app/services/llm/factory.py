@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from app.core.exceptions import LLMAuthFailedError
+from app.observability.llm.observer import build_llm_observer, build_llm_observer_config
 from app.services.llm.base_provider import BaseLLMProvider
 from app.services.llm.config import LLMConfig, build_llm_config
 from app.services.llm.kimi_provider import KimiProvider
@@ -33,6 +34,8 @@ def build_llm_client(config: LLMConfig | None = None) -> LLMClient:
     """Build a fully configured ``LLMClient``."""
     cfg = config if config is not None else build_llm_config()
     provider = build_llm_provider(cfg)
+    observer_config = build_llm_observer_config()
+    observer = build_llm_observer()
     fallback_provider = None
     if cfg.fallback_model:
         fallback_cfg = LLMConfig(
@@ -46,7 +49,13 @@ def build_llm_client(config: LLMConfig | None = None) -> LLMClient:
             max_retries=cfg.max_retries,
         )
         fallback_provider = build_llm_provider(fallback_cfg)
-    return LLMClient(provider=provider, fallback_provider=fallback_provider, config=cfg)
+    return LLMClient(
+        provider=provider,
+        fallback_provider=fallback_provider,
+        config=cfg,
+        observer=observer,
+        observer_config=observer_config,
+    )
 
 
 def validate_llm_config(config: LLMConfig | None = None) -> None:

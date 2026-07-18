@@ -227,6 +227,13 @@ llm:
   mock_response: "${LLM_MOCK_RESPONSE:-这是来自 mock provider 的固定回答。}"
   mock_stream_chunks: "${LLM_MOCK_STREAM_CHUNKS:-mock, ,answer}"
 
+llm_observability:
+  provider: "${LLM_OBSERVABILITY_PROVIDER:-none}"  # none / langfuse / langsmith
+  prompt_version: "${LLM_PROMPT_VERSION:-qa_v1}"
+  redact: "${LLM_OBSERVABILITY_REDACT:-true}"
+  max_prompt_chars: "${LLM_OBSERVABILITY_MAX_PROMPT_CHARS:-2000}"
+  max_completion_chars: "${LLM_OBSERVABILITY_MAX_COMPLETION_CHARS:-2000}"
+
 gateway:
   base_url: http://localhost:8080
   # Internal API key is read from the INTERNAL_API_KEY environment variable.
