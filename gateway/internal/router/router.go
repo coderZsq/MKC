@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -10,6 +12,7 @@ import (
 	gatewaymetrics "github.com/zhushuangquan/mkc/gateway/internal/observability/metrics"
 	gatewaytracing "github.com/zhushuangquan/mkc/gateway/internal/observability/tracing"
 	"github.com/zhushuangquan/mkc/gateway/pkg/jwt"
+	"github.com/zhushuangquan/mkc/gateway/pkg/response"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
@@ -129,15 +132,7 @@ func New(cfg *config.Config, logger *zap.Logger, health *handler.HealthHandler, 
 	}
 
 	r.NoRoute(func(c *gin.Context) {
-		c.JSON(404, gin.H{
-			"success": false,
-			"data":    nil,
-			"error": gin.H{
-				"code":    "NOT_FOUND",
-				"message": "resource not found",
-			},
-			"meta": nil,
-		})
+		response.Error(c, http.StatusNotFound, "NOT_FOUND", "resource not found")
 	})
 
 	return r

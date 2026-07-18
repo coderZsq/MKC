@@ -12,7 +12,7 @@ from app.core.exceptions import (
 from app.models.qa import QARequest, QAStreamEvent, format_sse_event
 from app.models.retrieval import RetrievalChunk, RetrievalRequest
 from app.observability.metrics import get_metrics
-from app.observability.tracing import start_span
+from app.observability.tracing import get_trace_id, start_span
 from app.services.citation_service import CitationService, citation_to_event_data
 from app.services.llm.llm_client import LLMClient
 from app.services.llm.models import LLMRequest, Message
@@ -119,7 +119,12 @@ class QAService:
                         metrics = get_metrics()
                         if metrics is not None:
                             metrics.record_llm("mock", "stream", "error")
-                        yield self._error_event(request, "LLM_TIMEOUT", "生成超时")
+                        fallback = self._fallback_answer(request, retrieval_result)
+                        if fallback:
+                            yield self._chunk_event(request, fallback, chunk_index)
+                            yield self._done_event(request, 0, degraded=True)
+                        else:
+                            yield self._error_event(request, "LLM_TIMEOUT", "生成超时")
                         return
                     if chunk.finish_reason == "stop":
                         break
@@ -144,7 +149,12 @@ class QAService:
                 )
         except (LLMUnavailableError, LLMTimeoutError) as exc:
             logger.warning("LLM stream failed: %s", exc.code)
-            yield self._error_event(request, exc.code, exc.message)
+            fallback = self._fallback_answer(request, retrieval_result)
+            if fallback:
+                yield self._chunk_event(request, fallback, 0)
+                yield self._done_event(request, 0, degraded=True)
+            else:
+                yield self._error_event(request, exc.code, exc.message)
         except Exception:
             logger.exception("LLM streaming failed for question %s", request.question)
             yield self._error_event(request, "LLM_STREAM_ERROR", "流式生成失败")
@@ -201,13 +211,16 @@ class QAService:
             data={"message_id": request.message_id, **citation},
         )
 
-    def _done_event(self, request: QARequest, citation_count: int = 0) -> QAStreamEvent:
+    def _done_event(
+        self, request: QARequest, citation_count: int = 0, *, degraded: bool = False
+    ) -> QAStreamEvent:
         return QAStreamEvent(
             event_type="done",
             data={
                 "message_id": request.message_id,
                 "finish_reason": "stop",
                 "citation_count": citation_count,
+                "degraded": degraded,
             },
         )
 
@@ -218,8 +231,28 @@ class QAService:
                 "message_id": request.message_id,
                 "conversation_id": request.conversation_id,
                 "error_code": error_code,
+                "code": error_code,
                 "message": message,
+                "trace_id": get_trace_id(),
+                "retryable": error_code
+                in {"LLM_TIMEOUT", "LLM_STREAM_ERROR", "LLM_UNAVAILABLE", "RETRIEVAL_UNAVAILABLE"},
+                "details": {},
             },
+        )
+
+    def _fallback_answer(self, request: QARequest, retrieval_result: Any | None) -> str:
+        chunks = getattr(retrieval_result, "chunks", None)
+        if not chunks:
+            return ""
+        snippets = []
+        for chunk in chunks[:3]:
+            text = str(getattr(chunk, "text", "")).strip()
+            if text:
+                snippets.append(text[:160])
+        if not snippets:
+            return ""
+        return "模型暂时不可用，先根据已检索到的资料给出参考信息：\n" + "\n".join(
+            f"- {snippet}" for snippet in snippets
         )
 
 

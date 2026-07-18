@@ -10,6 +10,8 @@ class ChatEvent {
     this.finishReason,
     this.errorCode,
     this.errorMessage,
+    this.traceId,
+    this.retryable = false,
   });
 
   final String type;
@@ -21,6 +23,8 @@ class ChatEvent {
   final String? finishReason;
   final String? errorCode;
   final String? errorMessage;
+  final String? traceId;
+  final bool retryable;
 
   bool get isTerminal => type == 'done' || type == 'error';
 }

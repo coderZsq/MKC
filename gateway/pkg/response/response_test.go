@@ -42,6 +42,24 @@ func TestErrorResponse(t *testing.T) {
 	assert.Nil(t, body.Data)
 	assert.Equal(t, "BAD_REQUEST", body.Error.Code)
 	assert.Equal(t, "invalid input", body.Error.Message)
+	assert.False(t, body.Error.Retryable)
+	assert.Equal(t, "", body.Error.TraceID)
+}
+
+func TestErrorResponseRetryableWithTraceID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("trace_id", "trace-1")
+
+	Error(c, http.StatusGatewayTimeout, "LLM_TIMEOUT", "timeout")
+
+	assert.Equal(t, http.StatusGatewayTimeout, w.Code)
+
+	var body Envelope
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, "trace-1", body.Error.TraceID)
+	assert.True(t, body.Error.Retryable)
 }
 
 func TestInternalError(t *testing.T) {

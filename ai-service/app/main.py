@@ -19,6 +19,7 @@ from app.api.vectors import vectors_bp
 from app.api.web_search import web_search_bp
 from app.core.config import settings
 from app.core.exceptions import APIException
+from app.core.logger import get_logger
 from app.core.response import make_response
 from app.middleware.logging import init_request_logging
 from app.middleware.request_id import init_request_id
@@ -57,6 +58,8 @@ from app.services.summary import (
 from app.vector_store.factory import build_vector_store
 from app.vector_store.vector_store import VectorStore
 from celery_workers.celery_app import celery_app
+
+logger = get_logger(__name__)
 
 
 def create_app(
@@ -206,6 +209,7 @@ def register_blueprints(app: Flask) -> None:
 def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(APIException)
     def handle_api_exception(error: APIException) -> tuple[Response, int]:
+        logger.warning("API error handled code=%s", error.code)
         return make_response(
             success=False,
             error={"code": error.code, "message": error.message},
@@ -214,6 +218,7 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(404)
     def handle_not_found(_: Exception) -> tuple[Response, int]:
+        logger.warning("API error handled code=NOT_FOUND")
         return make_response(
             success=False,
             error={"code": "NOT_FOUND", "message": "资源不存在"},
@@ -221,7 +226,8 @@ def register_error_handlers(app: Flask) -> None:
         )
 
     @app.errorhandler(Exception)
-    def handle_generic_exception(_: Exception) -> tuple[Response, int]:
+    def handle_generic_exception(error: Exception) -> tuple[Response, int]:
+        logger.exception("API error handled code=INTERNAL_ERROR: %s", error.__class__.__name__)
         return make_response(
             success=False,
             error={"code": "INTERNAL_ERROR", "message": "服务器内部错误"},

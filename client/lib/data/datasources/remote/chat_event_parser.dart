@@ -54,8 +54,10 @@ class ChatEventParser {
       reasoningDelta: isReasoning ? json['delta'] as String? : null,
       citation: eventType == 'citation' ? _parseCitation(json, metadata) : null,
       finishReason: json['finish_reason'] as String?,
-      errorCode: json['error_code'] as String?,
+      errorCode: json['error_code'] as String? ?? json['code'] as String?,
       errorMessage: json['message'] as String?,
+      traceId: json['trace_id'] as String?,
+      retryable: json['retryable'] as bool? ?? false,
     );
   }
 

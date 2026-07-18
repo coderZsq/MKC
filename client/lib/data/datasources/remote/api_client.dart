@@ -142,7 +142,14 @@ class ApiClient {
 
     final error = body['error'] as Map<String, dynamic>?;
     final code = error?['code'] as String?;
-    return Result<T>.failure(ServerException(code: code));
+    return Result<T>.failure(
+      ServerException(
+        code: code,
+        message: error?['message'] as String?,
+        traceId: error?['trace_id'] as String?,
+        retryable: error?['retryable'] as bool? ?? false,
+      ),
+    );
   }
 
   AppException _mapDioException(DioException e) {
@@ -156,14 +163,26 @@ class ApiClient {
         final status = e.response?.statusCode;
         final body = e.response?.data;
         String? errorCode;
+        String? message;
+        String? traceId;
+        bool retryable = false;
         if (body is Map<String, dynamic>) {
-          errorCode = (body['error'] as Map<String, dynamic>?)?['code'] as String?;
+          final error = body['error'] as Map<String, dynamic>?;
+          errorCode = error?['code'] as String?;
+          message = error?['message'] as String?;
+          traceId = error?['trace_id'] as String?;
+          retryable = error?['retryable'] as bool? ?? false;
         }
         if (status == 401) return const UnauthorizedException();
         if (errorCode == 'TASK_NOT_COMPLETED') {
           return const TaskNotCompletedException();
         }
-        return ServerException(code: errorCode ?? status?.toString());
+        return ServerException(
+          code: errorCode ?? status?.toString(),
+          message: message,
+          traceId: traceId,
+          retryable: retryable,
+        );
       case DioExceptionType.cancel:
         return const CancelledUploadException();
       case DioExceptionType.unknown:

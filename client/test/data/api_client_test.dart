@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mkc_client/data/datasources/remote/api_client.dart';
 import 'package:mkc_client/domain/repositories/token_provider.dart';
+import 'package:mkc_client/shared/errors/app_exception.dart';
 
 class _FakeTokenProvider implements TokenProvider {
   String? _token;
@@ -197,7 +198,49 @@ void main() {
       );
     });
 
-    test('logs requests and responses without exposing tokens or bodies', () async {
+    test('maps unified error payload fields', () async {
+      dio.httpClientAdapter = _MockAdapter(
+        onFetch: (_) => _jsonBody(
+          {
+            'success': false,
+            'data': null,
+            'error': {
+              'code': 'LLM_TIMEOUT',
+              'message': '模型响应超时，请稍后重试',
+              'trace_id': 'trace-1',
+              'retryable': true,
+            },
+            'meta': null,
+          },
+          statusCode: 504,
+        ),
+      );
+
+      final client = ApiClient(
+        baseUrl: 'http://localhost:8080',
+        tokenProvider: tokenProvider,
+        dio: dio,
+      );
+
+      final result = await client.get<int>(
+        '/test',
+        parser: (dynamic data) => data as int,
+      );
+
+      final error = result.when<AppException?>(
+        success: (_) => null,
+        failure: (error) => error,
+      );
+      expect(error, isA<ServerException>());
+      final serverError = error! as ServerException;
+      expect(serverError.code, 'LLM_TIMEOUT');
+      expect(serverError.traceId, 'trace-1');
+      expect(serverError.retryable, isTrue);
+      expect(serverError.message, '模型响应超时，请稍后重试');
+    });
+
+    test('logs requests and responses without exposing tokens or bodies',
+        () async {
       final logs = <String>[];
       dio.httpClientAdapter = _MockAdapter(
         onFetch: (options) {

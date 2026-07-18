@@ -76,6 +76,15 @@ type QAConfig struct {
 	MaxSSEConnections int           `mapstructure:"max_sse_connections"`
 }
 
+// ResilienceConfig holds timeout and retry policy defaults for external dependencies.
+type ResilienceConfig struct {
+	UploadTimeout    time.Duration `mapstructure:"upload_timeout"`
+	RetrievalTimeout time.Duration `mapstructure:"retrieval_timeout"`
+	LLMTimeout       time.Duration `mapstructure:"llm_timeout"`
+	MaxRetries       int           `mapstructure:"max_retries"`
+	RetryBackoff     time.Duration `mapstructure:"retry_backoff"`
+}
+
 // ObservabilityConfig holds tracing and telemetry options.
 type ObservabilityConfig struct {
 	Tracing TracingConfig `mapstructure:"tracing"`
@@ -128,6 +137,7 @@ type Config struct {
 	AIService     AIServiceConfig     `mapstructure:"ai_service"`
 	Task          TaskConfig          `mapstructure:"task"`
 	QA            QAConfig            `mapstructure:"qa"`
+	Resilience    ResilienceConfig    `mapstructure:"resilience"`
 	Observability ObservabilityConfig `mapstructure:"observability"`
 	Conversation  ConversationConfig  `mapstructure:"conversation"`
 	MinIO         MinIOConfig         `mapstructure:"minio"`
@@ -209,6 +219,21 @@ func (c *Config) validate() error {
 	}
 	if c.QA.MaxSSEConnections <= 0 {
 		c.QA.MaxSSEConnections = 10
+	}
+	if c.Resilience.UploadTimeout <= 0 {
+		c.Resilience.UploadTimeout = 60 * time.Second
+	}
+	if c.Resilience.RetrievalTimeout <= 0 {
+		c.Resilience.RetrievalTimeout = 20 * time.Second
+	}
+	if c.Resilience.LLMTimeout <= 0 {
+		c.Resilience.LLMTimeout = 60 * time.Second
+	}
+	if c.Resilience.MaxRetries < 0 {
+		c.Resilience.MaxRetries = 0
+	}
+	if c.Resilience.RetryBackoff <= 0 {
+		c.Resilience.RetryBackoff = 300 * time.Millisecond
 	}
 	if c.Observability.Tracing.ServiceName == "" {
 		c.Observability.Tracing.ServiceName = c.App.Name

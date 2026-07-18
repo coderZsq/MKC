@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     metrics_enabled: bool = True
     metrics_path: str = "/metrics"
     metrics_namespace: str = "mkc"
+    resilience_upload_timeout_seconds: int = 60
+    resilience_retrieval_timeout_seconds: int = 20
+    resilience_llm_timeout_seconds: int = 60
+    resilience_max_retries: int = 2
+    resilience_retry_backoff_ms: int = 300
 
     @property
     def ai_config(self) -> dict[str, Any]:
