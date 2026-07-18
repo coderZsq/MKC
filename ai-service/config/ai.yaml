@@ -234,6 +234,13 @@ llm_observability:
   max_prompt_chars: "${LLM_OBSERVABILITY_MAX_PROMPT_CHARS:-2000}"
   max_completion_chars: "${LLM_OBSERVABILITY_MAX_COMPLETION_CHARS:-2000}"
 
+resilience:
+  upload_timeout_seconds: 60
+  retrieval_timeout_seconds: 20
+  llm_timeout_seconds: 60
+  max_retries: 2
+  retry_backoff_ms: 300
+
 gateway:
   base_url: http://localhost:8080
   # Internal API key is read from the INTERNAL_API_KEY environment variable.

@@ -51,6 +51,13 @@ qa:
   timeout: 120s
   max_sse_connections: 10
 
+resilience:
+  upload_timeout: 60s
+  retrieval_timeout: 20s
+  llm_timeout: 60s
+  max_retries: 2
+  retry_backoff: 300ms
+
 observability:
   tracing:
     enabled: false

@@ -34,6 +34,18 @@ void main() {
       expect(const ServerException().code, isNull);
     });
 
+    test('ServerException maps known codes to friendly messages', () {
+      const error = ServerException(
+        code: 'LLM_TIMEOUT',
+        traceId: 'trace-1',
+        retryable: true,
+      );
+
+      expect(error.message, '模型响应超时，请稍后重试');
+      expect(error.traceId, 'trace-1');
+      expect(error.retryable, isTrue);
+    });
+
     test('non-const constructors execute for coverage', () {
       final exceptions = <AppException>[
         NetworkException(),

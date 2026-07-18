@@ -171,6 +171,44 @@ def test_stream_answer_llm_error_yields_error_event(qa_request: QARequest) -> No
 
     assert events[-1].event_type == "error"
     assert events[-1].data["error_code"] == "LLM_TIMEOUT"
+    assert events[-1].data["code"] == "LLM_TIMEOUT"
+    assert events[-1].data["retryable"] is True
+    assert events[-1].data["details"] == {}
+
+
+def test_stream_answer_llm_error_degrades_with_retrieved_context(
+    qa_request: QARequest,
+) -> None:
+    retrieval_result = RetrievalResult(
+        chunks=[
+            RetrievalChunk(
+                chunk_id="chunk-1",
+                resource_id="res-1",
+                text="retrieved context answer",
+                score=0.9,
+                metadata={},
+            )
+        ],
+        prompt="prompt",
+        context_token_count=4,
+    )
+    retrieval_service = MagicMock(spec=RetrievalService)
+    retrieval_service.retrieve.return_value = retrieval_result
+
+    llm_client = MagicMock(spec=LLMClient)
+
+    async def _fake_stream(_request: object) -> AsyncIterator[LLMStreamChunk]:
+        yield LLMStreamChunk(delta="", finish_reason="error")
+
+    llm_client.stream_complete.side_effect = _fake_stream
+
+    service = QAService(retrieval_service, llm_client)
+    events = _collect_events(service.stream_answer(qa_request))
+
+    assert [event.event_type for event in events] == ["chunk", "done"]
+    assert "模型暂时不可用" in events[0].data["delta"]
+    assert "retrieved context answer" in events[0].data["delta"]
+    assert events[-1].data["degraded"] is True
 
 
 def test_stream_answer_without_markers_emits_no_citations(qa_request: QARequest) -> None:

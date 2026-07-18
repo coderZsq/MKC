@@ -107,14 +107,18 @@ void main() {
     test('parses error event with code and message', () {
       final json = jsonEncode({
         'message_id': 'm-4',
-        'error_code': 'UNAUTHORIZED',
+        'code': 'UNAUTHORIZED',
         'message': 'session expired',
+        'trace_id': 'trace-1',
+        'retryable': true,
       });
       final event = ChatEventParser.parseEvent('event: error\ndata: $json\n');
       expect(event, isNotNull);
       expect(event!.type, 'error');
       expect(event.errorCode, 'UNAUTHORIZED');
       expect(event.errorMessage, 'session expired');
+      expect(event.traceId, 'trace-1');
+      expect(event.retryable, isTrue);
     });
 
     test('returns null for empty data', () {

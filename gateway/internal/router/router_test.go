@@ -497,10 +497,12 @@ func TestNoRoute_ReturnsNotFoundEnvelope(t *testing.T) {
 
 	assert.Equal(t, false, body["success"])
 	assert.Nil(t, body["data"])
-	assert.Nil(t, body["meta"])
+	assert.NotNil(t, body["meta"])
 
 	err, ok := body["error"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "NOT_FOUND", err["code"])
 	assert.Equal(t, "resource not found", err["message"])
+	assert.Equal(t, false, err["retryable"])
+	assert.NotNil(t, err["trace_id"])
 }

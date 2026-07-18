@@ -19,9 +19,11 @@ type Envelope struct {
 
 // ErrorInfo represents an API error payload.
 type ErrorInfo struct {
-	Code    string            `json:"code"`
-	Message string            `json:"message"`
-	Details map[string]string `json:"details,omitempty"`
+	Code      string            `json:"code"`
+	Message   string            `json:"message"`
+	TraceID   string            `json:"trace_id"`
+	Retryable bool              `json:"retryable"`
+	Details   map[string]string `json:"details,omitempty"`
 }
 
 // MetaInfo carries request metadata.
@@ -59,8 +61,13 @@ func OKWithMeta(c *gin.Context, data any, meta MetaInfo) {
 func Error(c *gin.Context, status int, code, message string) {
 	c.JSON(status, Envelope{
 		Success: false,
-		Error:   &ErrorInfo{Code: code, Message: message},
-		Meta:    buildMeta(c),
+		Error: &ErrorInfo{
+			Code:      code,
+			Message:   message,
+			TraceID:   traceID(c),
+			Retryable: retryable(status, code),
+		},
+		Meta: buildMeta(c),
 	})
 }
 
@@ -83,5 +90,30 @@ func buildMeta(c *gin.Context) *MetaInfo {
 	return &MetaInfo{
 		RequestID: c.GetString(requestIDKey),
 		Timestamp: time.Now().UTC(),
+	}
+}
+
+func traceID(c *gin.Context) string {
+	if id := c.GetString("trace_id"); id != "" {
+		return id
+	}
+	if c.Request == nil {
+		return ""
+	}
+	return c.GetHeader("X-Trace-Id")
+}
+
+func retryable(status int, code string) bool {
+	if status == http.StatusTooManyRequests || status == http.StatusRequestTimeout {
+		return true
+	}
+	if status == http.StatusServiceUnavailable || status == http.StatusGatewayTimeout {
+		return true
+	}
+	switch code {
+	case "LLM_TIMEOUT", "RETRIEVAL_TIMEOUT", "WORKER_UNAVAILABLE", "AI_SERVICE_UNAVAILABLE", "STREAM_ERROR":
+		return true
+	default:
+		return false
 	}
 }

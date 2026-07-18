@@ -137,6 +137,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             ServerException(
               code: event.errorCode,
               message: event.errorMessage,
+              traceId: event.traceId,
+              retryable: event.retryable,
             ),
           );
         }

@@ -24,3 +24,18 @@ def test_make_response_error() -> None:
     assert data["success"] is False
     assert data["error"]["code"] == "ERR"
     assert data["error"]["message"] == "bad"
+    assert data["error"]["retryable"] is False
+    assert data["error"]["trace_id"] == ""
+
+
+def test_make_response_retryable_error_sanitizes_message() -> None:
+    response, status = make_response(
+        success=False,
+        error={"code": "LLM_TIMEOUT", "message": "select * from secrets"},
+        status=504,
+    )
+    assert status == 504
+
+    data = response.get_json()
+    assert data["error"]["message"] == "系统异常，请稍后重试"
+    assert data["error"]["retryable"] is True
