@@ -4,12 +4,20 @@ on:
   push:
     branches: [main, feature/**]
     paths:
+      - 'README.md'
+      - 'docs/**/*.md'
       - 'docs/api/**'
+      - '.markdownlint.json'
+      - '.markdown-link-check.json'
       - '.github/workflows/ci-docs.yml'
   pull_request:
     branches: [main]
     paths:
+      - 'README.md'
+      - 'docs/**/*.md'
       - 'docs/api/**'
+      - '.markdownlint.json'
+      - '.markdown-link-check.json'
       - '.github/workflows/ci-docs.yml'
 
 permissions:
@@ -20,6 +28,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint-markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Lint Markdown
+        run: npx --yes markdownlint-cli README.md 'docs/**/*.md'
+
+      - name: Check Markdown links
+        run: |
+          npx --yes markdown-link-check README.md --config .markdown-link-check.json
+          find docs -name '*.md' -print0 | xargs -0 -n1 npx --yes markdown-link-check --config .markdown-link-check.json
+
   validate-openapi:
     runs-on: ubuntu-latest
     steps:

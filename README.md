@@ -1,45 +1,80 @@
 # MKC - Multimedia AI Knowledge Companion
 
-![CI - Gateway](https://github.com/coderZsq/mkc/actions/workflows/ci-gateway.yml/badge.svg)
-![CI - AI Service](https://github.com/coderZsq/mkc/actions/workflows/ci-ai-service.yml/badge.svg)
-![CI - Client](https://github.com/coderZsq/mkc/actions/workflows/ci-client.yml/badge.svg)
+[![CI - Gateway](https://github.com/coderZsq/MKC/actions/workflows/ci-gateway.yml/badge.svg)](https://github.com/coderZsq/MKC/actions/workflows/ci-gateway.yml)
+[![CI - AI Service](https://github.com/coderZsq/MKC/actions/workflows/ci-ai-service.yml/badge.svg)](https://github.com/coderZsq/MKC/actions/workflows/ci-ai-service.yml)
+[![CI - Client](https://github.com/coderZsq/MKC/actions/workflows/ci-client.yml/badge.svg)](https://github.com/coderZsq/MKC/actions/workflows/ci-client.yml)
 
-基于 Flutter + Go + Python 的多媒体 AI 知识库助手。
+MKC 是一个多媒体 AI 知识库助手：用户上传音频或 PDF 后，系统完成转写、解析、清洗、向量化、检索增强生成，并在 Flutter 客户端中提供资源管理、任务进度、摘要、标签、引用跳转和 SSE 流式问答。
 
-## 核心能力
+```mermaid
+flowchart LR
+  Client[Flutter Client] -->|REST / SSE| Gateway[Go Gateway]
+  Gateway --> MySQL[(MySQL)]
+  Gateway --> Redis[(Redis)]
+  Gateway --> MinIO[(MinIO)]
+  Gateway -->|internal API| AI[Python AI Service]
+  AI --> Celery[Celery Workers]
+  AI --> Milvus[(Milvus)]
+  AI --> MinIO
+  Celery --> Redis
+  Celery --> Milvus
+  Celery --> Providers[ASR / OCR / Embedding / LLM]
+```
 
-- MP3 转录为 SRT 与文本
-- PDF 解析为结构化文本
-- 基于 RAG 的知识库问答
-- 多轮 SSE 流式对话
+## Core Features
 
-## 技术栈
+- Upload MP3 and PDF resources with authenticated task tracking.
+- Convert audio into SRT and cleaned text.
+- Extract searchable text from PDFs, including OCR fallback.
+- Generate summaries, tags, entities, and resource cards.
+- Build a vector index and answer questions through RAG.
+- Stream multi-turn chat over SSE with citation metadata.
+- Trace requests, expose Prometheus metrics, and provide fallback errors.
+- Run local evaluation datasets and LLM-as-judge reports.
 
-- 前端：Flutter + Clean Architecture + Riverpod
-- 网关：Go + Gin + GORM + MySQL + Redis
-- AI 服务：Python + Flask + Celery + LangGraph + LlamaIndex
-- 基础设施：Kubernetes + nginx-ingress + MinIO + Milvus
+## Tech Stack
 
-## 快速开始
+| Layer | Main Tools |
+|---|---|
+| Client | Flutter, Riverpod, go_router, Dio |
+| Gateway | Go, Gin, GORM, MySQL, Redis, MinIO |
+| AI Service | Python, Flask, Celery, LangGraph, LlamaIndex |
+| Retrieval | Milvus, hybrid retrieval, rerank hooks |
+| Observability | OpenTelemetry, Prometheus, Grafana, Jaeger, Langfuse/LangSmith hooks |
+| Infra | Docker, Docker Desktop Kubernetes, nginx-ingress, Kubernetes manifests |
 
-当前仓库最适合的本地开发方式是：
+## Repository Map
 
-- 使用本地 Kubernetes 启动 MySQL / Redis / MinIO / Milvus / Jaeger 等基础设施
-- 在宿主机直接启动 `ai-service`、`gateway`、`client` 三个开发进程
+```text
+.
+├── client/       # Flutter Web/Desktop client
+├── gateway/      # Go API gateway and persistence boundary
+├── ai-service/   # Flask API, Celery tasks, AI pipelines, eval tools
+├── infra/        # Local Kubernetes, observability, and helper scripts
+├── docs/         # Product, architecture, API, runbooks, and test cases
+└── scripts/      # Local multi-process startup helpers
+```
 
-> 说明：`infra/k8s/gateway` 当前仅包含 Service / Ingress，尚未提供完整 Gateway Deployment。因此不建议直接用 Kubernetes 跑完整应用链路。
+## Quick Start
 
-### 1. 启动本地基础设施
+### 1. Prepare Tools
 
-前置条件：
+- Docker Desktop with Kubernetes enabled.
+- `kubectl`, `curl`, `nc`, `lsof`, and `envsubst`.
+- Go 1.22 or newer.
+- Python 3.11 or newer.
+- Flutter SDK 3.22 or newer with Chrome support.
+- Optional: Ollama with `bge-m3` and `deepseek-r1:8b`.
 
-- Docker Desktop 已安装并启用 Kubernetes
-- `kubectl` 可连接本地集群
-- 已安装 `envsubst`，macOS 可通过 `brew install gettext` 安装
+On macOS, `envsubst` is available through gettext:
 
 ```bash
-cd /Users/zhushuangquan/Downloads/MKC
+brew install gettext
+```
 
+### 2. Start Local Infrastructure
+
+```bash
 export MYSQL_ROOT_PASSWORD=dev-root
 export MYSQL_PASSWORD=dev-mkc
 export REDIS_PASSWORD=dev-redis
@@ -48,16 +83,15 @@ export MINIO_ROOT_PASSWORD=dev-minio
 ./infra/scripts/local-up.sh
 ```
 
-另开一个终端启动端口转发，并保持该终端运行：
+Keep a second terminal open for port forwarding:
 
 ```bash
-cd /Users/zhushuangquan/Downloads/MKC
 ./infra/scripts/port-forward.sh
 ```
 
-默认转发端口：
+Default forwarded services:
 
-| 服务 | 本地地址 |
+| Service | Local Address |
 |---|---|
 | MySQL | `localhost:3306` |
 | Redis | `localhost:6379` |
@@ -66,163 +100,67 @@ cd /Users/zhushuangquan/Downloads/MKC
 | Jaeger UI | `localhost:16686` |
 | Milvus | `localhost:19530` |
 
-### 2. 一键启动应用服务
-
-完成基础设施和端口转发后，可以一键启动 AI HTTP 服务、AI Celery worker、Gateway 和 Flutter client：
+### 3. Install AI Service Dependencies
 
 ```bash
-cd /Users/zhushuangquan/Downloads/MKC
+cd ai-service
+python -m venv .venv
+source .venv/bin/activate
+make install
+cp config/.env.example .env
+cd ..
+```
+
+For the default local mock mode, no external model key is required. For local Ollama embedding, pull the embedding model first:
+
+```bash
+ollama pull bge-m3
+```
+
+### 4. Start the App
+
+```bash
 ./scripts/local-dev-up.sh
 ```
 
-脚本默认配置：
+The script starts AI Service, Celery worker, Gateway, and Flutter. Logs and PID files are stored in `.mkc-dev/`.
 
-| 服务 | 默认值 |
+Useful local endpoints:
+
+| Service | URL |
 |---|---|
-| AI Service | `http://localhost:5001` |
-| AI Celery worker | `default,transcribe,parse_pdf,embed,rag` queues |
-| Gateway | `http://localhost:8080` |
-| Flutter device | `chrome` |
-| Client API | `http://localhost:8080/api/v1` |
-| Storage host | `localhost` |
+| Gateway health | `http://localhost:8080/health` |
+| Gateway API health | `http://localhost:8080/api/v1/health` |
+| AI Service health | `http://localhost:5001/api/v1/health` |
+| Gateway metrics | `http://localhost:8080/metrics` |
+| AI Service metrics | `http://localhost:5001/metrics` |
 
-停止脚本启动的应用进程：
+Demo entry points after the Flutter process starts:
+
+- Flutter Web: check the `client.log` output for the Chrome URL printed by `flutter run -d chrome`.
+- MinIO Console: `http://localhost:9001`
+- Jaeger UI: `http://localhost:16686`
+- Swagger/OpenAPI contract: [docs/api/openapi.yaml](docs/api/openapi.yaml)
+
+Stop app processes:
 
 ```bash
 ./scripts/local-dev-down.sh
 ```
 
-日志与 PID 文件保存在 `.mkc-dev/`，该目录不会提交到 Git。解析 MP3/PDF、进度更新和自动摘要都依赖 AI Celery worker；如果没有 worker，任务会停在“等待中 0%”。
-
-如需覆盖默认值：
+Stop local Kubernetes dependencies:
 
 ```bash
-CLIENT_DEVICE=macos AI_PORT=5001 GATEWAY_PORT=8080 ./scripts/local-dev-up.sh
+./infra/scripts/local-down.sh
 ```
 
-如需让聊天走本地 Ollama 的 `deepseek-r1:8b`，先确认 Ollama 已启动并拉取模型：
+## Manual Development Commands
+
+Gateway:
 
 ```bash
-ollama pull deepseek-r1:8b
-
-LLM_PROVIDER=ollama \
-LLM_MODEL=deepseek-r1:8b \
-LLM_BASE_URL=http://localhost:11434/v1 \
-LLM_API_KEY=ollama \
-./scripts/local-dev-up.sh
-```
-
-本地 embedding 默认走 Ollama 的 `bge-m3`（1024 维）：`config/.env.example` 已默认开启，`cp config/.env.example .env` 即可启用，首次使用前先 `ollama pull bge-m3`。注意 `EMBEDDING_DIMENSIONS` 必须与 `VECTOR_STORE_DIMENSIONS` 一致（bge-m3 均为 `1024`）；切换 embedding 模型或维度后需删除本地 `ai-service/milvus.db`（或 drop 向量集合）再重建，否则会因维度不匹配报错。
-
-### 3. 手动启动 AI Service
-
-```bash
-cd /Users/zhushuangquan/Downloads/MKC/ai-service
-
-python -m venv .venv
-source .venv/bin/activate
-make install
-
-cp config/.env.example .env
-```
-
-修改 `ai-service/.env` 的本地开发配置：
-
-```env
-INTERNAL_API_KEY=dev-internal-key
-REDIS_URL=redis://:dev-redis@localhost:6379/0
-CELERY_BROKER_URL=redis://:dev-redis@localhost:6379/1
-CELERY_RESULT_BACKEND=redis://:dev-redis@localhost:6379/1
-MINIO_ACCESS_KEY=mkc
-MINIO_SECRET_KEY=dev-minio
-MINIO_BUCKET=mkc-resources
-MINIO_ENDPOINT=localhost:9000
-PORT=5001
-
-# Local embedding uses Ollama bge-m3 (1024-dim). Pull first: `ollama pull bge-m3`
-EMBEDDING_PROVIDER=ollama
-EMBEDDING_MODEL=bge-m3
-EMBEDDING_BASE_URL=http://localhost:11434/v1
-EMBEDDING_DIMENSIONS=1024
-# Vector store collection dimension MUST match EMBEDDING_DIMENSIONS.
-VECTOR_STORE_DIMENSIONS=1024
-
-# LLM defaults to mock; see below for local Ollama DeepSeek.
-LLM_PROVIDER=mock
-```
-
-如果要使用本地 Ollama 的 DeepSeek R1，把 LLM 配置改成：
-
-```env
-LLM_PROVIDER=ollama
-LLM_MODEL=deepseek-r1:8b
-LLM_BASE_URL=http://localhost:11434/v1
-LLM_API_KEY=ollama
-```
-
-> 维度对齐：`EMBEDDING_DIMENSIONS` 必须与 `VECTOR_STORE_DIMENSIONS` 一致（bge-m3 均为 `1024`）。切换 embedding 模型或维度后，需删除本地 `ai-service/milvus.db`（或 drop `mkc_vectors` 集合）再重启服务重建集合，并对已有资源重新生成 embedding，否则写入会因维度不匹配失败。
-
-启动 HTTP 服务。本地验证使用 `5001` 端口；如果当前 shell 里存在 `DEBUG=release` 等非布尔值环境变量，需要显式覆盖为 `DEBUG=false`。推荐用 `python -m flask`，避免虚拟环境中 `flask` 命令入口指向旧 Python 解释器：
-
-```bash
-cd /Users/zhushuangquan/Downloads/MKC/ai-service
-source .venv/bin/activate
-
-set -a
-source .env
-DEBUG=false
-PORT=5001
-set +a
-
-python -m flask --app app.main:create_app run \
-  --host=0.0.0.0 \
-  --port=5001 \
-  --no-debugger \
-  --no-reload
-```
-
-验证：
-
-```bash
-curl http://localhost:5001/api/v1/health
-```
-
-解析 MP3/PDF、进度更新和自动摘要都依赖 Celery worker。另开终端启动 worker，并保持运行：
-
-```bash
-cd /Users/zhushuangquan/Downloads/MKC/ai-service
-source .venv/bin/activate
-set -a
-source .env
-set +a
-make worker
-```
-
-`make worker` 会显式使用 `DEBUG=false` 和 `celery_workers.celery_app`，避免当前 shell 中 `DEBUG=release` 等非布尔值导致 Celery 无法加载。可用下面命令确认 worker 在线且任务注册完整：
-
-```bash
-DEBUG=false celery -A celery_workers.celery_app inspect registered
-```
-
-### 4. 手动启动 Gateway
-
-```bash
-cd /Users/zhushuangquan/Downloads/MKC/gateway
+cd gateway
 cp config/config.example.yaml config/config.yaml
-```
-
-`gateway/config/config.yaml` 中已默认使用本机依赖地址，但密钥和密码建议通过环境变量注入，不写入配置文件。确认 `ai_service.base_url` 使用 `5001`：
-
-```yaml
-ai_service:
-  base_url: http://localhost:5001
-```
-
-启动 Gateway：
-
-```bash
-cd /Users/zhushuangquan/Downloads/MKC/gateway
-
 APP_MYSQL_PASSWORD=dev-mkc \
 APP_REDIS_PASSWORD=dev-redis \
 APP_JWT_SECRET=dev-jwt-secret \
@@ -233,60 +171,108 @@ APP_MINIO_SECRET_KEY=dev-minio \
 go run ./cmd/server
 ```
 
-验证：
+AI Service:
 
 ```bash
-curl http://localhost:8080/health
-curl http://localhost:8080/api/v1/health
+cd ai-service
+source .venv/bin/activate
+set -a
+source .env
+DEBUG=false
+PORT=5001
+set +a
+python -m flask --app app.main:create_app run --host=0.0.0.0 --port=5001 --no-debugger --no-reload
 ```
 
-### 5. 手动启动 Flutter Client
+Celery worker:
 
 ```bash
-cd /Users/zhushuangquan/Downloads/MKC/client
+cd ai-service
+source .venv/bin/activate
+set -a
+source .env
+set +a
+make worker
+```
 
+Flutter Web:
+
+```bash
+cd client
 flutter pub get
-flutter run \
-  --dart-define=BASE_URL=http://localhost:8080/api/v1 \
-  --dart-define=STORAGE_HOST=localhost
-```
-
-如果运行 Web：
-
-```bash
 flutter run -d chrome \
   --dart-define=BASE_URL=http://localhost:8080/api/v1 \
   --dart-define=STORAGE_HOST=localhost
 ```
 
-### 推荐启动顺序
+Flutter Web uses the same REST and SSE APIs as desktop. Browser uploads are constrained by browser memory and file picker behavior; large files should stay within the Gateway upload limit and can take longer to hash, preview, or stream from object storage.
 
-```text
-1. ./infra/scripts/local-up.sh
-2. ./infra/scripts/port-forward.sh
-3. ai-service HTTP: python -m flask --app app.main:create_app run --host=0.0.0.0 --port=5001 --no-debugger --no-reload
-4. ai-service Celery worker: make worker
-5. gateway: go run ./cmd/server
-6. client: flutter run --dart-define=BASE_URL=http://localhost:8080/api/v1 --dart-define=STORAGE_HOST=localhost
+## Testing
+
+Gateway:
+
+```bash
+cd gateway
+go test ./...
+go vet ./...
+go build ./cmd/server
 ```
 
-更多说明见 [docs/](./docs/) 目录。
+AI Service:
 
-## 目录结构
-
-见 [技术文档 TECH_S0-1](./docs/tech/TECH_S0-1_github_repo_init.md)。
-
-## API 文档
-
-API 接口契约位于 [docs/api/openapi.yaml](docs/api/openapi.yaml)，设计说明见 [docs/api/api-design.md](docs/api/api-design.md)。
-
-Gateway 启动后，可通过 Swagger UI 在线查看文档：
-
-```text
-http://mkc.local/swagger/index.html
+```bash
+cd ai-service
+DEBUG=true .venv/bin/python -m ruff check .
+DEBUG=true .venv/bin/python -m black --check .
+DEBUG=true .venv/bin/python -m mypy app
+INTERNAL_API_KEY=test-internal-key LLM_PROVIDER=mock LLM_MODEL=glm-4-flash LLM_API_KEY= KIMI_API_KEY=test-key DEBUG=true .venv/bin/python -m pytest -q
 ```
 
-本地开发环境请替换 `mkc.local` 为实际服务地址。
+Client:
+
+```bash
+cd client
+flutter analyze
+flutter test
+```
+
+Docs:
+
+```bash
+npx --yes markdownlint-cli README.md 'docs/**/*.md'
+npx --yes markdown-link-check README.md --config .markdown-link-check.json
+find docs -name '*.md' -print0 | xargs -0 -n1 npx --yes markdown-link-check --config .markdown-link-check.json
+```
+
+## Deployment
+
+Local development runs dependencies in Kubernetes and application services on the host. Production deployment should build Gateway, AI Service, and Client images, inject secrets through Kubernetes Secret or the cloud secret manager, expose only Gateway and Client publicly, and keep AI Service, Redis, MySQL, MinIO, Milvus, metrics, and tracing endpoints private.
+
+See [Deployment](docs/DEPLOYMENT.md) and [Infrastructure](infra/README.md) for the current manifest layout and known gaps.
+
+## Documentation
+
+| Topic | Link |
+|---|---|
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Development | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
+| Deployment | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+| Troubleshooting | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
+| API design | [docs/api/api-design.md](docs/api/api-design.md) |
+| OpenAPI | [docs/api/openapi.yaml](docs/api/openapi.yaml) |
+| Product PRD | [docs/prd/PRD_multimedia_knowledge_assistant.md](docs/prd/PRD_multimedia_knowledge_assistant.md) |
+| Tech stack | [docs/tech/TECH_STACK.md](docs/tech/TECH_STACK.md) |
+| Agile plan | [docs/AGILE_plan_multimedia_knowledge_assistant.md](docs/AGILE_plan_multimedia_knowledge_assistant.md) |
+| Evaluation dataset | [docs/runbooks/evaluation_dataset.md](docs/runbooks/evaluation_dataset.md) |
+| LLM-as-judge report pipeline | [docs/runbooks/llm_as_judge_eval_pipeline.md](docs/runbooks/llm_as_judge_eval_pipeline.md) |
+| Monitoring runbook | [docs/runbooks/monitoring.md](docs/runbooks/monitoring.md) |
+| Error handling runbook | [docs/runbooks/error_handling.md](docs/runbooks/error_handling.md) |
+
+## Security Notes
+
+- Do not commit `.env`, generated Kubernetes Secret files, local databases, logs, model weights, or `.mkc-dev/`.
+- Keep `INTERNAL_API_KEY`, JWT secrets, provider keys, database passwords, and MinIO credentials in environment variables or a secret manager.
+- The examples in this repository use development placeholders only. Rotate all secrets before deploying outside a local machine.
 
 ## License
 

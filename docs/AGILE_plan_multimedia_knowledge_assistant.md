@@ -409,7 +409,7 @@ Week:  1-2   3-4   5-6   7-8   9-10  11-12
 
 ### 10.2 代码提交规范
 
-遵循 [common/git-workflow.md](./.claude/rules/common/git-workflow.md) 中的约定：
+遵循 [TECH_S0-1_github_repo_init.md](./tech/TECH_S0-1_github_repo_init.md) 中的 Git 工作流约定：
 
 ```
 <type>: <description>
