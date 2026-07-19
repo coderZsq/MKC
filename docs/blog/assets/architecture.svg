@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="680" viewBox="0 0 1120 680" role="img" aria-labelledby="title desc">
+  <title id="title">MKC architecture overview</title>
+  <desc id="desc">A sanitized architecture diagram for the MKC multimedia knowledge companion.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .band { fill: #ffffff; stroke: #d8e1ec; stroke-width: 2; }
+    .box { fill: #ffffff; stroke: #2d6cdf; stroke-width: 2; rx: 8; }
+    .store { fill: #eef6ff; stroke: #0f6abf; stroke-width: 2; rx: 8; }
+    .worker { fill: #f5f0ff; stroke: #7c3aed; stroke-width: 2; rx: 8; }
+    .text { font-family: Arial, sans-serif; fill: #172033; font-size: 18px; }
+    .small { font-family: Arial, sans-serif; fill: #475569; font-size: 14px; }
+    .title { font-family: Arial, sans-serif; fill: #0f172a; font-size: 28px; font-weight: 700; }
+    .arrow { stroke: #334155; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1120" height="680"/>
+  <text class="title" x="40" y="54">MKC: from multimedia files to grounded answers</text>
+
+  <rect class="band" x="40" y="90" width="250" height="500" rx="12"/>
+  <text class="small" x="64" y="125">User surface</text>
+  <rect class="box" x="78" y="180" width="175" height="92"/>
+  <text class="text" x="105" y="220">Flutter Client</text>
+  <text class="small" x="96" y="248">Upload, chat, citations</text>
+
+  <rect class="band" x="335" y="90" width="250" height="500" rx="12"/>
+  <text class="small" x="359" y="125">Public boundary</text>
+  <rect class="box" x="374" y="178" width="175" height="96"/>
+  <text class="text" x="418" y="216">Go Gateway</text>
+  <text class="small" x="394" y="245">Auth, tasks, SSE, API</text>
+  <rect class="store" x="374" y="355" width="175" height="100"/>
+  <text class="text" x="425" y="394">MySQL</text>
+  <text class="small" x="400" y="423">Resources and messages</text>
+
+  <rect class="band" x="630" y="90" width="450" height="500" rx="12"/>
+  <text class="small" x="654" y="125">Private AI and storage layer</text>
+  <rect class="box" x="672" y="170" width="175" height="96"/>
+  <text class="text" x="711" y="208">AI Service</text>
+  <text class="small" x="694" y="237">RAG and orchestration</text>
+  <rect class="worker" x="875" y="170" width="160" height="96"/>
+  <text class="text" x="916" y="208">Celery</text>
+  <text class="small" x="901" y="237">Async processing</text>
+  <rect class="store" x="672" y="338" width="150" height="92"/>
+  <text class="text" x="724" y="376">MinIO</text>
+  <text class="small" x="699" y="404">Files and artifacts</text>
+  <rect class="store" x="850" y="338" width="150" height="92"/>
+  <text class="text" x="900" y="376">Milvus</text>
+  <text class="small" x="879" y="404">Chunk embeddings</text>
+  <rect class="store" x="760" y="470" width="150" height="80"/>
+  <text class="text" x="813" y="505">Redis</text>
+  <text class="small" x="786" y="530">Tasks and cache</text>
+
+  <path class="arrow" d="M253 226 H374"/>
+  <text class="small" x="285" y="214">REST / SSE</text>
+  <path class="arrow" d="M549 226 H672"/>
+  <text class="small" x="585" y="214">Internal API</text>
+  <path class="arrow" d="M847 218 H875"/>
+  <path class="arrow" d="M760 266 V338"/>
+  <path class="arrow" d="M955 266 V338"/>
+  <path class="arrow" d="M760 266 C760 310 820 322 850 352"/>
+  <path class="arrow" d="M461 274 V355"/>
+  <path class="arrow" d="M760 470 V430"/>
+  <path class="arrow" d="M835 470 C835 450 890 448 925 430"/>
+
+  <text class="small" x="40" y="630">Only Gateway and Client are public. AI Service, databases, object storage, metrics, and tracing stay private.</text>
+</svg>

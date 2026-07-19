@@ -23,6 +23,9 @@
     },
     {
       "pattern": "^https://github\\.com/coderZsq/MKC/actions/workflows/"
+    },
+    {
+      "pattern": "^https://nip\\.io"
     }
   ],
   "replacementPatterns": [

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="620" viewBox="0 0 1120 620" role="img" aria-labelledby="title desc">
+  <title id="title">MKC evaluation pipeline overview</title>
+  <desc id="desc">A sanitized visual summary of the LLM-as-judge evaluation pipeline.</desc>
+  <style>
+    .bg { fill: #fbfcff; }
+    .card { fill: #ffffff; stroke: #d8e1ec; stroke-width: 2; rx: 10; }
+    .accent { fill: #eefbf4; stroke: #15803d; stroke-width: 2; rx: 10; }
+    .warn { fill: #fff7ed; stroke: #c2410c; stroke-width: 2; rx: 10; }
+    .text { font-family: Arial, sans-serif; fill: #172033; font-size: 18px; }
+    .small { font-family: Arial, sans-serif; fill: #475569; font-size: 14px; }
+    .title { font-family: Arial, sans-serif; fill: #0f172a; font-size: 28px; font-weight: 700; }
+    .metric { font-family: Arial, sans-serif; fill: #0f172a; font-size: 34px; font-weight: 700; }
+    .arrow { stroke: #334155; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1120" height="620"/>
+  <text class="title" x="42" y="58">Offline RAG evaluation: dataset, judge, report, gate</text>
+
+  <rect class="card" x="54" y="118" width="215" height="118"/>
+  <text class="text" x="92" y="162">JSONL Dataset</text>
+  <text class="small" x="80" y="193">audio / PDF / citation</text>
+  <text class="small" x="92" y="216">no-answer samples</text>
+
+  <rect class="card" x="318" y="118" width="215" height="118"/>
+  <text class="text" x="359" y="162">Answer Provider</text>
+  <text class="small" x="350" y="193">mock or configured LLM</text>
+  <text class="small" x="375" y="216">stable CI path</text>
+
+  <rect class="card" x="582" y="118" width="215" height="118"/>
+  <text class="text" x="637" y="162">Judge</text>
+  <text class="small" x="622" y="193">recall, faithfulness</text>
+  <text class="small" x="621" y="216">relevance, citation</text>
+
+  <rect class="accent" x="846" y="118" width="215" height="118"/>
+  <text class="text" x="896" y="162">Report</text>
+  <text class="small" x="878" y="193">Markdown and JSON</text>
+  <text class="small" x="890" y="216">secret scan before write</text>
+
+  <path class="arrow" d="M269 177 H318"/>
+  <path class="arrow" d="M533 177 H582"/>
+  <path class="arrow" d="M797 177 H846"/>
+
+  <rect class="card" x="90" y="330" width="210" height="130"/>
+  <text class="metric" x="134" y="385">0.75</text>
+  <text class="text" x="122" y="424">Recall gate</text>
+
+  <rect class="card" x="336" y="330" width="210" height="130"/>
+  <text class="metric" x="383" y="385">0.80</text>
+  <text class="text" x="371" y="424">Faithfulness</text>
+
+  <rect class="card" x="582" y="330" width="210" height="130"/>
+  <text class="metric" x="629" y="385">0.80</text>
+  <text class="text" x="636" y="424">Relevance</text>
+
+  <rect class="warn" x="828" y="330" width="210" height="130"/>
+  <text class="metric" x="875" y="385">0.70</text>
+  <text class="text" x="861" y="424">Citation accuracy</text>
+
+  <text class="small" x="54" y="540">The checked-in datasets use sanitized demo resource ids. Real customer files, private domains, and credentials are intentionally excluded.</text>
+</svg>
