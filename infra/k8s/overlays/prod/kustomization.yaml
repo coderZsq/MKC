@@ -10,7 +10,10 @@ resources:
 patches:
   - path: namespace-patch.yaml
   - path: ingress-patch.yaml
-  - path: production-resources-patch.yaml
+  - path: production-resources-gateway-patch.yaml
+  - path: production-resources-ai-service-patch.yaml
+  - path: production-resources-ai-worker-patch.yaml
+  - path: production-resources-client-patch.yaml
 
 secretGenerator:
   - name: mkc-secrets
