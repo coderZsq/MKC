@@ -7,6 +7,10 @@ on:
       - 'README.md'
       - 'docs/**/*.md'
       - 'docs/api/**'
+      - 'infra/k8s/**'
+      - 'scripts/deploy_k8s.sh'
+      - 'scripts/smoke_prod.sh'
+      - 'scripts/validate_k8s_manifests.sh'
       - '.markdownlint.json'
       - '.markdown-link-check.json'
       - '.github/workflows/ci-docs.yml'
@@ -16,6 +20,10 @@ on:
       - 'README.md'
       - 'docs/**/*.md'
       - 'docs/api/**'
+      - 'infra/k8s/**'
+      - 'scripts/deploy_k8s.sh'
+      - 'scripts/smoke_prod.sh'
+      - 'scripts/validate_k8s_manifests.sh'
       - '.markdownlint.json'
       - '.markdown-link-check.json'
       - '.github/workflows/ci-docs.yml'
@@ -45,6 +53,19 @@ jobs:
         run: |
           npx --yes markdown-link-check README.md --config .markdown-link-check.json
           find docs -name '*.md' -print0 | xargs -0 -n1 npx --yes markdown-link-check --config .markdown-link-check.json
+
+  validate-k8s:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Validate Kustomize overlays
+        run: ./scripts/validate_k8s_manifests.sh
 
   validate-openapi:
     runs-on: ubuntu-latest

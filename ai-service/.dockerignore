@@ -17,4 +17,3 @@ Dockerfile
 Makefile
 README.md
 k8s/
-config/

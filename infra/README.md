@@ -7,6 +7,8 @@
 ```
 infra/
 ├── k8s/              # Kubernetes manifests
+│   ├── base/         # S5-8 Kustomize base for full app deployment
+│   ├── overlays/     # local/prod Kustomize overlays
 │   ├── namespaces/   # mkc-dev 命名空间
 │   ├── nginx-ingress/# 本地 Ingress Controller
 │   ├── cert-manager/ # 生产 TLS 自动签发（本地暂不需要）
@@ -15,8 +17,8 @@ infra/
 │   ├── minio/        # MinIO Deployment + Secret + 初始化 Bucket Job
 │   ├── milvus/       # Milvus standalone + etcd
 │   ├── jaeger/       # Jaeger all-in-one
-│   ├── gateway/      # Gateway Service + Ingress（Deployment 在 S0-7 补充）
-│   └── ai-service/   # AI Service 部署（后续 Sprint 补充）
+│   ├── gateway/      # Legacy local Gateway Service + Ingress
+│   └── ai-service/   # Legacy AI Service deployment draft
 └── scripts/          # 本地部署脚本
     ├── local-up.sh
     ├── local-down.sh
@@ -53,6 +55,20 @@ infra/
 
 ```bash
 ./infra/scripts/local-up.sh
+```
+
+完整应用的 Kustomize 部署入口：
+
+```bash
+kubectl kustomize infra/k8s/overlays/local
+kubectl kustomize infra/k8s/overlays/prod
+./scripts/deploy_k8s.sh local
+```
+
+生产/演示环境使用 `infra/k8s/overlays/prod`，替换域名、镜像 tag 和 Secret 后执行：
+
+```bash
+./scripts/deploy_k8s.sh prod
 ```
 
 脚本会依次完成：
@@ -157,6 +173,7 @@ kubectl exec -it deployment/mysql -n mkc-dev -- mysql -u root -p
 
 ## 注意事项
 
-- `infra/k8s/gateway/deployment.yaml` 不在 S0-2 范围内，Gateway 应用镜像将在 S0-7 构建后补充。
+- 旧的 `infra/k8s/mysql`、`redis`、`minio`、`milvus`、`gateway` 目录仍服务 `infra/scripts/local-up.sh`。
+- S5-8 后推荐新部署使用 `infra/k8s/base` 与 `infra/k8s/overlays/*`。
 - cert-manager 本地开发暂不启用，生产环境必需。
 - 本地环境以“能跑通”为首要目标，不追求高可用。

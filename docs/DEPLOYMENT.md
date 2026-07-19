@@ -8,8 +8,8 @@ MKC currently supports a local Kubernetes dependency stack plus host-run app ser
 |---|---|---|
 | Local dependencies + host app processes | Supported | Daily development |
 | Local Kubernetes dependencies only | Supported | Testing infrastructure manifests |
-| Full Kubernetes app deployment | Partial | Gateway Service/Ingress exists; app Deployments need environment-specific completion |
-| Production Kubernetes | Planned | S5-8 domain, TLS, and deployment hardening |
+| Full Kubernetes app deployment | Supported through Kustomize | Gateway, AI Service, worker, Client, and dependencies |
+| Production Kubernetes | Template provided | Domain, TLS, resources, smoke, and rollback |
 
 ## Local Kubernetes
 
@@ -68,6 +68,10 @@ Use environment-specific image tags in real deployments, for example a short Git
 
 ```text
 infra/k8s/
+├── base/
+├── overlays/
+│   ├── local/
+│   └── prod/
 ├── namespaces/
 ├── nginx-ingress/
 ├── mysql/
@@ -78,12 +82,26 @@ infra/k8s/
 └── gateway/
 ```
 
-The current manifests deploy local infrastructure components and Gateway network resources. `infra/k8s/gateway/service.yaml` and `infra/k8s/gateway/ingress.yaml` assume a Gateway workload exists, but the environment-specific Deployment is intentionally left for the deployment sprint.
+The S5-8 deployment entrypoint is Kustomize:
+
+```bash
+kubectl kustomize infra/k8s/overlays/local
+kubectl kustomize infra/k8s/overlays/prod
+```
+
+`infra/k8s/base` defines Gateway, AI Service, AI worker, Client, MySQL, Redis, MinIO, Milvus, internal services, persistence, probes, resources, and Ingress. `overlays/local` uses `mkc.local`; `overlays/prod` enables cert-manager TLS and immutable image tags.
 
 Apply local manifests through the script instead of applying directories by hand:
 
 ```bash
 ./infra/scripts/local-up.sh
+```
+
+Apply full application overlays:
+
+```bash
+./scripts/deploy_k8s.sh local
+./scripts/deploy_k8s.sh prod
 ```
 
 ## Secrets
@@ -122,6 +140,22 @@ Production rules:
 - Run migrations before or during release with a rollback plan.
 - Use object storage buckets and vector collections scoped by environment.
 
+## Domain and TLS
+
+Production Ingress is defined in `infra/k8s/overlays/prod`. Before applying it:
+
+1. Point the DNS record for the demo domain to the ingress load balancer.
+2. Replace `MKC_DOMAIN=mkc.example.com` in `infra/k8s/overlays/prod/kustomization.yaml`.
+3. Replace `ops@example.com` in `infra/k8s/overlays/prod/cluster-issuer.yaml`.
+4. Confirm cert-manager is installed.
+
+The Ingress includes SSE and upload annotations:
+
+- `nginx.ingress.kubernetes.io/proxy-buffering: "off"`
+- `nginx.ingress.kubernetes.io/proxy-read-timeout: "600"`
+- `nginx.ingress.kubernetes.io/proxy-send-timeout: "600"`
+- `nginx.ingress.kubernetes.io/proxy-body-size: "500m"`
+
 ## Health and Readiness
 
 Gateway:
@@ -158,6 +192,7 @@ Do not expose metrics or tracing endpoints through public ingress.
 ## Release Checklist
 
 - Images are built from the intended Git SHA.
+- Prod overlay image tags are immutable and reviewed.
 - Secrets are injected from a safe source.
 - Gateway and AI Service health checks pass.
 - Database migrations have been applied.
@@ -166,6 +201,33 @@ Do not expose metrics or tracing endpoints through public ingress.
 - Upload size limits are aligned across browser, Gateway, ingress, and object storage.
 - Rollback image tags and database backup are available.
 
+## Smoke Test
+
+```bash
+BASE_URL=https://mkc.example.com \
+NAMESPACE=mkc \
+./scripts/smoke_prod.sh
+```
+
+To include upload verification:
+
+```bash
+BASE_URL=https://mkc.example.com \
+UPLOAD_FILE=/path/to/smoke.pdf \
+./scripts/smoke_prod.sh
+```
+
+## Rollback
+
+```bash
+kubectl rollout undo deployment/gateway -n mkc
+kubectl rollout undo deployment/ai-service -n mkc
+kubectl rollout undo deployment/client -n mkc
+kubectl rollout status deployment/gateway -n mkc --timeout=300s
+```
+
+For data-impacting releases, restore MySQL/MinIO/Milvus backups that match the release window.
+
 ## Related Docs
 
 - [Architecture](ARCHITECTURE.md)
@@ -173,3 +235,4 @@ Do not expose metrics or tracing endpoints through public ingress.
 - [Troubleshooting](TROUBLESHOOTING.md)
 - [Infrastructure README](../infra/README.md)
 - [S5-8 Kubernetes domain deployment TECH](tech/TECH_S5-8_k8s_domain_deployment.md)
+- [Kubernetes domain deployment runbook](runbooks/k8s_domain_deployment.md)
