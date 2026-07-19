@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+spec:
+  template:
+    spec:
+      containers:
+        - name: client
+          imagePullPolicy: IfNotPresent

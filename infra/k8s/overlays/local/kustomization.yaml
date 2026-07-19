@@ -9,7 +9,10 @@ resources:
 patches:
   - path: namespace-patch.yaml
   - path: ingress-patch.yaml
-  - path: image-policy-patch.yaml
+  - path: image-policy-gateway-patch.yaml
+  - path: image-policy-ai-service-patch.yaml
+  - path: image-policy-ai-worker-patch.yaml
+  - path: image-policy-client-patch.yaml
 
 secretGenerator:
   - name: mkc-secrets
