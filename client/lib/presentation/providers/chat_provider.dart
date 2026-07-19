@@ -21,6 +21,8 @@ class ChatState {
     this.isSending = false,
     this.error,
     this.title = '',
+    this.lastQuestion,
+    this.canRetryLastQuestion = false,
   });
 
   final List<Message> messages;
@@ -28,6 +30,8 @@ class ChatState {
   final bool isSending;
   final AppException? error;
   final String title;
+  final String? lastQuestion;
+  final bool canRetryLastQuestion;
 
   ChatState copyWith({
     List<Message>? messages,
@@ -35,6 +39,8 @@ class ChatState {
     bool? isSending,
     AppException? error,
     String? title,
+    String? lastQuestion,
+    bool? canRetryLastQuestion,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -42,6 +48,8 @@ class ChatState {
       isSending: isSending ?? this.isSending,
       error: error,
       title: title ?? this.title,
+      lastQuestion: lastQuestion ?? this.lastQuestion,
+      canRetryLastQuestion: canRetryLastQuestion ?? this.canRetryLastQuestion,
     );
   }
 }
@@ -89,6 +97,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: messagesWithUser,
       isSending: true,
       error: null,
+      lastQuestion: trimmed,
+      canRetryLastQuestion: false,
     );
 
     final assistantMessage = Message.assistant(
@@ -102,11 +112,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final stream = _repository.sendQuestion(_conversationId, trimmed);
     _sseSubscription = stream.listen(
       _handleEvent,
-      onError: (_) => _stopStreaming(
-        const NetworkException(),
-      ),
+      onError: (_) => _stopStreaming(const StreamDisconnectedException()),
       onDone: () => _stopStreaming(null),
     );
+  }
+
+  Future<void> retryLastQuestion() async {
+    final question = state.lastQuestion;
+    if (question == null || question.trim().isEmpty || state.isSending) {
+      return;
+    }
+    state = state.copyWith(error: null, canRetryLastQuestion: false);
+    await send(question);
   }
 
   void cancel() {
@@ -214,7 +231,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: updated,
       isSending: false,
       error: error,
+      canRetryLastQuestion: error is StreamDisconnectedException ||
+          _isRetryableServerError(error),
     );
+  }
+
+  bool _isRetryableServerError(AppException? error) {
+    return error is ServerException && error.retryable;
   }
 
   @override

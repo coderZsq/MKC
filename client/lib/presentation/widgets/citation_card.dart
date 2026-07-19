@@ -64,10 +64,19 @@ class CitationCard extends StatelessWidget {
     final snippet = citation.snippet;
     return Tooltip(
       message: snippet == null || snippet.isEmpty ? _label : snippet,
-      child: ActionChip(
-        avatar: const Icon(Icons.insert_drive_file_outlined, size: 18),
-        label: Text(_label),
-        onPressed: () => _onTap(context),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width - 32,
+        ),
+        child: ActionChip(
+          avatar: const Icon(Icons.insert_drive_file_outlined, size: 18),
+          label: Text(
+            _label,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+          onPressed: () => _onTap(context),
+        ),
       ),
     );
   }

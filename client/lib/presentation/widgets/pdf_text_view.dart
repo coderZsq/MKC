@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/breakpoints.dart';
 import '../../domain/entities/parsed_page.dart';
 import '../providers/content_view_provider.dart';
 import 'claude_layout.dart';
@@ -98,7 +99,12 @@ class _PdfTextViewState extends State<PdfTextView> {
   Widget build(BuildContext context) {
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
+      padding: EdgeInsets.fromLTRB(
+        context.isCompactWidth ? 8 : 12,
+        4,
+        context.isCompactWidth ? 8 : 12,
+        28,
+      ),
       itemCount: widget.pages.length,
       itemBuilder: (context, index) {
         final page = widget.pages[index];

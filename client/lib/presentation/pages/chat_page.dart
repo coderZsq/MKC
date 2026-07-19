@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/responsive/breakpoints.dart';
 import '../providers/chat_provider.dart';
 import '../routes/app_routes.dart';
 import '../widgets/chat_bubble.dart';
@@ -103,6 +104,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               Expanded(
                 child: _buildMessageList(state),
               ),
+              if (state.error != null && state.messages.isNotEmpty)
+                _StreamErrorRetryBar(
+                  message: state.error!.message,
+                  canRetry: state.canRetryLastQuestion,
+                  onRetry: () => ref
+                      .read(chatProvider(widget.conversationId).notifier)
+                      .retryLastQuestion(),
+                  onDismiss: () => ref
+                      .read(chatProvider(widget.conversationId).notifier)
+                      .clearError(),
+                ),
               ChatInputBar(
                 enabled: !state.isSending,
                 onSend: (question) => _send(question),
@@ -142,7 +154,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+      padding: EdgeInsets.fromLTRB(
+        context.isCompactWidth ? 8 : 12,
+        16,
+        context.isCompactWidth ? 8 : 12,
+        20,
+      ),
       itemCount: state.messages.length + (state.isSending ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == state.messages.length) {
@@ -166,5 +183,64 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   void _openConversationList(BuildContext context) {
     context.push(conversationListRoute);
+  }
+}
+
+class _StreamErrorRetryBar extends StatelessWidget {
+  const _StreamErrorRetryBar({
+    required this.message,
+    required this.canRetry,
+    required this.onRetry,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final bool canRetry;
+  final VoidCallback onRetry;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompact = context.isCompactWidth;
+    final content = <Widget>[
+      Icon(
+        Icons.wifi_off_outlined,
+        color: Theme.of(context).colorScheme.error,
+        size: 20,
+      ),
+      Expanded(child: Text(message)),
+      if (canRetry)
+        TextButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text('重试'),
+        ),
+      IconButton(
+        onPressed: onDismiss,
+        icon: const Icon(Icons.close),
+        tooltip: '关闭',
+      ),
+    ];
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.fromLTRB(
+          isCompact ? 8 : 12,
+          8,
+          isCompact ? 8 : 12,
+          8,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          border: Border(
+            top:
+                BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+        ),
+        child: Row(children: content),
+      ),
+    );
   }
 }

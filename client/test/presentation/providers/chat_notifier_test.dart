@@ -205,6 +205,31 @@ void main() {
       expect(notifier.state.error, isA<ServerException>());
     });
 
+    test('sets retry state on stream disconnect and retries last question',
+        () async {
+      repository.streamError = const StreamDisconnectedException();
+
+      await notifier.send('Question');
+      await Future.delayed(Duration.zero);
+
+      expect(notifier.state.isSending, isFalse);
+      expect(notifier.state.error, isA<StreamDisconnectedException>());
+      expect(notifier.state.canRetryLastQuestion, isTrue);
+
+      repository
+        ..streamError = null
+        ..events = const [
+          ChatEvent(type: 'chunk', messageId: 'a2', delta: 'Recovered'),
+        ];
+
+      await notifier.retryLastQuestion();
+      await Future.delayed(Duration.zero);
+
+      expect(repository.lastQuestion, 'Question');
+      expect(notifier.state.messages.last.content, 'Recovered');
+      expect(notifier.state.canRetryLastQuestion, isFalse);
+    });
+
     test('does not send when already streaming', () async {
       repository
         ..keepOpen = true
