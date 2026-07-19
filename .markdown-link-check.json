@@ -1,0 +1,36 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^http://127\\.0\\.0\\.1"
+    },
+    {
+      "pattern": "^http://mkc\\.local"
+    },
+    {
+      "pattern": "^http://minio\\.mkc\\.local"
+    },
+    {
+      "pattern": "^http://jaeger\\.mkc\\.local"
+    },
+    {
+      "pattern": "^https://api\\.example\\.com"
+    },
+    {
+      "pattern": "^https://storage\\.example\\.com"
+    },
+    {
+      "pattern": "^https://github\\.com/coderZsq/MKC/actions/workflows/"
+    }
+  ],
+  "replacementPatterns": [
+    {
+      "pattern": "^/",
+      "replacement": "{{BASEURL}}/"
+    }
+  ],
+  "retryOn429": true,
+  "timeout": "20s"
+}

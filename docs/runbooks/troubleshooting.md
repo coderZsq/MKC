@@ -2,7 +2,7 @@
 
 ## 本地 K8s 排查
 
-详见 [TECH_S0-2_local_k8s_manifests.md](./tech/TECH_S0-2_local_k8s_manifests.md) 第 9 节。
+详见 [TECH_S0-2_local_k8s_manifests.md](../tech/TECH_S0-2_local_k8s_manifests.md) 第 9 节。
 
 ## 常用命令
 
