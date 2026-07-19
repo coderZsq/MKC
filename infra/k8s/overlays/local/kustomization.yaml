@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mkc-dev
+
+resources:
+  - ../../base
+
+patches:
+  - path: namespace-patch.yaml
+  - path: ingress-patch.yaml
+  - path: image-policy-patch.yaml
+
+secretGenerator:
+  - name: mkc-secrets
+    behavior: replace
+    envs:
+      - secrets.env.example
+
+configMapGenerator:
+  - name: local-domain-config
+    literals:
+      - MKC_DOMAIN=mkc.local
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: local-domain-config
+      fieldPath: data.MKC_DOMAIN
+    targets:
+      - select:
+          kind: Ingress
+          name: mkc-ingress
+        fieldPaths:
+          - spec.rules.0.host
+
+images:
+  - name: ghcr.io/coderzsq/mkc-gateway
+    newName: mkc-gateway
+    newTag: latest
+  - name: ghcr.io/coderzsq/mkc-ai-service
+    newName: mkc-ai-service
+    newTag: latest
+  - name: ghcr.io/coderzsq/mkc-client
+    newName: mkc-client
+    newTag: latest
