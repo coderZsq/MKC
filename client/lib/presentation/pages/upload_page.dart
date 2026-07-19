@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/platform/platform_capabilities.dart';
+import '../../core/responsive/breakpoints.dart';
 import '../providers/upload_provider.dart';
 import '../routes/app_routes.dart';
 import '../widgets/claude_layout.dart';
@@ -15,6 +17,7 @@ class UploadPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(uploadNotifierProvider);
     final notifier = ref.read(uploadNotifierProvider.notifier);
+    final capabilities = ref.watch(platformCapabilitiesProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('上传文件')),
@@ -31,6 +34,8 @@ class UploadPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildFileSelector(context, state, notifier),
+              const SizedBox(height: 12),
+              _PlatformUploadNote(capabilities: capabilities),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('生成摘要'),
@@ -57,6 +62,27 @@ class UploadPage extends ConsumerWidget {
     UploadNotifier notifier,
   ) {
     final selected = state.selectedFile;
+    final isCompact = context.isCompactWidth;
+    final actions = <Widget>[
+      ElevatedButton.icon(
+        onPressed: state.isUploading ? null : notifier.pickFile,
+        icon: const Icon(Icons.folder_open),
+        label: Text(selected == null ? '选择文件' : '重新选择'),
+      ),
+      if (selected != null)
+        if (state.isUploading)
+          OutlinedButton.icon(
+            onPressed: notifier.cancel,
+            icon: const Icon(Icons.cancel),
+            label: const Text('取消'),
+          )
+        else if (state.canUpload)
+          ElevatedButton.icon(
+            onPressed: notifier.upload,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('开始上传'),
+          ),
+    ];
 
     return ClaudePanel(
       padding: const EdgeInsets.all(24),
@@ -78,31 +104,23 @@ class UploadPage extends ConsumerWidget {
               ],
             ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                onPressed: state.isUploading ? null : notifier.pickFile,
-                icon: const Icon(Icons.folder_open),
-                label: Text(selected == null ? '选择文件' : '重新选择'),
-              ),
-              if (selected != null) ...[
-                const SizedBox(width: 12),
-                if (state.isUploading)
-                  OutlinedButton.icon(
-                    onPressed: notifier.cancel,
-                    icon: const Icon(Icons.cancel),
-                    label: const Text('取消'),
-                  )
-                else if (state.canUpload)
-                  ElevatedButton.icon(
-                    onPressed: notifier.upload,
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text('开始上传'),
-                  ),
+          if (isCompact)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < actions.length; i++) ...[
+                  actions[i],
+                  if (i != actions.length - 1) const SizedBox(height: 10),
+                ],
               ],
-            ],
-          ),
+            )
+          else
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 10,
+              children: actions,
+            ),
         ],
       ),
     );
@@ -166,5 +184,27 @@ class UploadPage extends ConsumerWidget {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+}
+
+class _PlatformUploadNote extends StatelessWidget {
+  const _PlatformUploadNote({required this.capabilities});
+
+  final PlatformCapabilities capabilities;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxMb = capabilities.maxUploadBytes ~/ (1024 * 1024);
+    final platformLabel = capabilities.isWeb
+        ? 'Web 端会在浏览器内读取文件，建议单文件不超过 $maxMb MB。'
+        : '移动端和桌面端支持系统文件选择，单文件上限 $maxMb MB。';
+
+    return Text(
+      platformLabel,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+      textAlign: TextAlign.center,
+    );
   }
 }

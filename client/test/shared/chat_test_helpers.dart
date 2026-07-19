@@ -5,6 +5,7 @@ import 'package:mkc_client/domain/entities/conversation.dart';
 import 'package:mkc_client/domain/entities/message.dart';
 import 'package:mkc_client/domain/repositories/chat_repository.dart';
 import 'package:mkc_client/domain/repositories/conversation_repository.dart';
+import 'package:mkc_client/shared/errors/app_exception.dart';
 import 'package:mkc_client/shared/result.dart';
 
 Message createMessage({
@@ -46,6 +47,7 @@ Conversation makeConversation({
 class FakeChatRepository implements ChatRepository {
   Result<List<Message>>? nextMessagesResult;
   List<ChatEvent> events = const <ChatEvent>[];
+  AppException? streamError;
   bool keepOpen = false;
   StreamController<ChatEvent>? _controller;
   String? lastConversationId;
@@ -71,6 +73,10 @@ class FakeChatRepository implements ChatRepository {
         _controller!.add(event);
       }
       return _controller!.stream;
+    }
+    final error = streamError;
+    if (error != null) {
+      return Stream<ChatEvent>.error(error);
     }
     return Stream.fromIterable(events);
   }

@@ -95,6 +95,27 @@ class UnsupportedFileTypeException extends AppException {
   String get message => '不支持的文件类型';
 }
 
+class FilePickerFailedException extends AppException {
+  const FilePickerFailedException();
+
+  @override
+  String get message => '文件选择失败';
+}
+
+class PlatformUnsupportedException extends AppException {
+  const PlatformUnsupportedException();
+
+  @override
+  String get message => '当前平台暂不支持该能力';
+}
+
+class StreamDisconnectedException extends AppException {
+  const StreamDisconnectedException();
+
+  @override
+  String get message => '回答连接已断开，请重试';
+}
+
 String userMessageForCode(String? code) {
   return switch (code) {
     'FILE_TOO_LARGE' || '413' => '文件超过大小限制',
@@ -103,6 +124,9 @@ String userMessageForCode(String? code) {
     'RETRIEVAL_TIMEOUT' => '检索超时，请稍后重试',
     'RETRIEVAL_UNAVAILABLE' => '检索服务暂不可用，请稍后重试',
     'LLM_TIMEOUT' => '模型响应超时，请稍后重试',
+    'STREAM_DISCONNECTED' => '回答连接已断开，请重试',
+    'PLATFORM_UNSUPPORTED' => '当前平台暂不支持该能力',
+    'FILE_PICKER_FAILED' => '文件选择失败',
     'LLM_UNAVAILABLE' || 'LLM_STREAM_ERROR' => '模型服务暂不可用，请稍后重试',
     'DEPENDENCY_UNAVAILABLE' ||
     'VECTOR_STORE_UNAVAILABLE' ||

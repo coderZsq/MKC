@@ -5,6 +5,7 @@ import '../../domain/entities/content.dart';
 import '../../domain/entities/content_type.dart';
 import '../../domain/services/audio_seek_service.dart';
 import '../../shared/errors/app_exception.dart';
+import '../../core/responsive/breakpoints.dart';
 import '../providers/content_view_provider.dart';
 import '../widgets/pdf_text_view.dart';
 import '../widgets/srt_list_view.dart';
@@ -68,15 +69,23 @@ class _ContentViewPageState extends ConsumerState<ContentViewPage> {
       ),
       body: Column(
         children: [
-          TextSearchBar(
-            keyword: state.keyword,
-            matchCount: state.matches.length,
-            currentIndex: state.currentMatchIndex,
-            onChanged: (value) =>
-                ref.read(_provider.notifier).onSearchChanged(value),
-            onPrevious: () =>
-                ref.read(_provider.notifier).jumpToPreviousMatch(),
-            onNext: () => ref.read(_provider.notifier).jumpToNextMatch(),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.isCompactWidth ? 8 : 0,
+              ),
+              child: TextSearchBar(
+                keyword: state.keyword,
+                matchCount: state.matches.length,
+                currentIndex: state.currentMatchIndex,
+                onChanged: (value) =>
+                    ref.read(_provider.notifier).onSearchChanged(value),
+                onPrevious: () =>
+                    ref.read(_provider.notifier).jumpToPreviousMatch(),
+                onNext: () => ref.read(_provider.notifier).jumpToNextMatch(),
+              ),
+            ),
           ),
           Expanded(child: _buildBody(context, state, audioSeekService)),
         ],

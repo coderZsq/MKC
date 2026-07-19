@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config/constants.dart';
+import '../../core/responsive/breakpoints.dart';
 import '../../domain/entities/subtitle_segment.dart';
 import '../providers/content_view_provider.dart';
 import 'claude_layout.dart';
@@ -203,7 +204,12 @@ class _SrtListViewState extends State<SrtListView> {
     final buckets = _buildBuckets();
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
+      padding: EdgeInsets.fromLTRB(
+        context.isCompactWidth ? 8 : 12,
+        4,
+        context.isCompactWidth ? 8 : 12,
+        28,
+      ),
       itemCount: buckets.length,
       itemBuilder: (context, index) {
         final bucket = buckets[index];
@@ -328,8 +334,14 @@ class _SegmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = segment.displayText(showCleaned: showCleanedText);
+    final compact = context.isCompactWidth;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: EdgeInsets.fromLTRB(
+        compact ? 12 : 16,
+        0,
+        compact ? 12 : 16,
+        16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

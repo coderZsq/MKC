@@ -9,11 +9,16 @@ import 'package:mkc_client/shared/result.dart';
 
 class FakeFilePickerService implements FilePickerService {
   PickedFile? nextFile;
+  Object? nextError;
   int pickCount = 0;
 
   @override
   Future<PickedFile?> pickSingleFile() async {
     pickCount++;
+    final error = nextError;
+    if (error != null) {
+      throw error;
+    }
     return nextFile;
   }
 }

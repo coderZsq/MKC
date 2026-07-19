@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/breakpoints.dart';
 import '../../config/theme.dart';
 
 class ClaudePage extends StatelessWidget {
@@ -18,6 +19,10 @@ class ClaudePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectivePadding = context.isCompactWidth
+        ? const EdgeInsets.fromLTRB(12, 16, 12, 24)
+        : padding;
+
     return SafeArea(
       child: Align(
         alignment: Alignment.topCenter,
@@ -25,7 +30,7 @@ class ClaudePage extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: ListView(
             physics: physics,
-            padding: padding,
+            padding: effectivePadding,
             children: children,
           ),
         ),
@@ -51,6 +56,30 @@ class ClaudeSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (context.isCompactWidth) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClaudeEyebrow(label),
+          const SizedBox(height: 10),
+          Text(title, style: theme.textTheme.headlineMedium),
+          if (description != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              description!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: ClaudeColors.oliveGray,
+              ),
+            ),
+          ],
+          if (action != null) ...[
+            const SizedBox(height: 14),
+            action!,
+          ],
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -218,12 +247,16 @@ class ClaudeListShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectivePadding = context.isCompactWidth
+        ? const EdgeInsets.fromLTRB(12, 12, 12, 24)
+        : padding;
+
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
-          padding: padding,
+          padding: effectivePadding,
           child: child,
         ),
       ),

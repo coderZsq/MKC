@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/platform/platform_capabilities.dart';
 import '../../data/datasources/remote/file_api.dart';
 import 'app_provider.dart';
 import '../../data/models/upload_response_model.dart';
@@ -77,18 +77,39 @@ class UploadNotifier extends StateNotifier<UploadState> {
   UploadNotifier({
     required FilePickerService picker,
     required FileRepository repository,
+    required PlatformCapabilities capabilities,
   })  : _picker = picker,
         _repository = repository,
+        _capabilities = capabilities,
         super(const UploadState());
 
   final FilePickerService _picker;
   final FileRepository _repository;
+  final PlatformCapabilities _capabilities;
   CancelToken? _cancelToken;
 
   Future<void> pickFile() async {
+    if (!_capabilities.supportsFilePicker) {
+      state = state.copyWith(
+        status: UploadStatus.failure,
+        error: const PlatformUnsupportedException(),
+        response: null,
+      );
+      return;
+    }
+
     state = state.copyWith(
         status: UploadStatus.picking, error: null, response: null);
-    final pickedFile = await _picker.pickSingleFile();
+    final PickedFile? pickedFile;
+    try {
+      pickedFile = await _picker.pickSingleFile();
+    } catch (_) {
+      state = state.copyWith(
+        status: UploadStatus.failure,
+        error: const FilePickerFailedException(),
+      );
+      return;
+    }
     if (pickedFile == null) {
       state = state.copyWith(status: UploadStatus.initial);
       return;
@@ -99,7 +120,7 @@ class UploadNotifier extends StateNotifier<UploadState> {
     final validationError = validatePickedFile(
       size: pickedFile.size,
       extension: pickedFile.extension,
-      isWeb: kIsWeb,
+      isWeb: _capabilities.isWeb,
     );
 
     if (validationError != null) {
@@ -181,5 +202,6 @@ final uploadNotifierProvider =
   return UploadNotifier(
     picker: ref.watch(filePickerServiceProvider),
     repository: ref.watch(fileRepositoryProvider),
+    capabilities: ref.watch(platformCapabilitiesProvider),
   );
 });

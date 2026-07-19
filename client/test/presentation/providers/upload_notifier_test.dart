@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mkc_client/core/platform/platform_capabilities.dart';
 import 'package:mkc_client/data/models/upload_response_model.dart';
 import 'package:mkc_client/presentation/providers/upload_provider.dart';
 import 'package:mkc_client/shared/errors/app_exception.dart';
@@ -14,7 +15,19 @@ void main() {
   setUp(() {
     picker = FakeFilePickerService();
     repository = FakeFileRepository();
-    notifier = UploadNotifier(picker: picker, repository: repository);
+    notifier = UploadNotifier(
+      picker: picker,
+      repository: repository,
+      capabilities: const PlatformCapabilities(
+        supportsFilePicker: true,
+        supportsSse: true,
+        isWeb: false,
+        isMobile: true,
+        isDesktop: false,
+        uploadsRequireInMemoryBytes: false,
+        maxUploadBytes: PlatformUploadLimits.native,
+      ),
+    );
   });
 
   tearDown(() {
@@ -55,6 +68,38 @@ void main() {
 
       expect(notifier.state.status, UploadStatus.failure);
       expect(notifier.state.error, isA<UnsupportedFileTypeException>());
+    });
+
+    test('fails with FilePickerFailedException when picker throws', () async {
+      picker.nextError = const FilePickerFailedException();
+
+      await notifier.pickFile();
+
+      expect(notifier.state.status, UploadStatus.failure);
+      expect(notifier.state.error, isA<FilePickerFailedException>());
+    });
+
+    test('fails with PlatformUnsupportedException when picker unsupported',
+        () async {
+      final unsupported = UploadNotifier(
+        picker: picker,
+        repository: repository,
+        capabilities: const PlatformCapabilities(
+          supportsFilePicker: false,
+          supportsSse: true,
+          isWeb: false,
+          isMobile: false,
+          isDesktop: false,
+          uploadsRequireInMemoryBytes: false,
+          maxUploadBytes: PlatformUploadLimits.native,
+        ),
+      );
+      addTearDown(unsupported.dispose);
+
+      await unsupported.pickFile();
+
+      expect(unsupported.state.status, UploadStatus.failure);
+      expect(unsupported.state.error, isA<PlatformUnsupportedException>());
     });
   });
 

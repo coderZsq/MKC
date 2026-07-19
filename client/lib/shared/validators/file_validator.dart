@@ -1,4 +1,5 @@
 import '../errors/app_exception.dart';
+import '../../core/platform/platform_capabilities.dart';
 
 /// Allowed upload extensions for Sprint 1.
 const Set<String> allowedExtensions = {
@@ -13,10 +14,10 @@ const Set<String> allowedExtensions = {
 };
 
 /// Maximum upload size for mobile/desktop clients.
-const int maxSizeBytes = 500 * 1024 * 1024;
+const int maxSizeBytes = PlatformUploadLimits.native;
 
 /// Maximum upload size for Web clients to avoid browser memory issues.
-const int webMaxSizeBytes = 100 * 1024 * 1024;
+const int webMaxSizeBytes = PlatformUploadLimits.web;
 
 /// Returns the MIME type for a given extension, or `null` if unknown.
 String? mimeFromExtension(String? extension) {
@@ -28,7 +29,8 @@ String? mimeFromExtension(String? extension) {
     'pdf' => 'application/pdf',
     'txt' => 'text/plain',
     'doc' => 'application/msword',
-    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'docx' =>
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     _ => null,
   };
 }

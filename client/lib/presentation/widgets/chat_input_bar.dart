@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/breakpoints.dart';
 import '../../config/theme.dart';
 
 const int _maxQuestionLength = 2000;
@@ -40,10 +41,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   Widget build(BuildContext context) {
     final isSending = !widget.enabled;
+    final isCompact = context.isCompactWidth;
 
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        padding: EdgeInsets.fromLTRB(
+          isCompact ? 8 : 12,
+          10,
+          isCompact ? 8 : 12,
+          12,
+        ),
         decoration: BoxDecoration(
           color: ClaudeColors.parchment.withAlpha(242),
           border: Border(
@@ -61,6 +68,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 textInputAction: TextInputAction.send,
                 maxLines: null,
                 minLines: 1,
+                scrollPadding: EdgeInsets.only(
+                  bottom: MediaQuery.viewInsetsOf(context).bottom + 96,
+                ),
                 maxLength: _maxQuestionLength,
                 decoration: const InputDecoration(
                   hintText: 'Type a question',
