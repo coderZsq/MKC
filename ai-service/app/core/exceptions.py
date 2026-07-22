@@ -172,6 +172,11 @@ class RetrievalUnavailableError(APIException):
         super().__init__("RETRIEVAL_UNAVAILABLE", message, 503)
 
 
+class InvalidRetrievalFilterError(APIException):
+    def __init__(self, message: str = "检索过滤条件不合法") -> None:
+        super().__init__("INVALID_RETRIEVAL_FILTER", message, 400)
+
+
 class RagEngineConfigError(APIException):
     def __init__(self, message: str = "RAG_ENGINE 仅支持 legacy/llamaindex") -> None:
         super().__init__("RAG_ENGINE_INVALID", message, 400)
