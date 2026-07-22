@@ -1,9 +1,12 @@
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if TYPE_CHECKING:
+    from app.services.rag_engine.config import RagEngineConfig
 
 
 class Settings(BaseSettings):
@@ -56,6 +59,16 @@ class Settings(BaseSettings):
     @property
     def ai_config(self) -> dict[str, Any]:
         return load_yaml_config(self.ai_config_path)
+
+    @property
+    def rag_engine_config(self) -> "RagEngineConfig":
+        from app.services.rag_engine.config import build_rag_engine_config
+
+        return build_rag_engine_config()
+
+    @property
+    def rag_engine(self) -> "RagEngineConfig":
+        return self.rag_engine_config
 
     @property
     def is_dev(self) -> bool:

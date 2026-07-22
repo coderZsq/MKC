@@ -172,6 +172,16 @@ class RetrievalUnavailableError(APIException):
         super().__init__("RETRIEVAL_UNAVAILABLE", message, 503)
 
 
+class RagEngineConfigError(APIException):
+    def __init__(self, message: str = "RAG_ENGINE 仅支持 legacy/llamaindex") -> None:
+        super().__init__("RAG_ENGINE_INVALID", message, 400)
+
+
+class RagEngineUnavailableError(APIException):
+    def __init__(self, message: str = "LlamaIndex 依赖未安装") -> None:
+        super().__init__("RAG_ENGINE_UNAVAILABLE", message, 503)
+
+
 class LLMAuthFailedError(APIException):
     def __init__(self, message: str = "LLM 认证失败") -> None:
         super().__init__("LLM_AUTH_FAILED", message, 401)
