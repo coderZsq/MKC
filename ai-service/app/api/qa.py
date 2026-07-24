@@ -11,6 +11,7 @@ from app.core.exceptions import APIException, LLMUnavailableError, ValidationExc
 from app.models.qa import QARequest
 from app.services.llm.llm_client import sync_format_sse_stream
 from app.services.qa_service import QAService
+from app.services.rag_engine.legacy_engine import LegacyRagEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +29,14 @@ def stream_qa() -> Response:
         logger.warning("QA request validation failed: %s", exc)
         raise ValidationException("请求参数错误") from exc
 
-    retrieval_service = current_app.extensions["retrieval"]
+    rag_engine = current_app.extensions.get("rag_engine")
+    if rag_engine is None or "retrieval" in current_app.extensions:
+        rag_engine = LegacyRagEngine(current_app.extensions["retrieval"])
     llm_client = current_app.extensions["llm"]
     citation_service = current_app.extensions.get("citation_service")
     memory_service = current_app.extensions.get("memory_service")
     service = QAService(
-        retrieval_service,
+        rag_engine,
         llm_client,
         citation_service=citation_service,
         memory_service=memory_service,
