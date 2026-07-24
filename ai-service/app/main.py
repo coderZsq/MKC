@@ -47,6 +47,8 @@ from app.services.hybrid_retrieval import (
 )
 from app.services.llm import LLMClient, build_llm_client, validate_llm_config
 from app.services.memory import MemoryService, build_memory_config, build_memory_service
+from app.services.rag_engine.engine import RagEngine
+from app.services.rag_engine.factory import build_rag_engine
 from app.services.retrieval import RetrievalService, build_retrieval_service
 from app.services.summary import (
     MapReduceSummarizer,
@@ -67,6 +69,7 @@ def create_app(
     vector_store: VectorStore | None = None,
     retrieval_service: RetrievalService | None = None,
     hybrid_retrieval_service: HybridRetrievalService | None = None,
+    rag_engine: RagEngine | None = None,
     llm_client: LLMClient | None = None,
     memory_service: MemoryService | None = None,
 ) -> Flask:
@@ -80,6 +83,7 @@ def create_app(
         vector_store=vector_store,
         retrieval_service=retrieval_service,
         hybrid_retrieval_service=hybrid_retrieval_service,
+        rag_engine=rag_engine,
         llm_client=llm_client,
         memory_service=memory_service,
     )
@@ -99,6 +103,7 @@ def init_extensions(
     vector_store: VectorStore | None = None,
     retrieval_service: RetrievalService | None = None,
     hybrid_retrieval_service: HybridRetrievalService | None = None,
+    rag_engine: RagEngine | None = None,
     llm_client: LLMClient | None = None,
     memory_service: MemoryService | None = None,
 ) -> None:
@@ -119,6 +124,15 @@ def init_extensions(
         app.extensions["retrieval"] = build_retrieval_service(
             app.extensions["embedding"],
             app.extensions["vector_store"],
+        )
+
+    if rag_engine is not None:
+        app.extensions["rag_engine"] = rag_engine
+    else:
+        app.extensions["rag_engine"] = build_rag_engine(
+            retrieval_service=app.extensions["retrieval"],
+            embedding_service=app.extensions["embedding"],
+            vector_store=app.extensions["vector_store"],
         )
 
     if hybrid_retrieval_service is not None:
