@@ -167,9 +167,19 @@ class RetrievalForbiddenError(APIException):
         super().__init__("FORBIDDEN", message, 403)
 
 
+class LlamaIndexRetrievalForbiddenError(APIException):
+    def __init__(self, message: str = "无权访问资源") -> None:
+        super().__init__("RETRIEVAL_FORBIDDEN", message, 403)
+
+
 class RetrievalUnavailableError(APIException):
     def __init__(self, message: str = "检索服务不可用") -> None:
         super().__init__("RETRIEVAL_UNAVAILABLE", message, 503)
+
+
+class InvalidRetrievalRequestError(APIException):
+    def __init__(self, message: str = "检索请求不合法") -> None:
+        super().__init__("INVALID_RETRIEVAL_REQUEST", message, 400)
 
 
 class InvalidRetrievalFilterError(APIException):
