@@ -1,3 +1,4 @@
+from app.services.llamaindex.context_compressor import LlamaIndexContextCompressor
 from app.services.llamaindex.embedding_adapter import MKCEmbeddingAdapter
 from app.services.llamaindex.filters import build_metadata_filters
 from app.services.llamaindex.metadata_mapper import (
@@ -10,8 +11,17 @@ from app.services.llamaindex.milvus_adapter import (
     MKCVectorStoreAdapter,
     build_llamaindex_vector_store,
 )
+from app.services.llamaindex.query_engine import LlamaIndexQueryEngine
+from app.services.llamaindex.retrieval_engine import (
+    LlamaIndexRetrievalConfig,
+    LlamaIndexRetrievalEngine,
+)
 
 __all__ = [
+    "LlamaIndexContextCompressor",
+    "LlamaIndexQueryEngine",
+    "LlamaIndexRetrievalConfig",
+    "LlamaIndexRetrievalEngine",
     "MKCEmbeddingAdapter",
     "MKCVectorStoreAdapter",
     "build_llamaindex_vector_store",
